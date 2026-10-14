@@ -1,7 +1,7 @@
 # DANA-emu — Canonical continuity, universal rules, and no-drift operating contract
 
 **Status: ACTIVE / MANDATORY READING at the beginning of every new conversation.**
-**Updated: 2026-10-13. Exact technical cursor: D1.1 (PENDING, explicit authorization required). D0.1–D0.6 = SPEC_READY, documentation only.**
+**Updated: 2026-10-14. Exact technical cursor: D1.2 (PENDING; no source or remote execution authorization). D1.1 = PASS (independent T-verified build/selectability only); D0.1–D0.6 = SPEC_READY, documentation only.**
 
 This document exists so the user does not need to teach the assistant the project, correct repeated process errors, restore standing rules, or audit its actions. Treat the content as the minimum mandatory baseline for future work. Any later change requires an explicit project decision supported by Git evidence; never silently reinterpret this file or advance the cursor.
 
@@ -17,7 +17,7 @@ This document exists so the user does not need to teach the assistant the projec
 
 ## 1. Project objective and strict separation
 
-**Implementation repository:** https://github.com/SamDelorean/DANA-emu (private main, when last checked).
+**Implementation repository:** https://github.com/SamDelorean/DANA-emu (`main`; GitHub reported visibility `public` on 2026-10-14; this integration did not change visibility).
 **Related research/firmware repository:** https://github.com/SamDelorean/Dana-OS3K.
 **Existing MAME reference:** https://github.com/SamDelorean/mame-as3k (source lock in research/sources.lock.json).
 
@@ -40,14 +40,15 @@ The target hardware is **MC68VZ328 DragonBall VZ and the Dana board**. First pro
 | **D0.4**, virtual RAM bootstrap CPU/bus state | **SPEC_READY, documentation only** | docs/D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md |
 | **D0.5**, deterministic harness and traces | **SPEC_READY, documentary only** | docs/D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md |
 | **D0.6**, frozen first MAME candidate | **SPEC_READY, documentation only** | docs/D0_6_FIRST_MAME_DRIVER_CANDIDATE.md |
-| **D1.1**, two independent Dana machine builds | **PENDING — NOT AUTHORIZED** | Candidate D0.6; no binaries or tests exist |
-| **D1+**, functional emulator construction/testing | **PENDING** | no PASS yet |
+| **D1.1**, two independent Dana machine builds | **PASS — build/selectability only** | [T R5 evidence](https://drive.google.com/file/d/1NLIydtsa6t2XTyeXG4SvleIZI-jfYeo7/view); [PR #5 qualification](https://github.com/SamDelorean/DANA-emu/pull/5#issuecomment-6179533751) |
+| **D1.2**, 4 MiB guest RAM and 8/16/32-bit bus tests | **PENDING — not authorized** | [D0.4 contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md); no guest RAM test yet |
+| **D1.3+**, VZ and guest functionality | **PENDING** | no guest-visible PASS yet |
 
-**No Dana emulator source/build has passed functional verification.** No MC68VZ328 MAME device, stable or diag executable, or successful EmuTOS-on-MAME run is proven in this repository. The specific machine T checkout path and revision for DANA-emu are not yet verified. No EmuTOS-Dana build artifacts or guest image SHA have been verified. Do not label documentary SPEC_READY as **PASS**. Do not claim a partial GUI/host rendering proves a real guest LCD.
+**D1.1 has passed only its defined minimal MAME build/selectability scope:** two different real binaries (`dana-stable` and `dana-diag`) were built sequentially with `-j3` on T using Clang 21 and `PRECOMPILE=0`. Both independently passed `-listfull`, `-listxml` and `-validate` for `asmdana`, with staged source/list registration checks. This is **not a functional Dana guest emulator**: there is no MC68VZ328 SoC/MMIO model, guest RAM, LCD, keyboard, or successful EmuTOS-on-MAME run. No EmuTOS-Dana image SHA is available. D0.1–D0.6 remain documentary SPEC_READY, never functional PASS.
 
 Historical facts to preserve:
 
-- MAME source baseline candidate is SamDelorean/mame-as3k commit **c4e48388ca620472643110db2941ce70aa5f3c07** (GitHub source baseline, **not** proof of T checkout).
+- MAME pinned baseline is SamDelorean/mame-as3k commit **c4e48388ca620472643110db2941ce70aa5f3c07**, verified available read-only in T at `/home/spc/Projects/alphasmart/as2k-stable-eeepc900-local/mame-as3k-donor`; use new Dana-owned staging for builds, never compile inside this donor checkout.
 - EmuTOS-Dana commit **9c42ef0f2c2fa9d1e217fced9da68901b2326e8b**, source target **make dana**; outputs **emutos.img** and **emutos-dana.rom**, not a physical Dana Flash ROM.
 - The historical Dana RAM booter copies EmuTOS to **0x00002140**, then jumps there; that address and image length must be validated against the exact build map before execution. Historic loader limitation approximately **256 KiB**, with alignment/coverage constraints, is recorded in D0.3.
 - First intended guest RAM profile is **4 MiB**, from **0x00000000 through 0x003FFFFF**, in a **post-bootstrap** state. Do not confuse this with physical reset/power-on.
@@ -63,7 +64,7 @@ Detailed authoritative milestones are in **docs/DANA_EMU_INCREMENTAL_WORK_PLAN.m
 Before product changes, define: current cursor, one technical objective, dependencies, exact files allowed, source/base SHA, guest fixture, expected signals, bounded instrumentation, reproducible commands, functional test and regression coverage, failure/rollback behavior, and evidence location.
 
 - **D0 documentation:** SPEC_READY closes a source-audited specification, **not** functional testing. Advance only from the latest verified D0.x specification to the next planned D0.x task; no functional PASS is implied.
-- **D1 onward:** PASS requires *actual* execution and objective guest-visible evidence on T (or an expressly approved replacement test environment); compilation and CI structural checks alone are insufficient. FAIL and BLOCKED record exact causes, not guesses.
+- **D1.1 exception specified in its frozen acceptance contract:** PASS means *both real, separately compiled executables* register/select/validate the minimal nonworking driver on T; no guest can run yet. **D1.2 onward:** actual guest-visible evidence on T (or an expressly approved substitute) is mandatory for memory/peripheral behavior; compilation and CI structural checks alone are insufficient. FAIL and BLOCKED record exact causes.
 - **Never reopen PASS** without evidence of a defect; never skip a blocking dependency by inventing a stub, pre-cooked framebuffer, fake interrupt or host-side simulation of a guest system call.
 - Differentiate a tool, connector, launch, test-harness, or infrastructure failure from a firmware/hardware-model functional failure. A connector error never proves a code defect.
 - Every run records commit, input/executable hashes (when they actually exist), image source, arguments, logs, machine-readable result, relevant CPU/IRQ/MMIO/framebuffer evidence, regression coverage and exact status.
@@ -95,7 +96,7 @@ Known stable infrastructure (from the user's canonical Drive operating records):
 Rules:
 1. **Before scheduling/launching:** inspect the **Drive** queue, reconcile outputs/statuses for previous jobs, and ensure that the pending job is exactly ours; **never move, execute, overwrite or delete someone else's jobs**. Compare SHA-256 before treating a file as a duplicate; quarantine exact duplicates to hold rather than deleting.
 2. Prepare a complete **self-contained** job, preferably syntax-checked beforehand. Make it do all deterministic work in one launch, with its own outputs, validation and clean error classification. Avoid fragile nested quoting and accidental variable expansion.
-3. Use Git commit archives, isolated working folders and unambiguous paths. **Do not clean, reset, stash, reclone over, or alter another project's dirty worktree** to satisfy a Dana preflight. Do not assume the Dana checkout exists until verified as part of the first approved productive job.
+3. Use Git commit archives, isolated working folders and unambiguous paths. **Do not clean, reset, stash, reclone over, or alter another project's dirty worktree.** Verified persistent Dana Git checkout on T: `/home/spc/Projects/alphasmart/DANA-emu` (D1.1 tested head `92e39eff050fa7a62486569be6a34994682ce44c`; T checkout requires normal refresh after GitHub merges). Disposable builds belong under `/home/spc/DANA_EMU_ISOLATED`, outside the read-only MAME donor.
 4. After authorized launch, **never use Commander to poll**. Read result bundles, log, SHA/manifest and PASS/FAIL/BLOCKED status from Drive. A reported launch PID or rc=0 does not itself prove that the job executed or passed.
 5. Keep Dana jobs isolated from AS2K job queues, evidence, and files. If the default shared inbox is occupied, **do not displace foreign work**; stage the Dana job elsewhere or wait for a properly configured independent queue, documenting the block. Do not invent a remote path or runner flag.
 6. When compiling on T, always specify **-j3**, never an unconstrained full-host MAME build by default. Favor an isolated **reduced MAME** build.
@@ -111,20 +112,21 @@ These documents describe **known premises**; do not spend Remote Desktop calls r
 ## 6. Project boundaries, Git, and licensing
 
 - **All future Git artifacts in English:** docs, README edits, file/symbol names, scripts, code comments, commit messages, PRs, issues, tests, CI/checkpoint output under our control. No retroactive bulk translation of Spanish historical artifacts without an independent relevant reason. Conversation remains Spanish. See [publication/language record](PUBLICATION_ASIDE_AND_GIT_LANGUAGE_20261013.md).
-- **Git repository remains private** until the user separately chooses otherwise. Publication-readiness PR #1 and language-policy PR #2 did **not** change visibility. Publishing to GitHub, CI, official MAME, releases or package managers is never implicit.
+- **Repository visibility:** GitHub reported `public` on 2026-10-14; this documentation/integration operation **did not change visibility**. Do not infer authorization to modify visibility, publish binary releases, submit upstream MAME changes or distribute firmware. Private ROMs, credentials and saved state remain excluded regardless of visibility.
 - **Do not commit** commercial Dana/Palm/AlphaSmart ROM/Flash/updates, proprietary derivative firmware, personal media, private tokens/keys, user data, state images, test dumps or indiscriminately copied third-party code. Audit SPDX/licensing for files actually reused from MAME/POSE/Retro68/EmuTOS.
 - **Do not touch** AS2K firmware, ROM Z stock, existing MAME AS2K, unrelated branches, the physical Dana, OS3K patching, Surface/Vontar/Armbian, Drive jobs belonging to other projects, or the status/cursor of another conversation's workflow.
 - In a cross-project conversation, treat a Dana aside as **separate recorded information only**; never advance an AS2K increment because of Dana work or vice versa.
 
-## 7. Immediate next task — D1.1 (explicitly gated)
+## 7. Immediate next task — D1.2 (not authorized for implementation)
 
-**D0.6 is SPEC_READY documentary:** [frozen candidate with independent Dana-stable and Dana-diag builds](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md). This is **not a source-code implementation, build or PASS**. D0.1–D0.6 remain documentary only.
+**D1.1 is CLOSED/PASS for build/selectability only.** PR [#5](https://github.com/SamDelorean/DANA-emu/pull/5) was merged after the independent T R5 qualification and PR [#4](https://github.com/SamDelorean/DANA-emu/pull/4) separately integrated English documentation. The validated pre-merge implementation head is `92e39eff050fa7a62486569be6a34994682ce44c`, with MAME pinned at `c4e48388ca620472643110db2941ce70aa5f3c07`. The R5 Drive evidence package is [here](https://drive.google.com/file/d/1NLIydtsa6t2XTyeXG4SvleIZI-jfYeo7/view), SHA-256 `2f697fdffb381b3ed2f82dba596a528a5fa8aa88be07735247b608f64a3847ff`.
 
-**Binding user instruction:** From **D1.1, not D6**, there must be **two independent MAME reduced builds**: **Dana-stable** and **Dana-diag**. Use the same Dana C++ skeleton, shared hardware model and pinned MAME source revision, but distinct build directories/subtargets, binary paths, configs, media, state and evidence. Build sequentially with exactly **-j3** each when authorised. Neither build may use or modify the AS2K worktree, object cache, emulator executable or unrelated jobs. DIAG may initially differ by debug build configuration, before specialized probes are added; no second CPU/emulator model.
+- Stable executable SHA-256: `ec055d08b66d46181d26cd9371f7f961f52732ad36f468a8aae0a4e1b7bc83d1`.
+- Diag executable SHA-256: `dd877c9cb36c491e675b82ce2aba78548519cccf2bd16bf2a9c61cbd3000435c`.
+- Reproducible T toolchain choice: Clang 21, `OVERRIDE_CC=clang OVERRIDE_CXX=clang++ OVERRIDE_LD=clang++ PRECOMPILE=0`, separate source/output stages, sequential `make -j3`; diagnostic variant adds `DEBUG=1`. GCC 15 failed building GENie and Clang PCH failed, both bypassed without modifying source.
+- The validated skeleton remains `MACHINE_NOT_WORKING | MACHINE_NO_SOUND`, with placeholder M68000 at 1 MHz; no guest RAM, VZ, LCD, keyboard, loader or guest-runtime PASS is claimed. See [D1.1 implementation and qualification](D1_1_IMPLEMENTATION_CANDIDATE.md).
 
-**Only D1.1 work after explicit approval:** implement the tiny `src/mame/skeleton/alphasdana.cpp` skeleton and two-line `mame.lst` registration as a DANA-owned overlay, then in a separately approved Drive-first T intervention stage a clean pinned source, build **both variants**, verify `asmdana` in each and save independent evidence. MAME VZ MMIO, RAM and guest boot remain future increments. D1.1 cannot PASS with one executable.
-
-**"Siguiente" is not prior authorisation for executable source edits, remote access, build, job dispatch, publication or filesystem changes.** Implementation and Commander require separately scoped explicit approval. The universal three-call ceiling, T deviceId, canonical dcjob launcher and no-polling rules remain in force.
+**Next exact technical increment: D1.2 — 4 MiB RAM and 68k 8/16/32-bit read/write semantics only.** Begin with static source/D0.4 contract inspection, define a bounded guest fixture, big-endian ordering, alignment and access boundaries, regression of D1.1 selection, and explicit PASS/FAIL/BLOCKED criteria. No VZ MMIO, firmware loader, fabricated guest responses or expanded hardware features in D1.2. Implementation and any T/Commander job require new, separately scoped user authorization; every prior five-call budget is exhausted. `Siguiente` does **not** authorize code writes, a remote run, publication, or new Git merges.
 
 ## 8. Nonnegotiable self-audit before every response / tool use
 
@@ -140,6 +142,6 @@ These documents describe **known premises**; do not spend Remote Desktop calls r
 
 **User prompt in the new conversation:**
 
-"Resume DANA-emu at D1.1 PENDING. First read docs/CANONICAL_CONTINUITY_AND_RULES.md, HANDOFF, the master plan, D0.6 and source lock. Two independently compiled products — Dana-stable and Dana-diag — are mandatory from D1.1, sharing one Dana hardware engine and isolated from AS2K. Request explicit approval before implementing C++ or invoking T/Commander; never interpret Siguiente as remote authorization."
+"Resume DANA-emu at D1.2 PENDING. D1.1 is closed PASS for dual-build/selectability only (R5 on T; PR #5 merged). Read canonical continuity, HANDOFF, master plan, D0.4, D1.1 evidence and source lock. Prepare the static D1.2 RAM/bus contract first; ask for fresh approval before source implementation or any T/Commander run. No previous Commander budget carries over."
 
 **Never ask the user to reconstruct project history once these records are available in Git.**
