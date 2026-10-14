@@ -2,7 +2,7 @@
 
 **MANDATORY FIRST READ:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). This contains the permanent no-drift startup protocol, remote Commander identity/call accounting, Drive pipeline, tests, isolation rules and current cursor. Do not restart past work or request the rules again.
 
-**Updated: 2026-10-13 source review; current technical cursor D0.5.** This file supersedes older D0.3 handoff text preserved in Git history.
+**Updated: 2026-10-13 source review; current technical cursor D0.6.** This file supersedes older D0.3 handoff text preserved in Git history.
 
 ## 1. Purpose and immutable architecture
 
@@ -27,7 +27,8 @@ No functional Dana emulator, MC68VZ328 MAME device, Dana stable/diag executable 
 | **D0.2** — EZ/VZ MMIO and errata | **SPEC_READY, documentary** | [D0_2_EZ_VZ_REGISTER_CONTRACT.md](D0_2_EZ_VZ_REGISTER_CONTRACT.md) | No VZ implementation or silicon test |
 | **D0.3** — EmuTOS-Dana image/loader contract | **SPEC_READY, source/build recipe only** | [D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md) | No built image, SHA-256 or guest boot test |
 | **D0.4** — CPU/RAM/VZ post-bootstrap profile | **SPEC_READY, documentary** | [D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md) | No guest/image/map or MAME execution |
-| **D0.5–D0.6** | **PENDING** | Plan only | Not started |
+| **D0.5** — deterministic fixture/trace and evidence | **SPEC_READY, documentary** | [D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md) | No harness code or runtime test |
+| **D0.6** — freeze first MAME candidate | **PENDING: NEXT** | Plan only | Not started |
 | **D1 and later** | **PENDING** | Plan only | No emulator code or tests |
 
 Relevant pinned sources are in [research/sources.lock.json](../research/sources.lock.json).
@@ -41,14 +42,14 @@ Relevant pinned sources are in [research/sources.lock.json](../research/sources.
 - Linker image start/entry still needs confirmation against the **actual emutos.map**. The historical loader assumes the embedded image is aligned to four bytes and up to **256 KiB** (16-bit DBF counter); the Palm block array is also only safely sized for **at most eight 32-KiB kernel blocks** (256 KiB payload), even though KERNEL_SIZE is defined as 300 KiB.
 - Drive filename search did **not** locate emutos-dana.rom, danarun or kernel.img. No output hashes exist. **Never fabricate image sizes/hashes or claim an EmuTOS build is already available on T.**
 
-## 5. Exact next increment: D0.5 (static-first)
+## 5. Exact next increment: D0.6 (static-first)
 
-**D0.4 closed as SPEC_READY documentary**: [RAM/CPU/bus contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md). It establishes the guest low-memory map, nominal vector offsets, synthetic CPU supervisor-entry policy, pre-bootstrap register distinction, and startup checkpoints. Exact __text/_stktop from emutos.map and the guest binary/hash remain missing; no functional PASS was claimed.
+**D0.5 completed as SPEC_READY documentary:** [test harness/trace/evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md). No actual fixture, compiled emulator, guest image, verified guest SHA, or independent verifier exists.
 
-**D0.5 question:** design only the **deterministic test harness and bounded trace/evidence formats** for MAME Dana stable/diag, ensuring guest-derived assertions and strict classification of emulator vs infrastructure failure.
+**D0.6 question:** freeze the first minimal **D1.1** implementation candidate against the source-locked MAME baseline. Document the exact file allowlist/device registration, reduced build target, stable/diag isolation strategy, preflight source revision, compile/selectability smoke, regression coverage, rollback and Drive evidence arrangement. Preserve the missing guest build/map dependency for later D1.4/D1.5.
 
-Outputs: manifest schema, trace/event schema, guest/host verification contracts, negative and regression tests, Drive result bundle and PASS/FAIL/BLOCKED rules, D0.6 freeze checklist. Do not write the harness executable, create a T job, compile, dispatch or use Commander.
+The D0.6 output remains documentary. **No Commander, compile, source implementation, T jobs or installation without a separate new authorization for later D1.1.**
 
 ## 6. Starting prompt for another conversation
 
-> Resume DANA-emu from **D0.5**. Read the canonical continuity rules, incremental plan, D0.4 RAM/CPU/bus contract, AS2K workflow and source lock. Define only the deterministic trace and test-evidence contract in English Git documents. Do not spend Commander calls, compile, or implement without explicit authorization.
+> Resume DANA-emu from **D0.6**. Read the canonical continuity rules, incremental plan, D0.5 test-harness contract, AS2K workflow and source lock. Freeze only the first minimal D1.1 MAME candidate in English Git documents. Do not spend Commander calls, compile, or implement without separate explicit authorization.
