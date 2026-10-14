@@ -138,14 +138,20 @@ for variant, binary in [('stable', stable), ('diag', diag)]:
     save(work / 'manifest.json', result)
     save(work / 'result.json', result)
     results[variant] = result
-# Reduced products do not contain AS2K/AS3K; check preservation in the pinned list.
-reference = Path('/workspace/mame-as3k')
-try:
-    listing = subprocess.check_output(['git', '-C', str(reference), 'show', PIN + ':' + LIST], text=True)
-    assert all(listing.splitlines().count(name) == 1 for name in ('asma2k', 'asma3k'))
-    regression = {'status': 'PASS', 'scope': 'Pinned reference registrations only; no AS2K runtime claim'}
-except (OSError, subprocess.CalledProcessError, AssertionError) as error:
-    regression = {'status': 'BLOCKED', 'reason': str(error)}
+# Registration preservation is established from each prepared tree and its
+# pinned-source manifest above; verification never opens a reference checkout.
+registration_results = {
+    variant: result['checks'].get('registration_preservation', {
+        'status': 'FAIL' if result['status'] == 'FAIL' else 'BLOCKED',
+        'reason': result['reason']})
+    for variant, result in results.items()
+}
+registration_statuses = [r['status'] for r in registration_results.values()]
+regression = {
+    'status': ('FAIL' if 'FAIL' in registration_statuses else
+               'BLOCKED' if 'BLOCKED' in registration_statuses else 'PASS'),
+    'scope': 'Prepared pinned-source manifests and staged lists only; no AS2K runtime claim',
+    'variants': registration_results}
 statuses = [r['status'] for r in results.values()] + [regression['status']]
 status = 'FAIL' if 'FAIL' in statuses else 'BLOCKED' if 'BLOCKED' in statuses else 'PASS'
 save(evidence / 'result.json', {'status': status, 'scope': 'Binary smoke assertions only; not D1.1 qualification',

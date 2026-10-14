@@ -26,11 +26,11 @@ Existing MAME/reference checkouts are never build or modification destinations.
 
 ## Reproducible preparation (not executed during implementation)
 
-From `/workspace/DANA-emu`, after execution authorization, choose a **new**
+From the DANA-emu checkout, after execution authorization, choose a **new**
 Dana-only destination outside reference checkouts:
 
 ```sh
-tests/d1_1_build_select_smoke.sh prepare /workspace/mame-as3k /tmp/dana-d1-1-run
+tests/d1_1_build_select_smoke.sh prepare /absolute/path/to/pinned-mame /tmp/dana-d1-1-run
 ```
 
 The helper reads `git archive` at the exact pinned commit and creates separate
@@ -74,7 +74,17 @@ tests/d1_1_build_select_smoke.sh verify \
 The verifier requires a fresh evidence directory and distinct binary paths and
 parent directories. It checks staged manifests/driver/list hashes, exact overlay
 insertion, preservation of `asma2k`/`asma3k`, binary existence and executable
-permissions. It records separate binary hashes and executes real `-listfull
+permissions. The verify interface needs no reference-checkout argument or mounted
+Codex path: each executable must reside in its prepared `VARIANT/bin` directory,
+with `VARIANT/source-manifest.json` and `VARIANT/source` retained. The manifest
+must identify the pinned commit and correct variant; driver/list hashes must
+match, removing the exact Dana insertion must recover the recorded baseline list
+hash, and `asma2k`/`asma3k` must each remain registered once. Missing provenance
+is BLOCKED; altered provenance or registrations are FAIL. Preparation alone uses
+the explicitly supplied reference path through read-only Git commands. Manifest
+provenance assumes a trusted preparation run; it is not a signed attestation.
+
+It records separate binary hashes and executes real `-listfull
 asmdana`, `-listxml asmdana` and `-validate asmdana` assertions for each variant,
 with configuration reading disabled and separate working directories/logs.
 XML must identify one expected nonworking, ROM-less Dana skeleton with one
@@ -98,6 +108,15 @@ BLOCKED for missing executables; controlled mock executables returning exit 7
 were correctly classified FAIL. The pinned makedep.py sourcesproject and
 sourcesfilter commands succeeded on the unchanged alphasma3k reference, not on
 a compiled Dana candidate.
+Portability correction checks: shell/Python syntax and diff whitespace checks
+passed. Five temporary fixtures verified missing binaries/manifests as BLOCKED
+and wrong pins, altered registrations and command failures as FAIL for both
+variants, with isolated manifests/results. Git was disabled through a test PATH
+shim during verification; no reference-checkout access was needed. These fixtures
+are harness checks, not successful MAME validation. The PR #5 supervisor comment
+could not be read directly (GitHub GraphQL Forbidden); the requested portability
+correction follows the user's explicit instructions.
+
 No successful binary smoke, compiler/link test or T execution is claimed.
 Cloud GCC/G++ 14.2, Make 4.4.1 and Python 3.12 are present. SDL2/SDL3,
 SDL2_ttf, fontconfig, ALSA, PulseAudio and Qt6 development discovery via pkg-config
