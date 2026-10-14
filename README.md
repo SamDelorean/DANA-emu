@@ -2,55 +2,56 @@
 
 **Start of any future session:** read [CANONICAL_CONTINUITY_AND_RULES.md](docs/CANONICAL_CONTINUITY_AND_RULES.md) first. It preserves the authoritative D1.1 cursor and the separate Dana-stable/Dana-diag builds, all AS2K/Commander/Drive constraints, the English-only Git policy and the pre-action checklist; do not ask the user to reconstruct these rules. No remote authorization is inherited.
 
-**Emulador propio y reducido del AlphaSmart Dana, basado en MAME.**
+**Independent, reduced AlphaSmart Dana emulator based on MAME.**
 
-Proyecto de ingeniería para reproducir el hardware **AlphaSmart Dana / MC68VZ328 (DragonBall VZ)** y disponer de un banco de pruebas para **DANA-OS3K**. Se adopta la filosofía del emulador AS2K: dos variantes reducidas, un núcleo compartido y evidencia funcional antes de cerrar incrementos.
+An engineering project to reproduce **AlphaSmart Dana / MC68VZ328 (DragonBall VZ)** hardware and provide a test platform for **DANA-OS3K**. It follows the AS2K emulator philosophy: two reduced variants, one shared core, and functional evidence before closing increments.
 
-## Productos definidos
+## Defined products
 
-| Variante | Contrato previsto | Estado |
+| Variant | Intended contract | Status |
 |---|---|---|
-| **dana-stable** | Emulador de uso cotidiano: carga de imágenes y ROM según soporte confirmado, pantalla, teclado, interfaz de control, persistencia de estado, lanzamiento e instalación sencillos | **Diseño inicial; no implementado** |
-| **dana-diag** | Banco de pruebas instrumentado: trazas CPU/MMIO, IRQ, RAM, GPIO, SPI, UART, LCD, snapshots y ejecuciones reproducibles | **Diseño inicial; no implementado** |
+| **dana-stable** | Everyday-use emulator: supported image/ROM loading, screen, keyboard, control interface, session-state persistence, and straightforward launch and installation | **Initial design; not implemented** |
+| **dana-diag** | Instrumented test bench: CPU/MMIO traces, IRQ, RAM, GPIO, SPI, UART, LCD, snapshots, and reproducible runs | **Initial design; not implemented** |
 
-**Two separately compiled Dana products from D1.1, sharing one hardware codebase and completely isolated from AS2K.** Nunca mezclar estados, medios de almacenamiento o configuraciones de las variantes. La instrumentación no debe falsear el resultado observado por el firmware invitado (guest).
+**Two separately compiled Dana products from D1.1, sharing one hardware codebase and completely isolated from AS2K.** Never mix variant state, storage media, or configurations. Instrumentation must not falsify the behavior observed by guest firmware.
 
-## Prioridad de ejecución
+## Execution priorities
 
-1. Emular **DragonBall VZ y los periféricos Dana** utilizando la infraestructura MAME.
-2. Validar primero con **EmuTOS-Dana** cargado en RAM, por ser una referencia de rutinas LCD, teclado ST/SPI2, reloj y otros periféricos.
-3. Construir las funciones de banco que realmente requieren nuestras pruebas, diferenciando stable y diag.
-4. Probar en el mismo hardware virtual el **firmware OS3K/NEO parcheado**. La emulación del arranque Palm/Dana desde Flash es un perfil distinto y requiere mapa físico aún no cerrado.
+1. Emulate **DragonBall VZ and Dana peripherals** using MAME infrastructure.
+2. Validate first with **EmuTOS-Dana** loaded into RAM, as a reference for LCD, ST/SPI2 keyboard, clock, and other peripheral routines.
+3. Develop the test-bench functions actually required by our tests, distinguishing stable from diag.
+4. Run **patched OS3K/NEO firmware** on the same validated virtual hardware. Emulation of the stock Palm/Dana Flash boot path is a separate profile whose physical mapping is not yet finalized.
 
-**No** se busca emular Palm OS por sí mismo, implementar Atari TOS ni lograr aceptación del proyecto oficial MAME. La publicación independiente y las contribuciones upstream son opcionales. No sustituir MMIO con hooks que simulen resultados exitosos.
+The goal is **not** to emulate Palm OS for its own sake, implement Atari TOS, or obtain acceptance into upstream MAME. Independent publication and upstream contributions are optional. Do not replace MMIO with hooks that simulate successful results.
 
-## Publicación y uso del repositorio
+## Publication and repository use
 
-Este repositorio documenta una implementación **todavía no construida** y no incluye ROM, firmware comercial ni código de terceros copiado. El proyecto no está afiliado a AlphaSmart, Palm ni MAMEDev. Las implementaciones externas enlazadas conservan sus respectivas licencias y titulares; **un enlace no autoriza copiar su código**.
+This repository documents an implementation **not yet built** and contains no ROMs, commercial firmware, or copied third-party code. The project is unaffiliated with AlphaSmart, Palm, or MAMEDev. Linked external implementations retain their respective copyright holders and licenses; **linking to code does not authorize copying it**.
 
-**[Revisión de procedencia, riesgos y costos de GitHub Actions](docs/PUBLICATION_REVIEW_20261013.md).** Un repositorio público no equivale automáticamente a un proyecto con licencia abierta: la licencia del futuro código propio y las obligaciones al incorporar MAME/EmuTOS/POSE deberán revisarse antes de su redistribución.
-## Documentación
+**[Provenance, risk, and GitHub Actions cost review](docs/PUBLICATION_REVIEW_20261013.md).** A public repository is not automatically an open-licensed project: the license for future project-owned code and the obligations associated with incorporating MAME/EmuTOS/POSE must be reviewed before redistribution.
 
-- [Arquitectura stable/diag](docs/ARCHITECTURE.md).
-- [**Plan maestro incremental (autoritativo)**](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md): microincrementos, pruebas por periférico, regresiones y criterios PASS/FAIL/BLOCKED.
-- [Índice del plan anterior D0–D8](docs/INCREMENTAL_PLAN.md): equivalencias históricas, supersedidas en detalle por el plan maestro.
-- [Reglas de trabajo AS2K](docs/WORKFLOW_AS2K.md).
-- [Fuentes técnicas y revisiones fijadas](docs/SOURCES.md).
-- [**D0.1 — Auditoría de reutilización MAME/VZ**](docs/D0_1_MAME_VZ_REUSE_AUDIT.md): SPEC_READY documental.
+## Documentation
+
+- [Stable/diag architecture](docs/ARCHITECTURE.md).
+- [**Authoritative incremental master plan**](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md): micro-increments, peripheral-specific tests, regressions, and PASS/FAIL/BLOCKED criteria.
+- [Historical D0–D8 plan index](docs/INCREMENTAL_PLAN.md): historical mappings superseded in detail by the master plan.
+- [AS2K operating rules](docs/WORKFLOW_AS2K.md).
+- [Technical sources and pinned revisions](docs/SOURCES.md).
+- [**D0.1 — MAME/VZ reuse audit**](docs/D0_1_MAME_VZ_REUSE_AUDIT.md): documentary SPEC_READY.
 - [**D0.2 — EZ/VZ register contract**](docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md): SPEC_READY; VZ MMIO mapping and manufacturer errata.
 - [**D0.3 — EmuTOS-Dana guest image/loader**](docs/D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md): SPEC_READY source/build recipe, image binary/hash unavailable. **D0.4 documented.**
 - [**D0.4 — RAM/CPU/bus entry contract**](docs/D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md): SPEC_READY documentation.
 - [**D0.5 — Deterministic test harness and evidence**](docs/D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md): SPEC_READY documentary.
 - [**D0.6 — First independent Dana-stable/Dana-diag MAME builds**](docs/D0_6_FIRST_MAME_DRIVER_CANDIDATE.md): SPEC_READY documentary; next D1.1 pending explicit approval.
-- [Punto de continuación en otro chat](docs/HANDOFF.md).
+- [Cross-conversation continuation point](docs/HANDOFF.md).
 
-## Relación con otros repositorios
+## Relationship to other repositories
 
-- **[DANA-OS3K](https://github.com/SamDelorean/Dana-OS3K)**: documentación de hardware, firmware y adaptación OS3K, y el manifiesto maestro de fuentes.
-- **[DANA-emu](https://github.com/SamDelorean/DANA-emu)**: desarrollo exclusivo del emulador.
-- **[EmuTOS-Dana](https://github.com/davidgiven/emutos/tree/dana)** y **[POSE-Dana (Retro68)](https://github.com/csnover/Retro68/tree/palmos/PalmUtils/poser)**: referencia de hardware, con licencias que deben respetarse.
-- **[MAME-AS3K](https://github.com/SamDelorean/mame-as3k)**: infraestructura MAME/DragonBall EZ existente, **no un emulador Dana funcional**.
+- **[DANA-OS3K](https://github.com/SamDelorean/Dana-OS3K)**: hardware and firmware research, OS3K adaptation, and the master source manifest.
+- **[DANA-emu](https://github.com/SamDelorean/DANA-emu)**: emulator development only.
+- **[EmuTOS-Dana](https://github.com/davidgiven/emutos/tree/dana)** and **[POSE-Dana (Retro68)](https://github.com/csnover/Retro68/tree/palmos/PalmUtils/poser)**: hardware references, subject to their licenses.
+- **[MAME-AS3K](https://github.com/SamDelorean/mame-as3k)**: existing MAME/DragonBall EZ infrastructure, **not a working Dana emulator**.
 
-## Estado de traslado — 2026-10-13
+## Handoff status — 2026-10-13
 
-**Preparación documental.** Todavía no existe un controlador MC68VZ328 de este proyecto dentro de MAME, ni ejecutable Dana, ni prueba EmuTOS dentro del emulador. No se utilizó Commander durante esta preparación. **D0.1 quedó SPEC_READY documental**, con revisión GitHub fijada y mapa de reutilización; el checkout de T todavía no está comprobado. **Current next increment: D1.1 — two independent, isolated Dana-stable and Dana-diag builds (not yet authorised).** D0.1–D0.6 are SPEC_READY documentation only; guest binary/hash and actual build remain unverified. No se ha probado ningún emulador Dana. Consultar [plan maestro](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) y [HANDOFF](docs/HANDOFF.md).
+**Documentary preparation.** This project does not yet have an MC68VZ328 driver in MAME, a Dana executable, or an EmuTOS-on-emulator test. No Commander calls were made during this preparation. **D0.1 reached documentary SPEC_READY**, with a pinned GitHub revision and reuse map; the T checkout remains unverified. **Current next increment: D1.1 — two independent, isolated Dana-stable and Dana-diag builds (not yet authorised).** D0.1–D0.6 are SPEC_READY documentation only; guest binary/hash and actual build remain unverified. No Dana emulator has been tested. Consult the [master plan](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) and [HANDOFF](docs/HANDOFF.md).

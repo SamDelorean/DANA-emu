@@ -1,49 +1,49 @@
-# Arquitectura prevista — DANA-stable y DANA-diag
+# Planned architecture — Dana-stable and Dana-diag
 
 **Binding build architecture, 2026-10-13:** from D1.1 there are **two independent reduced MAME builds**: `Dana-stable` and `Dana-diag`. Each has its own SUBTARGET, BUILDDIR, executable, configuration and evidence; both use the same Dana MAME machine/CPU/device sources. Build them sequentially, exactly `-j3` each, in an isolated Dana-only MAME source snapshot that neither touches nor shares generated build products with AS2K. D6.1 later hardens launchers, persistent storage and user-facing deployment, **not** the creation of the two builds. Frozen commands and tests: [D0.6 candidate](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md). None has actually been built.
 
-**Estado: especificación inicial. Ninguna variante está implementada.**
+**Status: initial specification. Neither variant has been implemented.**
 
-## Un motor común, dos productos
+## One shared engine, two products
 
-El proyecto se basa en un **MAME reducido**, que reutiliza el núcleo Motorola 68000, planificador de dispositivos, mapa de direcciones, depurador y controladores ya disponibles cuando resulte apropiado. El dispositivo **MC68VZ328** debe modelarse de forma fiel. **Primero se comprobará si existe ya un driver VZ/NEO reutilizable en la versión MAME real de trabajo**, y se adaptará en lugar de duplicarlo cuando corresponda. En los árboles MAME hasta ahora auditados sólo se encontró MC68328/MC68EZ328; no se ha demostrado VZ nativo. El MC68EZ328 existente no constituye por sí solo ese dispositivo.
+The project uses **reduced MAME**, reusing the Motorola 68000 core, device scheduler, address mapping, debugger, and available device implementations where appropriate. The **MC68VZ328** device must be modeled faithfully. **First check whether a reusable VZ/NEO driver already exists in the actual MAME work revision**, and adapt it instead of duplicating it when applicable. Only MC68328/MC68EZ328 devices were found in MAME trees audited to date; native VZ support has not been demonstrated. The existing MC68EZ328 is not itself a substitute for the VZ device.
 
-La lógica compartida modelará RAM y chip-select, MMIO VZ, LCD, SPI1/2, UART1, GPIO, Timer1, IRQ y el microcontrolador auxiliar ST del Dana. **Un solo modelo de hardware para ambas variantes**: no introducir parches distintos de hardware para que pasen sus respectivas pruebas.
+Shared logic will model RAM and chip selects, VZ MMIO, LCD, SPI1/2, UART1, GPIO, Timer1, IRQ, and Dana's ST auxiliary microcontroller. **One hardware model for both variants**: do not introduce variant-specific hardware patches just to satisfy separate tests.
 
-### Producto stable
+### Stable product
 
-Emulador ligero de uso diario: escalado LCD 560 × 160, teclado funcional, carga de imagen seleccionable y mensajes de fallo inteligibles; controles de reinicio, pausa, guardado/restauración de estado y medios externos sólo cuando cada servicio tenga una implementación real. Experiencia de instalación y ejecución sencilla, siguiendo la filosofía del AS2K-stable.
+Lightweight everyday emulator: scaled 560 × 160 LCD, working keyboard, selectable image loading, and comprehensible error messages; reset, pause, save/restore, and removable-media controls only when their underlying services are genuinely implemented. Straightforward installation and launch experience, following the AS2K-stable philosophy.
 
-### Producto diag
+### Diagnostic product
 
-Mismo motor y comportamiento del guest, con instrumentación **opt-in**: PC/SR/SP, excepciones, vectores IRQ, lecturas/escrituras de MMIO, GPIO, SPI1/2, UART, framebuffer y regiones de memoria. Registros legibles por máquina, trazas activadas por evento o intervalo, snapshots con hash y fallas reproducibles. Idealmente compatibilidad con herramientas nativas del depurador MAME y corridas sin interfaz para automatizar pruebas.
+The same engine and guest-visible behavior, with **opt-in instrumentation**: PC/SR/SP, exceptions, IRQ vectors, MMIO reads/writes, GPIO, SPI1/2, UART, framebuffer and memory regions. Machine-readable logs, event/interval-triggered traces, hashed snapshots and reproducible failures. Ideally, use native MAME debugger facilities and headless runs for automated testing.
 
-No permitir que el perfil diagnóstico altere el orden de memoria, el estado de un periférico o las entradas del firmware bajo prueba. Estable y diagnóstico deben tener configuración, NVRAM, imágenes SD y snapshots aislados.
+The diagnostic profile must not alter memory ordering, peripheral state, or guest firmware inputs. Stable and diagnostic variants must isolate configuration, NVRAM, SD images and snapshots.
 
-## Perfiles de firmware diferenciados
+## Distinct firmware profiles
 
-**R — RAM/EmuTOS (primer objetivo):** recrear explícitamente el estado posterior a DanaRun o dbztool de 4 MiB de RAM en 0x00000000–0x003FFFFF y cargar una imagen EmuTOS-Dana. Este **no** equivale al reset eléctrico original. Confirmar formato exacto y punto de entrada de la imagen antes de programar el loader.
+**R — RAM/EmuTOS (first target):** explicitly recreate the 4 MiB post-DanaRun/dbztool RAM state at 0x00000000–0x003FFFFF and load an EmuTOS-Dana image. This is **not** equivalent to original power-on reset. Confirm the exact image format and entry point before programming the loader.
 
-**P — Palm/Flash stock (posterior):** reconstruir reset, chip-select, boot ROM y memoria Flash. El firmware extraído de actualizadores US/UK 1.2/1.5 **no ha sido identificado como volcado físico completo**. Su imagen no puede colocarse en una dirección de bus arbitraria y declararse ROM de arranque.
+**P — Stock Palm/Flash (later):** reconstruct reset, chip selects, boot ROM and Flash memory. Firmware extracted from US/UK 1.2/1.5 updaters **has not been established to be a complete physical dump**. Such an image cannot simply be placed at an arbitrary bus address and declared a boot ROM.
 
-**O — OS3K parcheado (posterior):** ejecutar firmware de NEO adaptado al hardware virtual validado. No crear este binario dentro del repositorio del emulador; pertenece a DANA-OS3K.
+**O — Patched OS3K (later):** run adapted NEO firmware on validated virtual hardware. Do not build this firmware in the emulator repository; it belongs to DANA-OS3K.
 
-## Compatibilidad y reutilización
+## Compatibility and reuse
 
-- Motor y periféricos MAME: [SamDelorean/mame-as3k](https://github.com/SamDelorean/mame-as3k), como referencia; no modificar ni destruir el emulador AS2K existente.
-- Investigación NEO/NEO 2: [auditoría de código MAME y emulador NEO firmware-first](NEO_NEO2_REUSE_AUDIT.md). CPU VZ compartida, pero periféricos de placa diferentes; el proyecto Rust [neo-re/alpha-emu](https://github.com/ioma8/neo-re/tree/master/alpha-emu) es **referencia**, no la base MAME del producto.
-- Modelo VZ genérico: [POSE original, EmRegsVZ](https://github.com/cloudpilot-emu/pose-original) y [CloudpilotEmu](https://github.com/cloudpilot-emu/cloudpilot-emu).
-- Modelo específico Dana: [Retro68 / EmRegsVZAlphaSmart](https://github.com/csnover/Retro68/tree/palmos/PalmUtils/poser/SrcShared/Hardware) y EmSPISlaveSTMicro.
-- Hardware observado: [EmuTOS-Dana](https://github.com/davidgiven/emutos/tree/dana), inicialización, GPIO, ST, SD y LCD.
-- Bootstrap RAM: [dbztool](https://github.com/davidgiven/dbztool).
-- Fuentes cerradas por commit: [SOURCES](SOURCES.md).
+- MAME engine and peripherals: [SamDelorean/mame-as3k](https://github.com/SamDelorean/mame-as3k), as a reference; do not modify or destroy the existing AS2K emulator.
+- NEO/NEO 2 research: [MAME code and firmware-first NEO emulator audit](NEO_NEO2_REUSE_AUDIT.md). The VZ CPU family is shared, but board peripherals differ; the Rust project [neo-re/alpha-emu](https://github.com/ioma8/neo-re/tree/master/alpha-emu) is a **reference**, not the product's MAME base.
+- Generic VZ model: [original POSE EmRegsVZ](https://github.com/cloudpilot-emu/pose-original) and [CloudpilotEmu](https://github.com/cloudpilot-emu/cloudpilot-emu).
+- Dana-specific model: [Retro68 / EmRegsVZAlphaSmart](https://github.com/csnover/Retro68/tree/palmos/PalmUtils/poser/SrcShared/Hardware) and EmSPISlaveSTMicro.
+- Observed hardware usage: [EmuTOS-Dana](https://github.com/davidgiven/emutos/tree/dana), including initialization, GPIO, ST, SD and LCD.
+- RAM bootstrap: [dbztool](https://github.com/davidgiven/dbztool).
+- Commit-pinned sources: [SOURCES](SOURCES.md).
 
-**Restricción de licencias:** POSE/Retro68 y EmuTOS incorporan GPLv2+; CloudpilotEmu/POSE64 usan GPLv3. No copiar sus archivos directamente a un dispositivo MAME de licencia distinta sin evaluación de compatibilidad. La documentación y los contratos observables son referencias para la futura implementación.
+**Licensing restriction:** POSE/Retro68 and EmuTOS include GPLv2+ code; CloudpilotEmu/POSE64 use GPLv3. Do not copy these files into differently licensed MAME devices without a license-compatibility review. Documentation and observable behavior contracts are references for future implementation.
 
-## Orden de subsistemas
+## Subsystem order
 
-Motor CPU/memoria/loader → PLL/timer/IRQ/UART → framebuffer LCD → ST/SPI2/teclado → arranque interactivo EmuTOS → SD SPI1 → táctil → RAM extra/Flash real/energía/USB/IR según necesidades OS3K.
+CPU/memory/loader engine → PLL/timer/IRQ/UART → LCD framebuffer → ST/SPI2/keyboard → interactive EmuTOS boot → SPI1 SD → touchscreen → additional RAM/physical Flash/power/USB/IR as required by OS3K.
 
-## Criterio de producto
+## Product acceptance principle
 
-El valor está en reproducir pruebas con el firmware invitado real, no en cubrir todas las funciones del Palm original ni obtener aprobación de MAME upstream. Cada funcionalidad se admite por necesidad verificada; no implementar prestaciones de presentación que oculten una falta de fidelidad interna.
+The value comes from reproducing tests against real guest firmware, not implementing every feature of the original Palm platform or winning upstream MAME acceptance. Admit each feature only when supported by a verified need; do not implement cosmetic features that conceal a lack of internal fidelity.
