@@ -96,7 +96,7 @@ Mandatory first-run evidence:
 
 ## 7. Authorisation and residual risks
 
-**D0.6 approves NOTHING operational.** It only freezes the first future scope. "Siguiente" after D0.6 identifies D1.1 and may prepare the requested source change in Git, but **does not carry any earlier Commander authorisation** or imply permission to execute a remote job/compile. Any T use requires a fresh explicit, bounded approval. The universal default maximum is **three Commander calls per authorised intervention**, preferably a single bundled `dcjob launch`; Drive is used to retrieve results, not Commander polling. Host builds use **-j3**.
+**D0.6 approves NOTHING operational.** It only freezes the first future scope. "Siguiente" after D0.6 identifies D1.1 **for explicit implementation authorization**; it does not silently permit executable source edits or carry prior Commander authorisation, and does not imply permission to execute a remote job/compile. Any T use requires a fresh explicit, bounded approval. The universal default maximum is **three Commander calls per authorised intervention**, preferably a single bundled `dcjob launch`; Drive is used to retrieve results, not Commander polling. Host builds use **-j3**.
 
 Open dependencies, without guesswork:
 
