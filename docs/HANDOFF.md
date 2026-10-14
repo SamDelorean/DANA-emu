@@ -1,5 +1,7 @@
 # DANA-emu — Canonical handoff and exact continuation
 
+**MANDATORY FIRST READ:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). This contains the permanent no-drift startup protocol, remote Commander identity/call accounting, Drive pipeline, tests, isolation rules and current cursor. Do not restart past work or request the rules again.
+
 **Updated: 2026-10-13 source review; current technical cursor D0.4.** This file supersedes older D0.3 handoff text preserved in Git history.
 
 ## 1. Purpose and immutable architecture
