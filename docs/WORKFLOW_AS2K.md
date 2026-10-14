@@ -1,47 +1,47 @@
-# Directivas operativas heredadas del emulador AS2K
+# Operational directives inherited from the AS2K emulator
 
 **MANDATORY FOR NEW CONVERSATIONS:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). It consolidates the verified Drive operating records, canonical T deviceId, dcjob launcher, three-call maximum subject to new explicit authorization, English Git rule and exact D1.1 checkpoint with two independent Dana builds. No Commander for static documentary work.
 
-**Objetivo:** producir un emulador estable y uno diagnóstico, reducidos, usando MAME como plataforma propia de pruebas.
+**Objective:** produce reduced stable and diagnostic emulators, using MAME as an independent testing platform.
 
-## Plan autoritativo
+## Authoritative plan
 
-El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **No document-only increment may be marked as functional PASS.** D0.1–D0.6 are SPEC_READY documentation; **D1.1 is pending explicit approval**. Dana-stable and Dana-diag are independent MAME builds from D1.1; no Commander calls are authorized by this document.
+The complete plan, containing atomic increments and their tests, is maintained in [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **No document-only increment may be marked as functional PASS.** D0.1–D0.6 are SPEC_READY documentation; **D1.1 is pending explicit approval**. Dana-stable and Dana-diag are independent MAME builds from D1.1; this document authorizes no Commander calls.
 
-## Metodología establecida
+## Established methodology
 
-**Reutilización estática → diseño de incremento → candidata congelada → autorización explícita de ejecución → job autocontenido → T → evidencia por Drive → PASS/FAIL/BLOCKED → integración exclusiva de PASS.**
+**Static reuse → increment design → frozen candidate → explicit execution approval → self-contained job → T → Drive evidence → PASS/FAIL/BLOCKED → integration of PASS items only.**
 
-GitHub aloja fuentes y documentación; no sustituye compilación/ejecución real sobre la máquina T. La aceptación upstream MAME no es requisito y las pruebas de GitHub Actions no sustituyen el banco local.
+GitHub hosts source and documentation; it does not replace real compilation and execution on machine T. Upstream MAME acceptance is not required, and GitHub Actions tests do not replace the local test bench.
 
-## Máquina T y ejecución
+## Machine T and execution
 
-- Entorno T: spc-HP-t640-Thin-Client, usuario spc.
-- Repositorios de trabajo AS2K conocidos en /home/spc/Projects/alphasmart; Ghidra 12.1.3 en /home/spc/.local/opt/ghidra_12.1.3_PUBLIC; directorio Ghidra /home/spc/GhidraProjects.
-- **No inventar la ruta local de checkout DANA-emu ni de un binario MAME Dana**: esa ruta aún no se ha establecido ni verificado.
-- Para compilaciones T, política del usuario: **exactamente tres núcleos (-j3)**.
-- Commander no debe usarse sin **autorización explícita**; el presupuesto aprobado en otro frente o conversación no se transfiere automáticamente.
-- Drive transporta el único script SH/job autocontenido, resultados, fallas y evidencia. Usar lanzador real documentado **/home/spc/.local/bin/dcjob launch** sólo tras preparar el job y comprobar que no hay más de un job pendiente.
-- **No gastar Commander** en exploración de rutas, polling, lectura reiterada de logs, pruebas de conexión, instalaciones exploratorias o recopilación estática resoluble por GitHub/Drive.
-- Un job ejecuta autónomamente el alcance autorizado y deposita log, hashes, manifest, resultados y dictamen en Drive. Los temporales son aislados; no borrar ni alterar objetos de otros proyectos.
-- Ningún job puede escribir firmware físico del Dana ni modificar repositorios AS2K salvo orden expresa distinta.
+- T environment: `spc-HP-t640-Thin-Client`, user `spc`.
+- Known AS2K working repositories under `/home/spc/Projects/alphasmart`; Ghidra 12.1.3 at `/home/spc/.local/opt/ghidra_12.1.3_PUBLIC`; Ghidra project directory `/home/spc/GhidraProjects`.
+- **Do not invent a local DANA-emu checkout path or Dana MAME binary path**: neither has been established and verified.
+- For T compilation, the user's policy is **exactly three cores (`-j3`)**.
+- Commander requires **explicit authorization**; an approved budget in another workstream or conversation does not automatically transfer.
+- Drive transports the single self-contained SH/job, results, failures and evidence. Use the documented real launcher **`/home/spc/.local/bin/dcjob launch`** only after preparing the job and verifying that no more than one job is pending.
+- **Do not spend Commander calls** on path exploration, polling, repeated log reading, connectivity testing, exploratory installations, or static information available through GitHub/Drive.
+- One job autonomously executes the authorized scope and deposits logs, hashes, a manifest, results, and its verdict in Drive. Temporary areas must be isolated; do not delete or alter other projects' objects.
+- No job may write physical Dana firmware or modify AS2K repositories without a separate express instruction.
 
-## Separación estable/diagnóstico
+## Stable/diagnostic separation
 
 - From **D1.1**, compile **two separate Dana-stable and Dana-diag MAME targets**, independently of AS2K, with one shared CPU/hardware source code model; use distinct SUBTARGET and BUILDDIR settings. D6.1 later hardens runtime integration, not the first dual build.
-- Ejecutables, perfiles, imágenes RAM/ROM externas, SD, snapshots, registros y temporales separados.
-- **stable:** experiencia diaria y control de estado de sesión.
-- **diag:** trazas MMIO/CPU/IRQ/SPI, guards/snapshots, logs machine-readable y scripts de pruebas; siempre opt-in cuando una sonda pueda producir gran volumen.
-- La evidencia de diag sirve para calificar stable; un PASS de DIAG no reemplaza un smoke test de stable.
+- Isolate executables, profiles, external RAM/ROM images, SD, snapshots, logs and temporary files.
+- **Stable:** daily-use experience and session-state controls.
+- **Diag:** MMIO/CPU/IRQ/SPI traces, guards/snapshots, machine-readable logs, and test scripts; always opt-in when a probe can produce high-volume output.
+- Diagnostic evidence may qualify stable; a DIAG PASS does not replace a stable smoke test.
 
-## Proveniencia y derechos
+## Provenance and rights
 
-Registrar revisión exacta del código MAME y los hashes del binario de prueba. Un hash de ejecutable es evidencia de proveniencia, no un motivo para bloquear un test si se compiló legítimamente otro hash. No incorporar firmware comercial ni binarios Palm/Dana extraídos a GitHub. No copiar código GPL EmuTOS/POSE directamente en MAME sin revisar licencias.
+Record the exact MAME source revision and test-binary hashes. An executable hash establishes provenance; it is not grounds to block a test solely because a legitimately rebuilt executable has another hash. Do not commit commercial firmware or extracted Palm/Dana binaries to GitHub. Do not copy GPL EmuTOS/POSE code directly into MAME without reviewing licenses.
 
-## Referencias existentes del usuario
+## Existing user references
 
-- [DANA-OS3K: entorno T y Ghidra](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/07-ENTORNO-T-Y-GHIDRA.md)
-- [DANA-OS3K: directiva de emulador reducido](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/11-ALCANCE-EMULADOR-REDUCIDO.md)
-- [DANA-OS3K: arquitectura EmuTOS](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/08-EMULADOR-ARQUITECTURA-EMUTOS.md)
+- [DANA-OS3K: T environment and Ghidra](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/07-ENTORNO-T-Y-GHIDRA.md)
+- [DANA-OS3K: reduced emulator directive](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/11-ALCANCE-EMULADOR-REDUCIDO.md)
+- [DANA-OS3K: EmuTOS emulator architecture](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/08-EMULADOR-ARQUITECTURA-EMUTOS.md)
 
-Estas reglas rigen desde la preparación y durante todos los incrementos; no sustituirlas por un flujo improvisado.
+These rules apply from preparation through every increment. Do not replace them with an improvised workflow.
