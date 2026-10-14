@@ -1,6 +1,6 @@
 # DANA-emu
 
-**Start of any future session:** read [CANONICAL_CONTINUITY_AND_RULES.md](docs/CANONICAL_CONTINUITY_AND_RULES.md) first. It preserves the authoritative D0.6 cursor, all AS2K/Commander/Drive constraints, the English-only Git policy and the pre-action checklist; do not ask the user to reconstruct these rules. No remote authorization is inherited.
+**Start of any future session:** read [CANONICAL_CONTINUITY_AND_RULES.md](docs/CANONICAL_CONTINUITY_AND_RULES.md) first. It preserves the authoritative D1.1 cursor and the separate Dana-stable/Dana-diag builds, all AS2K/Commander/Drive constraints, the English-only Git policy and the pre-action checklist; do not ask the user to reconstruct these rules. No remote authorization is inherited.
 
 **Emulador propio y reducido del AlphaSmart Dana, basado en MAME.**
 
@@ -13,7 +13,7 @@ Proyecto de ingeniería para reproducir el hardware **AlphaSmart Dana / MC68VZ32
 | **dana-stable** | Emulador de uso cotidiano: carga de imágenes y ROM según soporte confirmado, pantalla, teclado, interfaz de control, persistencia de estado, lanzamiento e instalación sencillos | **Diseño inicial; no implementado** |
 | **dana-diag** | Banco de pruebas instrumentado: trazas CPU/MMIO, IRQ, RAM, GPIO, SPI, UART, LCD, snapshots y ejecuciones reproducibles | **Diseño inicial; no implementado** |
 
-**Una implementación de hardware común, dos perfiles separados.** Nunca mezclar estados, medios de almacenamiento o configuraciones de las variantes. La instrumentación no debe falsear el resultado observado por el firmware invitado (guest).
+**Two separately compiled Dana products from D1.1, sharing one hardware codebase and completely isolated from AS2K.** Nunca mezclar estados, medios de almacenamiento o configuraciones de las variantes. La instrumentación no debe falsear el resultado observado por el firmware invitado (guest).
 
 ## Prioridad de ejecución
 
@@ -40,7 +40,8 @@ Este repositorio documenta una implementación **todavía no construida** y no i
 - [**D0.2 — EZ/VZ register contract**](docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md): SPEC_READY; VZ MMIO mapping and manufacturer errata.
 - [**D0.3 — EmuTOS-Dana guest image/loader**](docs/D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md): SPEC_READY source/build recipe, image binary/hash unavailable. **D0.4 documented.**
 - [**D0.4 — RAM/CPU/bus entry contract**](docs/D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md): SPEC_READY documentation.
-- [**D0.5 — Deterministic test harness and evidence**](docs/D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md): SPEC_READY documentary; next D0.6.
+- [**D0.5 — Deterministic test harness and evidence**](docs/D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md): SPEC_READY documentary.
+- [**D0.6 — First independent Dana-stable/Dana-diag MAME builds**](docs/D0_6_FIRST_MAME_DRIVER_CANDIDATE.md): SPEC_READY documentary; next D1.1 pending explicit approval.
 - [Punto de continuación en otro chat](docs/HANDOFF.md).
 
 ## Relación con otros repositorios
@@ -52,4 +53,4 @@ Este repositorio documenta una implementación **todavía no construida** y no i
 
 ## Estado de traslado — 2026-10-13
 
-**Preparación documental.** Todavía no existe un controlador MC68VZ328 de este proyecto dentro de MAME, ni ejecutable Dana, ni prueba EmuTOS dentro del emulador. No se utilizó Commander durante esta preparación. **D0.1 quedó SPEC_READY documental**, con revisión GitHub fijada y mapa de reutilización; el checkout de T todavía no está comprobado. **Current next increment: D0.6 — freeze the first minimal MAME D1.1 candidate.** D0.1–D0.5 are SPEC_READY documentation only; guest binary/hash and actual build remain unverified. No se ha probado ningún emulador Dana. Consultar [plan maestro](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) y [HANDOFF](docs/HANDOFF.md).
+**Preparación documental.** Todavía no existe un controlador MC68VZ328 de este proyecto dentro de MAME, ni ejecutable Dana, ni prueba EmuTOS dentro del emulador. No se utilizó Commander durante esta preparación. **D0.1 quedó SPEC_READY documental**, con revisión GitHub fijada y mapa de reutilización; el checkout de T todavía no está comprobado. **Current next increment: D1.1 — two independent, isolated Dana-stable and Dana-diag builds (not yet authorised).** D0.1–D0.6 are SPEC_READY documentation only; guest binary/hash and actual build remain unverified. No se ha probado ningún emulador Dana. Consultar [plan maestro](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) y [HANDOFF](docs/HANDOFF.md).
