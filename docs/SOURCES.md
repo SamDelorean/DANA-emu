@@ -27,6 +27,7 @@
 - [D0.2 — EZ/VZ MMIO contract](D0_2_EZ_VZ_REGISTER_CONTRACT.md): **SPEC_READY**, manufacturer errata and MAME/POSE/EmuTOS comparisons, no functional tests.
 - [D0.3 — EmuTOS-Dana guest image and loader](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md): **SPEC_READY** source/build recipe, raw booter/payload layout and static constraints. **No built image or hash**.
 - [D0.4 — RAM, CPU and VZ bus bootstrap](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md): **SPEC_READY** documented low-memory vector/sysvar layout, virtual PC/SSP/SR, EmuTOS startup checkpoints and unresolved image/map dependencies. No runtime test.
+- [D0.5 — Deterministic MAME test harness/trace contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md): **SPEC_READY** documented fixture and bounded trace schemas, independent verification, PASS/FAIL/BLOCKED taxonomy and Drive evidence requirements. No code, run or test result.
 
 ## Evidencias ya documentadas
 
