@@ -1,6 +1,6 @@
 # DANA-emu — plan maestro incremental y de calificación
 
-**Plan autoritativo del emulador reducido.** Elaborado el 2026-10-13. Sustituye la granularidad del esquema D0–D8 previo sin invalidar la arquitectura, fuentes ni reglas AS2K. **Estado del desarrollo: ningún incremento funcional cerrado.** El siguiente trabajo es **D0.1**, preparación estática, no ejecución remota.
+**Plan autoritativo del emulador reducido.** Elaborado el 2026-10-13. Sustituye la granularidad del esquema D0–D8 previo sin invalidar la arquitectura, fuentes ni reglas AS2K. **Development status: no functional increments have passed. Current next task: D0.4 (RAM loader CPU/bus initial state); D0.1–D0.3 are SPEC_READY documentation only.** No remote execution is authorized by this plan.
 
 ## 1. Objetivo y productos
 
@@ -43,7 +43,7 @@ MAME inventariado contiene CPU 68000 y dispositivos MC68328/MC68EZ328; **no** se
 
 ## 4. Incrementos atómicos
 
-**Las filas de la siguiente tabla están TODAS PENDING.** Son una secuencia planificada, no resultados obtenidos. Un incremento sólo podrá pasar a SPEC_READY cuando su contrato incluya fixture y comprobación verificable.
+**Status note:** D0.1–D0.3 have SPEC_READY documentary records. All D0.4 onward remain PENDING unless explicitly marked otherwise. No document-only closure is a functional PASS.
 
 ### D0 — Referencias, modelo inicial y banco reproducible (sólo estático)
 
@@ -51,7 +51,7 @@ MAME inventariado contiene CPU 68000 y dispositivos MC68328/MC68EZ328; **no** se
 |---|---|---|
 | **D0.1** | Fijar versión/revisión del MAME de referencia y confirmar qué recursos Neo/VZ y EZ son reutilizables | **SPEC_READY**: [auditoría fechada](D0_1_MAME_VZ_REUSE_AUDIT.md). SHA de GitHub fijado; instalación T no verificada hasta preflight posterior |
 | **D0.2** | Completar tabla EZ frente a VZ por bloque | **SPEC_READY documental**: [contrato de registros y correcciones Motorola](D0_2_EZ_VZ_REGISTER_CONTRACT.md); bitfields finos aún se validarán por subsistema |
-| **D0.3** | Fijar invitado de prueba EmuTOS-Dana | Imagen verificable **o** receta reproducible de construcción, formato real, hash, entrada/relocación, sin confundir cargador RAM con reset físico |
+| **D0.3** | Fix the EmuTOS-Dana reference guest artifact | **SPEC_READY:** [source/build and RAM bootstrap contract](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md). Source commit, make target, raw binary stages and 0x2140 relocation recorded. **No built image/hash exists yet**; actual binary validation belongs to a future authorized build |
 | **D0.4** | Especificar el estado CPU/bus del loader RAM | Estado RAM 4 MiB, excepciones, SSP/PC/SR, vectores, CS/DRAM mínimos y tabla de primer contacto MMIO |
 | **D0.5** | Definir harness reproducible y trazas mínimas | Formatos, fixtures, marcadores independientes, límite de traza, reporte máquina y verificador host/guest |
 | **D0.6** | Congelar candidata D1.1 | Archivos y dispositivos MAME concretos, límites, reversión y primer test; ninguna compilación implícita |
@@ -175,7 +175,8 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 |---|---|---|
 | **D0.1** | **SPEC_READY (cierre documental)** | [Auditoría de reutilización MAME/VZ](D0_1_MAME_VZ_REUSE_AUDIT.md); commit de baseline GitHub fijado, checkout de T pendiente del primer preflight |
 | **D0.2** | **SPEC_READY (cierre documental)** | [Tabla EZ/VZ y correcciones de addendum](D0_2_EZ_VZ_REGISTER_CONTRACT.md), sin PASS de emulación |
-| **D0.3–D0.6** | **PENDING** | Imagen/loader EmuTOS, bus y fixture reproducible |
+| **D0.3** | **SPEC_READY (documentation only)** | [EmuTOS-Dana source/build and RAM handoff audit](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md); no binary SHA or test |
+| **D0.4–D0.6** | **PENDING** | Virtual CPU/bus post-bootstrap state, test harness and frozen D1 candidate |
 | D1.1–D1.5 | **PENDING** | Sólo después de D0 |
 | D2.1–D2.6 | **PENDING** | Sólo después de D1 |
 | D3.1–D3.5 | **PENDING** | Sólo después de D2 |
@@ -187,7 +188,7 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 
 **No saltar un bloqueo usando un stub que devuelva éxito artificialmente.** Ante evidencia insuficiente registrar exactamente el registro, evento, archivo o señal que falta, estudiar fuentes/repositorios y retomar ese mismo incremento. Cambios de orden requieren modificar este plan de forma explícita, motivada y trazable.
 
-**Punto de continuidad exacto: D0.3 — imagen y procedimiento reproducible del invitado EmuTOS-Dana.** D0.1 y D0.2 quedaron **SPEC_READY documentales**, sin PASS funcional. No hay comandos de ejecución autorizados por este documento.
+**Exact continuation cursor: D0.4 — define the virtual 4 MiB RAM bootstrap CPU/bus state (PC/SSP/SR, vectors, CS/DRAM preconditions and initial MMIO sequence).** D0.1, D0.2, and D0.3 are **SPEC_READY documentation only**, not functional PASS. Do not build, use Commander, or execute a guest without a new explicit authorization.
 
 ## 7. Referencias de control
 
