@@ -61,7 +61,7 @@ Detailed authoritative milestones are in **docs/DANA_EMU_INCREMENTAL_WORK_PLAN.m
 
 Before product changes, define: current cursor, one technical objective, dependencies, exact files allowed, source/base SHA, guest fixture, expected signals, bounded instrumentation, reproducible commands, functional test and regression coverage, failure/rollback behavior, and evidence location.
 
-- **D0 documentation:** SPEC_READY closes a source-audited specification, **not** functional testing. Proceed linearly from D0.4 to D0.5 only after D0.4 documentation is actually complete.
+- **D0 documentation:** SPEC_READY closes a source-audited specification, **not** functional testing. Advance only from the latest verified D0.x specification to the next planned D0.x task; no functional PASS is implied.
 - **D1 onward:** PASS requires *actual* execution and objective guest-visible evidence on T (or an expressly approved replacement test environment); compilation and CI structural checks alone are insufficient. FAIL and BLOCKED record exact causes, not guesses.
 - **Never reopen PASS** without evidence of a defect; never skip a blocking dependency by inventing a stub, pre-cooked framebuffer, fake interrupt or host-side simulation of a guest system call.
 - Differentiate a tool, connector, launch, test-harness, or infrastructure failure from a firmware/hardware-model functional failure. A connector error never proves a code defect.
