@@ -22,11 +22,13 @@ Meta: **dana-stable** y **dana-diag**, emuladores **reducidos** basados en un mi
 
 Documentación y estructura inicial listas. **No existe en este repositorio una compilación del emulador Dana, ni un núcleo VZ implementado y validado, ni dos ejecutables stable/diag terminados.** Ninguna prueba del firmware fue ejecutada en T por este frente. No se autorizó consumir Commander para crear esta estructura documental.
 
-## Punto exacto de continuación: D0.1
+## Punto exacto de continuación: D0.2
 
 **PLAN AUTORITATIVO:** [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). La sección D0 subdivide lo que antes era una única preparación general.
 
-**D0.1 = fijar la versión y revisión del MAME reutilizable, confirmar qué existe realmente de Neo/Neo2/VZ en código ya accesible, registrar archivos, licencias y diferencias respecto a Dana.** Esto es revisión estática, no compilación ni prueba T. No declarar PASS hasta completar tabla con procedencia, SHA y rutas verificadas.
+**D0.1 = SPEC_READY (documental).** Se cerró la revisión de fuentes mediante [D0_1_MAME_VZ_REUSE_AUDIT.md](D0_1_MAME_VZ_REUSE_AUDIT.md); el baseline candidato es **SamDelorean/mame-as3k @ c4e48388ca620472643110db2941ce70aa5f3c07**. La versión y ruta del checkout T **NO** están validadas y se confrontarán en el primer preflight ejecutable, sin gastar Commander para explorar. No hay PASS de emulación.
+
+**D0.2 = siguiente tarea única:** levantar una **tabla de equivalencia EZ ↔ VZ por dirección, ancho, bits, reset y efecto**, empezando por memoria/chip-select, PLL, IRQ, Timer1, UART1, LCD y SPI1/SPI2. Fuentes: MAME mc68328.cpp/h, POSE EmRegsVZ/M68VZ328Hwr.h, EmuTOS bios/dana.c, manual Motorola. Registros no cubiertos quedan UNKNOWN documentado; no programar todavía.
 
 ### Alcance histórico de D0, ahora dividido en D0.1–D0.6
 
@@ -39,4 +41,4 @@ No iniciar un árbol completo nuevo de MAME, la implementación de OS3K ni el co
 
 ## Frase de continuidad
 
-«Retoma DANA-emu en D0.1. Lee el PLAN MAESTRO docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md, las reglas WORKFLOW_AS2K.md y la auditoría NEO_NEO2_REUSE_AUDIT.md, además de research/sources.lock.json. Completa sólo la auditoría estática D0.1; sin Commander ni compilación salvo autorización explícita».
+«Retoma DANA-emu en D0.2. D0.1 está SPEC_READY documental ([auditoría](D0_1_MAME_VZ_REUSE_AUDIT.md)). Lee el PLAN MAESTRO docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md, las reglas WORKFLOW_AS2K.md y research/sources.lock.json. Levanta únicamente la tabla EZ frente a VZ, sin Commander, compilación ni implementación».
