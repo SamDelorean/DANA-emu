@@ -10,7 +10,8 @@ Meta: **dana-stable** y **dana-diag**, emuladores **reducidos** basados en un mi
 
 ## Información disponible y reproducible
 
-- MAME AS3K contiene infraestructura Motorola 68000, MC68328/MC68EZ328 y LCD DragonBall, **pero no MC68VZ328 específico** en la revisión inventariada.
+- El Neo físico usa **DragonBall VZ**, también presente en Dana; confirmar por hardware la variante exacta de Neo 2. El MAME AS3K inventariado contiene MC68328/MC68EZ328 y el skeleton **AlphaSmart 3000 (EZ)**, **no** un driver completo Neo/Neo2 ni dispositivo MC68VZ328 en esa revisión. La lista `alphasmart_kapps.xml` cataloga SmartApplets Neo/OS3K, pero **no** es un emulador de Neo.
+- **ioma8/neo-re/alpha-emu** contiene trabajo abierto (pero licencia de reutilización aún no confirmada) de emulación **firmware-first de NEO**, fuera de MAME: RAM/MMIO VZ, teclado, LCD y timer, con pruebas headless. Consultar [docs/NEO_NEO2_REUSE_AUDIT.md](NEO_NEO2_REUSE_AUDIT.md) antes de escribir el dispositivo de Dana.
 - El port EmuTOS-Dana de David Given documenta ejecución con 4 MiB de RAM, LCD 560×160 1bpp, IRQ, timer1, UART1, microcontrolador ST del teclado por SPI2, SD por SPI1 y táctil.
 - Hay código GPL específico del **Dana** en **Retro68 rama palmos**: EmRegsVZAlphaSmart.cpp/h y EmSPISlaveSTMicro.cpp/h. Es fuente importante para GPIO, IRQ y protocolo ST, pero debe evitarse su copia directa a MAME sin auditar licencias.
 - POSE original tiene EmRegsVZ.cpp y el layout M68VZ328Hwr.h del DragonBall VZ, con diferencias de fidelidad respecto a hardware real.
@@ -24,7 +25,7 @@ Documentación y estructura inicial listas. **No existe en este repositorio una 
 ## Siguiente incremento propuesto: D0 (sólo preparación técnica)
 
 1. Fijar con evidencia la versión y la revisión del MAME que se reutilizará, y la ruta real del árbol de trabajo en T cuando haga falta; no inventar checkout/rutas.
-2. Elaborar diferencia precisa del dispositivo MAME MC68EZ328 contra registros VZ y la implementación VZ en POSE/Retro68; identificar reutilizable frente a faltante, sin duplicación.
+2. Elaborar diferencia precisa del MAME MC68EZ328, la arquitectura compartida Neo/Dana DragonBall VZ, y la implementación VZ de POSE/Retro68. Examinar también el emulador firmware-first `ioma8/neo-re/alpha-emu` (fuera de MAME) y cualquier controlador Neo/VZ WIP presente en el árbol MAME real de T; distinguir periféricos externos para no duplicarlos ni confundirlos.
 3. Definir la primera candidata de driver VZ y loader RAM EmuTOS: archivos exactos a tocar, imagen de prueba identificada, mapa de memoria, punto de entrada, evidencia de PC/SP, interruptores de instrumentación, checks deterministas.
 4. Cerrar el alcance de D1 y sólo entonces pedir autorización para preparar/ejecutar en T un job Drive-first. **No desarrollar teclado/UI/SD antes de tener núcleo y timer ejecutando correctamente un guest.**
 
