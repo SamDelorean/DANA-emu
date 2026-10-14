@@ -2,6 +2,10 @@
 
 **Objetivo:** producir un emulador estable y uno diagnóstico, reducidos, usando MAME como plataforma propia de pruebas.
 
+## Plan autoritativo
+
+El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **Ningún incremento cerrado por mera documentación puede marcarse PASS funcional.** El siguiente es D0.1 y no usa Commander.
+
 ## Metodología establecida
 
 **Reutilización estática → diseño de incremento → candidata congelada → autorización explícita de ejecución → job autocontenido → T → evidencia por Drive → PASS/FAIL/BLOCKED → integración exclusiva de PASS.**
