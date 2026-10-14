@@ -2,7 +2,7 @@
 
 **Mandatory session guard:** read [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md) before any action. It preserves the universal AS2K rules, execution authorization limits, source checkpoints, and exact next cursor. This plan alone does not authorize remote execution.
 
-**Plan autoritativo del emulador reducido.** Elaborado el 2026-10-13. Sustituye la granularidad del esquema D0–D8 previo sin invalidar la arquitectura, fuentes ni reglas AS2K. **Development status: no functional increments have passed. Current next task: D0.6 (freeze the first D1.1 MAME candidate); D0.1–D0.5 are SPEC_READY documentation only.** No remote execution is authorized by this plan.
+**Plan autoritativo del emulador reducido.** Elaborado el 2026-10-13. Sustituye la granularidad del esquema D0–D8 previo sin invalidar la arquitectura, fuentes ni reglas AS2K. **Development status: no functional increments have passed. Current next task: D1.1 PENDING (awaiting explicit authorization for implementation and execution); D0.1–D0.6 are SPEC_READY documentation only. **Dana-stable and Dana-diag require independent builds from D1.1, not D6.**** No remote execution is authorized by this plan.
 
 ## 1. Objetivo y productos
 
@@ -56,7 +56,7 @@ MAME inventariado contiene CPU 68000 y dispositivos MC68328/MC68EZ328; **no** se
 | **D0.3** | Fix the EmuTOS-Dana reference guest artifact | **SPEC_READY:** [source/build and RAM bootstrap contract](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md). Source commit, make target, raw binary stages and 0x2140 relocation recorded. **No built image/hash exists yet**; actual binary validation belongs to a future authorized build |
 | **D0.4** | Specify virtual RAM bootstrap CPU/bus state | **SPEC_READY documentary:** [contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md); includes 4 MiB RAM, vectors, SSP/PC/SR policy, memory-init ordering and first MMIO; no runtime validation |
 | **D0.5** | Specify deterministic fixtures, trace and evidence schema | **SPEC_READY documentary:** [trace/evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md). No harness, fixture files or runtime PASS yet |
-| **D0.6** | Congelar candidata D1.1 | Archivos y dispositivos MAME concretos, límites, reversión y primer test; ninguna compilación implícita |
+| **D0.6** | Freeze first dual-build MAME candidate | **SPEC_READY documentary:** [Dana-stable and Dana-diag independent build contract](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md); no source changes or compilation |
 
 **Entrega D0:** contrato ejecutable para el primer incremento MAME, no un emulador funcional. D0.1–D0.6 no consumen Commander mientras sólo se puedan resolver mediante fuentes/Drive.
 
@@ -64,7 +64,7 @@ MAME inventariado contiene CPU 68000 y dispositivos MC68328/MC68EZ328; **no** se
 
 | ID | Único cambio de producto | Prueba de cierre en T |
 |---|---|---|
-| **D1.1** | Introducir driver Dana mínimo y configuración reducida de build, sin periféricos simulados | Compila candidato aislado; el driver es seleccionable; smoke de otros drivers preservado |
+| **D1.1** | Introduce a minimal Dana skeleton driver and independently compile Dana-stable **and** Dana-diag, both from one MAME hardware source | **Both** isolated builds compile, each enumerates `asmdana`, old drivers remain untouched; no emulator guest runtime claim |
 | **D1.2** | Mapear 4 MiB RAM/lecturas y escrituras 68k; sin MMIO nuevo | Fixture guest lee/escribe 8/16/32 bits, BE correcto, alineación y límites sin corrupción |
 | **D1.3** | Implementar decodificación de ventana de registros VZ (MMIO) con valores reset básicos | Traza direccionada demuestra offsets y anchos 8/16/32, efectos de byte lanes, acceso inválido identificable |
 | **D1.4** | Añadir cargador del payload EmuTOS-Dana **RAM-only** | Verifica tamaño/hash, colocación, SSP/PC y entrega del control, sin reivindicar cold boot físico |
@@ -124,11 +124,11 @@ La matriz de NEO no se reutiliza como si fuera ST. La referencia prioritaria es 
 
 ### D6 — Productos stable y diag de calidad diaria
 
-D5 valida primero la paridad al encender/desactivar sondas dentro de una base común; **D6.1 formaliza por primera vez los dos productos separados**. No confundir ambos criterios.
+Dana-stable and Dana-diag are **already separate compiled products from D1.1**. D5 validates guest-visible parity. **D6.1 upgrades and hardens** existing independent launchers, media, configuration and state isolation for daily use; it does **not** introduce the dual-build separation for the first time.
 
 | ID | Único incremento | Prueba de cierre en T |
 |---|---|---|
-| **D6.1** | Separar lanzadores, configuración y datos stable/diag | Build reducido de ambas variantes; rutas/cachés/estados independientes |
+| **D6.1** | Harden existing stable/diag launchers, configuration, persistence and state isolation | Both builds already exist since D1.1; verify clean runtime state, media/caches and deployment separately |
 | **D6.2** | Activar trazas DIAG selectivas y bounded logs | Trace CPU/MMIO/IRQ/SPI reproducible sin inundar disco; paridad con stable |
 | **D6.3** | Automatizar smoke y regresiones headless | Script reproduce casos D1–D5 y emite resultado estructurado de cada caso |
 | **D6.4** | Guardar/restaurar estado completo | Checkpoint de CPU, RAM y periféricos; continuación determinista tras restore |
@@ -180,7 +180,8 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 | **D0.3** | **SPEC_READY (documentation only)** | [EmuTOS-Dana source/build and RAM handoff audit](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md); no binary SHA or test |
 | **D0.4** | **SPEC_READY (documentation only)** | [Post-bootstrap RAM/CPU/bus entry contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md), no MAME functional PASS |
 | **D0.5** | **SPEC_READY (documentation only)** | [Deterministic fixture, bounded trace and evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md), no actual tests |
-| **D0.6** | **PENDING: NEXT** | Freeze the initial D1.1 MAME candidate, exact file allowlist and test/rollback plan |
+| **D0.6** | **SPEC_READY (documentation only)** | [First MAME driver, dual-build test and rollback contract](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md), no compilation |
+| **D1.1** | **PENDING — approval required** | Two independent reduced builds, Dana-stable and Dana-diag; shared source, isolated build and evidence |
 | D1.1–D1.5 | **PENDING** | Sólo después de D0 |
 | D2.1–D2.6 | **PENDING** | Sólo después de D1 |
 | D3.1–D3.5 | **PENDING** | Sólo después de D2 |
@@ -192,7 +193,7 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 
 **No saltar un bloqueo usando un stub que devuelva éxito artificialmente.** Ante evidencia insuficiente registrar exactamente el registro, evento, archivo o señal que falta, estudiar fuentes/repositorios y retomar ese mismo incremento. Cambios de orden requieren modificar este plan de forma explícita, motivada y trazable.
 
-**Exact continuation cursor: D0.6 — freeze the initial D1.1 MAME reduced candidate and its file/test/evidence/rollback contract.** D0.1–D0.5 are **SPEC_READY documentation only**, not functional PASS. Do not build, use Commander, or execute a guest without a new explicit authorization.
+**Exact continuation cursor: D1.1 PENDING — first isolated dual build of Dana-stable and Dana-diag, subject to explicit implementation and remote authorizations.** D0.1–D0.6 are **SPEC_READY documentation only**, not functional PASS. Do not build, use Commander, or execute a guest without a new explicit authorization.
 
 ## 7. Referencias de control
 
