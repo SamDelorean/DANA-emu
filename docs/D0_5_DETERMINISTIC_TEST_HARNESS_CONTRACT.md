@@ -23,19 +23,19 @@ The future test file **fixture.json** shall use a documented schema version. All
 
 | Field | Type / rule | Meaning |
 |---|---|---|
-| schema_version | string, exact \`dana-fixture-v1\` | Reject unsupported versions |
-| case_id / increment_id | stable strings | One technical assertion group; e.g. \`D1.3-mmio-byte-lanes\` |
-| hardware_model | \`mc68vz328-dana\` | Physical target; no NEO GPIO or EZ-specific register substitutes |
-| emulator_variant | \`stable\` or \`diag\` | Same guest hardware, variant-specific instrumentation |
+| schema_version | string, exact `dana-fixture-v1` | Reject unsupported versions |
+| case_id / increment_id | stable strings | One technical assertion group; e.g. `D1.3-mmio-byte-lanes` |
+| hardware_model | `mc68vz328-dana` | Physical target; no NEO GPIO or EZ-specific register substitutes |
+| emulator_variant | `stable` or `diag` | Same guest hardware, variant-specific instrumentation |
 | emulator_source / emutos_source | SHA-1 git commit, not branch-only | Reproducible source provenance; official revision may change only with explicit record |
 | emulator_executable_sha256 | SHA-256 of actual binary **at run time** | Never invent or bypass; absent until build |
 | guest.path / guest.sha256 / guest.length | file, SHA-256, integer | Explicit exact guest input; synthetic unit-test guest must be marked as synthetic |
-| guest.kind / guest.profile | \`synthetic-68k\` or \`emutos-dana\`; \`R-direct\` or \`R-booter\` | Prevents confusing firmware and boot modes |
-| guest.map_sha256 / guest.symbols | actual map file SHA and symbols if EmuTOS | \`__text\`, \`_os_header\`, \`_stktop\`, \`__bss\`, \`__ebss\`; never hardcode unknown values |
+| guest.kind / guest.profile | `synthetic-68k` or `emutos-dana`; `R-direct` or `R-booter` | Prevents confusing firmware and boot modes |
+| guest.map_sha256 / guest.symbols | actual map file SHA and symbols if EmuTOS | `__text`, `_os_header`, `_stktop`, `__bss`, `__ebss`; never hardcode unknown values |
 | ram.size_bytes / ram.base / initial_fill | 4194304, 0, e.g. all-zero bytes unless fixture overrides | Defined **virtual post-bootstrap** memory only, not physical reset |
-| ram.patches[] | typed address, width, value, rationale | Every synthetic memory initialization e.g. \`_phystop\` at 0x42E explicitly recorded |
+| ram.patches[] | typed address, width, value, rationale | Every synthetic memory initialization e.g. `_phystop` at 0x42E explicitly recorded |
 | cpu.start.pc / sr / ssp / d[] / a[] | aligned, typed, provenance-tagged | Exact deterministic injected CPU state, distinguish observed versus synthetic |
-| vz.profile / initial_registers[] | \`post-bootstrap\` or other labelled, with width/reset/source | Never call dbztool values electrical defaults |
+| vz.profile / initial_registers[] | `post-bootstrap` or other labelled, with width/reset/source | Never call dbztool values electrical defaults |
 | input_events[] | virtual cycle and physical key/pin event + value | Immutable event ordering, never wall-clock keystroke timing |
 | termination | guest cycle/instruction ceiling, trace limit, wall safety timeout | Predictable, bounded stop; wall timeout is only host safety stop |
 | probes | named probe profile and capture bounds | Instrumentation choices are **not** guest inputs |
@@ -46,50 +46,50 @@ The future test file **fixture.json** shall use a documented schema version. All
 ### Reserved initial RAM policy
 
 - Default fixture: **all-zero 4 MiB RAM**, then explicit ordered patches by address and width; no hidden mutable global state between tests.
-- Mandatory explicit alternate for EmuTOS: \`_phystop = 0x00400000\` at **0x42E** when chosen as a synthetic post-bootstrap premise; \`_warm_magic\` at **0x6FC** must be either zeroed or set to **0x5741524D**, each in a named separate case.
+- Mandatory explicit alternate for EmuTOS: `_phystop = 0x00400000` at **0x42E** when chosen as a synthetic post-bootstrap premise; `_warm_magic` at **0x6FC** must be either zeroed or set to **0x5741524D**, each in a named separate case.
 - The verifier must not assume the same branch executes in both choices. The branch is determined by the guest's instructions and must be observed.
-- EmuTOS image placement, stack, \`__text\` and \`__bss\` depend on the exact **emutos.map** and image hash, which do not exist yet.
+- EmuTOS image placement, stack, `__text` and `__bss` depend on the exact **emutos.map** and image hash, which do not exist yet.
 - Never seed vector 0x10 or guest IRQ vectors on the host merely to make an asserted guest vector-write pass.
 
 ## 3. Bounded machine-readable trace v1
 
-**Proposed future format:** newline-delimited JSON (**events.ndjson**), with one header line and versioned event objects. A single monotonic \`seq\` orders events from one emulated machine timeline; \`vcycle\` records guest virtual cycles, not host elapsed milliseconds. Stable and diag need not write equal trace volume. Trace sources must indicate **CPU/DEVICE** versus **FIXTURE/HOST**.
+**Proposed future format:** newline-delimited JSON (**events.ndjson**), with one header line and versioned event objects. A single monotonic `seq` orders events from one emulated machine timeline; `vcycle` records guest virtual cycles, not host elapsed milliseconds. Stable and diag need not write equal trace volume. Trace sources must indicate **CPU/DEVICE** versus **FIXTURE/HOST**.
 
 Required universal fields (or explicit null for inapplicable event fields):
 
 | Field | Contract |
 |---|---|
-| schema | \`dana-trace-v1\` |
+| schema | `dana-trace-v1` |
 | run_id / case_id / variant | Correlate log with manifest and evidence |
 | seq | Zero-based, strictly increasing per run; detect duplicate/gaps unless bounded-drop is explicitly marked |
 | vcycle / icount | Monotonic guest clock/instruction counters; scheduling semantics must be frozen per driver |
-| origin | \`cpu\`, \`device\`, \`fixture\`, \`host\`, \`verifier\`; only CPU/device origins prove guest operation |
+| origin | `cpu`, `device`, `fixture`, `host`, `verifier`; only CPU/device origins prove guest operation |
 | event | Enumerated event type, see below |
 | pc / sr / ssp | Guest CPU state at event, when meaningful; exact semantics defined by event |
 | address / width_bits / value | Byte address, **8/16/32**, big-endian host-independent value, and read/write direction |
 | lane_mask | Byte lanes actually accessed for partial-register operations; essential for SPI/VZ and LCD |
-| device / register / instance | \`vz\`, \`ram\`, \`st\`, \`lcd\`, \`spi1\`, \`spi2\`, \`uart1\` etc; named MMIO register when resolved |
+| device / register / instance | `vz`, `ram`, `st`, `lcd`, `spi1`, `spi2`, `uart1` etc; named MMIO register when resolved |
 | aux | Small typed event-specific object; prohibit arbitrary huge dumps in a trace record |
-| probe_id / sampling | Probe identity or \`none\`; probes must never inject guest CPU/peripheral changes |
+| probe_id / sampling | Probe identity or `none`; probes must never inject guest CPU/peripheral changes |
 
 Event types:
 
 | Event | What it proves | Event-specific details |
 |---|---|---|
-| \`run.begin\` | Verified fixture was accepted, before guest enters CPU | Source/guest/binary hashes; profile ID; no guest PASS |
-| \`cpu.insn\` | CPU fetched/executed guest instruction (with precise hook position defined) | PC before fetch, opcode bytes if available, icount |
-| \`cpu.state\` | CPU checkpoint only | PC/SR/SSP, registers where required; distinguish state snapshots from single instruction events |
-| \`cpu.exception\` | Actual CPU exception dispatch | Exception vector, original PC, frame address, handler target, cause (illegal, address error, bus error, trap, IRQ) |
-| \`mem.read\` / \`mem.write\` | Bus access to actual guest RAM | Byte lanes, width, address, value and origin; bounded watch ranges |
-| \`mmio.read\` / \`mmio.write\` | Bus access serviced by VZ device mapping | Full address, width, lane, PC, value; no host-injected faux register state |
-| \`irq.assert\` / \`irq.clear\` / \`irq.ack\` | Interrupt-source change and CPU acceptance | Source, mask, pending, priority, vector, CPU result |
-| \`spi.exchange\` | Completed serial transaction via SPI controller | Master, CS state, bytes/words, device, response; no sector-level syscall shortcuts |
-| \`uart.tx\` / \`uart.rx\` | UART data direction from guest/peripheral | Register and byte, TX-ready/RX-ready state |
-| \`lcd.frame\` | Guest RAM framebuffer sampled at real LSSA | LSSA, dimensions, bit order, RAM-source hash, frame hash; host-painted images cannot satisfy |
-| \`input.apply\` | Scheduled external stimulus actually delivered | Virtual time, input ID and physical/host mapping; **not** proof that guest consumed it |
-| \`assert.observed\` | Verifier-linked observation; never standalone proof | Assertion ID + event seq/range and state hash |
-| \`trace.dropped\` | Explicit count/range of lost trace records | Drop reason, affected seq range, invalidated assertion classes |
-| \`run.end\` | Machine stopped with reason; not automatic PASS | \`expected_stop\`, \`guest_fault\`, \`budget_limit\`, \`host_abort\`, \`unimplemented_device\`, \`external_stop\` |
+| `run.begin` | Verified fixture was accepted, before guest enters CPU | Source/guest/binary hashes; profile ID; no guest PASS |
+| `cpu.insn` | CPU fetched/executed guest instruction (with precise hook position defined) | PC before fetch, opcode bytes if available, icount |
+| `cpu.state` | CPU checkpoint only | PC/SR/SSP, registers where required; distinguish state snapshots from single instruction events |
+| `cpu.exception` | Actual CPU exception dispatch | Exception vector, original PC, frame address, handler target, cause (illegal, address error, bus error, trap, IRQ) |
+| `mem.read` / `mem.write` | Bus access to actual guest RAM | Byte lanes, width, address, value and origin; bounded watch ranges |
+| `mmio.read` / `mmio.write` | Bus access serviced by VZ device mapping | Full address, width, lane, PC, value; no host-injected faux register state |
+| `irq.assert` / `irq.clear` / `irq.ack` | Interrupt-source change and CPU acceptance | Source, mask, pending, priority, vector, CPU result |
+| `spi.exchange` | Completed serial transaction via SPI controller | Master, CS state, bytes/words, device, response; no sector-level syscall shortcuts |
+| `uart.tx` / `uart.rx` | UART data direction from guest/peripheral | Register and byte, TX-ready/RX-ready state |
+| `lcd.frame` | Guest RAM framebuffer sampled at real LSSA | LSSA, dimensions, bit order, RAM-source hash, frame hash; host-painted images cannot satisfy |
+| `input.apply` | Scheduled external stimulus actually delivered | Virtual time, input ID and physical/host mapping; **not** proof that guest consumed it |
+| `assert.observed` | Verifier-linked observation; never standalone proof | Assertion ID + event seq/range and state hash |
+| `trace.dropped` | Explicit count/range of lost trace records | Drop reason, affected seq range, invalidated assertion classes |
+| `run.end` | Machine stopped with reason; not automatic PASS | `expected_stop`, `guest_fault`, `budget_limit`, `host_abort`, `unimplemented_device`, `external_stop` |
 
 **Safety/size proposal for first bounded tests:** default maximum **20,000 trace events OR 5 MiB uncompressed NDJSON** per case, whichever occurs first; additionally cap the CPU virtual-cycle/instruction budget in each fixture. These are **design defaults**, not measured performance limits, and can be tightened per case. Trace end must show truncation status. For a positive assertion that depends on discarded events, the verdict is **INCONCLUSIVE / BLOCKED_EVIDENCE**, never PASS. A planned sampling rule may be used only if the assertion does not depend on unsampled events.
 
@@ -103,13 +103,13 @@ Each test must define **setup → stimulus → observed event(s) → independent
 |---|---|---|---|
 | **D1.1** driver/build | MAME reduced target, no firmware needed for selectability | Build fingerprint, binary actually starts with declared device ID | PASS_BUILD only, never PASS_BOOT |
 | **D1.2** RAM | Small synthetic 68k program with 8/16/32-bit loads/stores and address boundary probes | Guest CPU values and RAM readback in snapshot, with PC path | Misaligned 16/32 access generates CPU address error; no silent widening |
-| **D1.3** MMIO | Synthetic guest writes test registers in controlled order | Real MMIO address+lane+value and guest readback for implemented regs | Unmapped access diagnosed, not converted to \`0\` or a fictional success |
-| **D1.4** loader | Valid/invalid EmuTOS image+map hash cases | Loader places exact bytes, CPU starts at map-derived \`__text\` | Wrong hash/map/address/oversize rejects before guest |
-| **D1.5** first EmuTOS | Source-locked guest, R-direct profile | Real \`_os_header → _main → _realmain\`; vector writes, memory.S branch; next unimplemented MMIO reported | Stop at unimplemented peripheral is **an expected D1.5 boundary only** if all earlier declared assertions passed; not a "boot successful" claim |
-| **D2.1–D2.3** PLL/IRQ/timer | Controlled virtual-cycle stimulus with genuine guest register operations | PLLFSR transition, mask/priority/ack and handler entered by CPU | A scheduled \`irq.assert\` event alone cannot prove guest handler execution |
+| **D1.3** MMIO | Synthetic guest writes test registers in controlled order | Real MMIO address+lane+value and guest readback for implemented regs | Unmapped access diagnosed, not converted to `0` or a fictional success |
+| **D1.4** loader | Valid/invalid EmuTOS image+map hash cases | Loader places exact bytes, CPU starts at map-derived `__text` | Wrong hash/map/address/oversize rejects before guest |
+| **D1.5** first EmuTOS | Source-locked guest, R-direct profile | Real `_os_header → _main → _realmain`; vector writes, memory.S branch; next unimplemented MMIO reported | Stop at unimplemented peripheral is **an expected D1.5 boundary only** if all earlier declared assertions passed; not a "boot successful" claim |
+| **D2.1–D2.3** PLL/IRQ/timer | Controlled virtual-cycle stimulus with genuine guest register operations | PLLFSR transition, mask/priority/ack and handler entered by CPU | A scheduled `irq.assert` event alone cannot prove guest handler execution |
 | **D2.4–D2.5** UART | Byte TX/RX via real registers | UART byte trace **and** guest read/write state | A host log string cannot prove UART implementation |
 | **D3** LCD | Guest writes known 1-bpp RAM patterns and LSSA/stride | Frame hash from source RAM, image dimensions/polarity and guest PC context | Host-generated static 560x160 bitmap is inadmissible |
-| **D4** SPI2/ST keyboard | GPIO reset/CS/ready and timed key presses | Guest SPI exchange with **0xAA** handshake and observed press/release consumption | \`input.apply\` alone is not a guest keyboard PASS |
+| **D4** SPI2/ST keyboard | GPIO reset/CS/ready and timed key presses | Guest SPI exchange with **0xAA** handshake and observed press/release consumption | `input.apply` alone is not a guest keyboard PASS |
 | **D5** full integration | Actual EmuTOS RAM guest, screen and multiple keys | Ordered S0–S6+ milestones, guest-owned framebuffer and key response | Startup reaches IVR only ≠ functional emulator |
 | **D6** parity/automation | Identical fixture under stable and diag; instrumentation toggled | Canonical guest-state/event hashes and screen output agree, excluding only probe artifacts | Host wall timing/log lengths need not match |
 
@@ -119,45 +119,45 @@ Each test must define **setup → stimulus → observed event(s) → independent
 
 ## 5. Assertion provenance and verifier safeguards
 
-- Every assertion has \`assertion_id\`, \`kind\` (\`guest_state\`, \`device_effect\`, \`input_response\`, \`build_only\`), \`required_event_types\`, \`event_seq_refs\` and \`actual_vs_expected\`.
-- For \`guest_state\` and \`device_effect\`, assertion must point to **CPU/device-origin** events and, where feasible, a corroborating **final RAM/register snapshot**. \`fixture\` and \`host\` event sources cannot satisfy it on their own.
+- Every assertion has `assertion_id`, `kind` (`guest_state`, `device_effect`, `input_response`, `build_only`), `required_event_types`, `event_seq_refs` and `actual_vs_expected`.
+- For `guest_state` and `device_effect`, assertion must point to **CPU/device-origin** events and, where feasible, a corroborating **final RAM/register snapshot**. `fixture` and `host` event sources cannot satisfy it on their own.
 - A message embedded in guest UART output that spells "PASS" is data, not the verifier's verdict.
 - The verifier independently checks trace monotonicity, schema, SHA/size of all artifacts, event boundaries, stop reason, assertion completeness, and no unexpected event loss. On absent evidence, report **BLOCKED_EVIDENCE** even if process exit code is zero.
 - The verifier's implementation and its tests are a **future D1/D6 engineering task**; this document only defines the interface. No script/test files are created by D0.5.
-- An \`expected_stop\` is accepted only where an explicit, versioned assertion requires exactly that endpoint. Unexpected crash, illegal vector, unknown MMIO or budget exhaustion is not a pass.
+- An `expected_stop` is accepted only where an explicit, versioned assertion requires exactly that endpoint. Unexpected crash, illegal vector, unknown MMIO or budget exhaustion is not a pass.
 - Each repeated test must reset the emulated machine and external device state from the fixture; no NVRAM or SD image carryover. Save-state hash and deterministic cycle schedule are the basis of reproduction once save-state support exists.
 
 ## 6. Classification: separate execution state from failure domain
 
-**Overall outcome** is exactly \`PASS\`, \`FAIL\` or \`BLOCKED\` (or \`PENDING\` before a run). **Failure domains** provide diagnosis without conflating them:
+**Overall outcome** is exactly `PASS`, `FAIL` or `BLOCKED` (or `PENDING` before a run). **Failure domains** provide diagnosis without conflating them:
 
 | Domain / reason code | Overall state | Interpretation |
 |---|---|---|
-| \`BUILD_COMPILE_ERROR\` | FAIL | Product source does not compile in a prepared supported environment |
-| \`BUILD_TOOLCHAIN_MISSING\` | BLOCKED | The required toolchain cannot be provided for the approved run |
-| \`LAUNCH_EXEC_ERROR\` | BLOCKED | Runner could not start the target; **no guest result** |
-| \`CONNECTOR_UNAVAILABLE\` / \`COMMANDER_TOOL_ERROR\` | BLOCKED | Remote connector failure, no inference that machine is offline |
-| \`QUEUE_CONFLICT\` | BLOCKED | More than one/another \`.job.sh\` exists; never displace external jobs |
-| \`FIXTURE_NOT_FOUND\` / \`FIXTURE_HASH_MISMATCH\` | BLOCKED | Required image/map/test fixture absent or inconsistent; guest not run |
-| \`HARNESS_CRASH\` / \`VERIFIER_EXCEPTION\` | BLOCKED | Test infrastructure failed before trustworthy verdict |
-| \`EVIDENCE_TRUNCATED\` / \`MISSING_EVENTS\` | BLOCKED | Necessary observations absent or invalid |
-| \`HOST_TIMEOUT\` | BLOCKED | Host safety timeout elapsed; guest cause unknown unless prior trace proves otherwise |
-| \`GUEST_ADDRESS_ERROR\` / \`GUEST_CPU_MISMATCH\` | FAIL when unexpected | Bad CPU/bus model or unintended guest exception |
-| \`MMIO_UNIMPLEMENTED\` | FAIL unless explicitly expected endpoint | Real missing device/feature with PC/address captured |
-| \`ASSERTION_MISMATCH\` | FAIL | Real guest-visible behavior disagreed with contract |
-| \`REGRESSION_MISMATCH\` | FAIL | Previously proven guest behavior changed |
-| \`VERIFIED_EXPECTED_STOP\` | PASS for **that limited test only** | All declared assertions pass and expected endpoint matched |
-| \`VERIFIED_GUEST_BEHAVIOR\` | PASS for **that increment only** | Full declared fixture/assertion coverage and regressions pass |
+| `BUILD_COMPILE_ERROR` | FAIL | Product source does not compile in a prepared supported environment |
+| `BUILD_TOOLCHAIN_MISSING` | BLOCKED | The required toolchain cannot be provided for the approved run |
+| `LAUNCH_EXEC_ERROR` | BLOCKED | Runner could not start the target; **no guest result** |
+| `CONNECTOR_UNAVAILABLE` / `COMMANDER_TOOL_ERROR` | BLOCKED | Remote connector failure, no inference that machine is offline |
+| `QUEUE_CONFLICT` | BLOCKED | More than one/another `.job.sh` exists; never displace external jobs |
+| `FIXTURE_NOT_FOUND` / `FIXTURE_HASH_MISMATCH` | BLOCKED | Required image/map/test fixture absent or inconsistent; guest not run |
+| `HARNESS_CRASH` / `VERIFIER_EXCEPTION` | BLOCKED | Test infrastructure failed before trustworthy verdict |
+| `EVIDENCE_TRUNCATED` / `MISSING_EVENTS` | BLOCKED | Necessary observations absent or invalid |
+| `HOST_TIMEOUT` | BLOCKED | Host safety timeout elapsed; guest cause unknown unless prior trace proves otherwise |
+| `GUEST_ADDRESS_ERROR` / `GUEST_CPU_MISMATCH` | FAIL when unexpected | Bad CPU/bus model or unintended guest exception |
+| `MMIO_UNIMPLEMENTED` | FAIL unless explicitly expected endpoint | Real missing device/feature with PC/address captured |
+| `ASSERTION_MISMATCH` | FAIL | Real guest-visible behavior disagreed with contract |
+| `REGRESSION_MISMATCH` | FAIL | Previously proven guest behavior changed |
+| `VERIFIED_EXPECTED_STOP` | PASS for **that limited test only** | All declared assertions pass and expected endpoint matched |
+| `VERIFIED_GUEST_BEHAVIOR` | PASS for **that increment only** | Full declared fixture/assertion coverage and regressions pass |
 
 **Important nuance:** For a first implementation attempt, an unmapped MMIO at the end of D1.5 may be the **expected test boundary**, but if the test's own objective is "execute Timer1 interrupt", that same absence is **FAIL**, not PASS. Pass/fail are relative to the pre-frozen increment contract, not conveniently reinterpreted after execution.
 
-For each failure report, include \`primary_domain\`, \`reason_code\`, \`first_bad_event_seq\`, \`guest_pc\` if available, \`blocked_dependency\`, \`recovery_action\` and \`repeat_safety\`. An unrelated connector error must never cause deletion, reset, reinstall or blind rerun of the MAME source tree.
+For each failure report, include `primary_domain`, `reason_code`, `first_bad_event_seq`, `guest_pc` if available, `blocked_dependency`, `recovery_action` and `repeat_safety`. An unrelated connector error must never cause deletion, reset, reinstall or blind rerun of the MAME source tree.
 
 ## 7. Drive-first evidence bundle contract
 
 **Conceptual structure only; no Drive job or folder was created in D0.5:**
 
-\`\`\`text
+```text
 DANA_EMU/<increment-id>/<run-id>/
   input/fixture.json             # immutable run input, SHA checked
   input/source_manifest.json     # pinned repos, toolchain and build flags
@@ -171,26 +171,26 @@ DANA_EMU/<increment-id>/<run-id>/
   result/verification.json       # independent verifier assertions
   result/result.json             # overall status and failure classification
   result/artifacts.sha256        # integrity hashes for actual files
-\`\`\`
+```
 
 Folders/files that do not apply to a given increment must be **explicitly declared not_applicable** in the result manifest instead of silently invented as empty placeholder evidence.
 
-**Job execution transport (later only):** T runs an isolated, self-contained job using **/home/spc/.local/bin/dcjob launch** via the Drive-first queue, **exactly one \`.job.sh\`** in its shared inbox before dispatch. Verify remote identity \`deviceId=dee0b4b6-578a-41a5-88de-73dbeb808983\` in every approved Commander call, no inherited authorization, default maximum three calls per **separately authorised** intervention, use **-j3** for builds, fetch logs/results from Drive, never by polling Commander. Do not create or use a Dana queue path on T without confirmed setup. Never touch someone else's queue items.
+**Job execution transport (later only):** T runs an isolated, self-contained job using **/home/spc/.local/bin/dcjob launch** via the Drive-first queue, **exactly one `.job.sh`** in its shared inbox before dispatch. Verify remote identity `deviceId=dee0b4b6-578a-41a5-88de-73dbeb808983` in every approved Commander call, no inherited authorization, default maximum three calls per **separately authorised** intervention, use **-j3** for builds, fetch logs/results from Drive, never by polling Commander. Do not create or use a Dana queue path on T without confirmed setup. Never touch someone else's queue items.
 
 **Minimal conceptual result.json fields:**
 
 | Field | Rule |
 |---|---|
-| \`schema_version\` | \`dana-result-v1\` |
-| \`run_id\`, \`case_id\`, \`increment_id\`, \`variant\` | Identity, cross-check every evidence file |
-| \`overall_status\` | \`PASS\` / \`FAIL\` / \`BLOCKED\`; never infer from rc=0 |
-| \`stage_status\` | Separate \`source\`, \`build\`, \`launch\`, \`guest\`, \`verification\`, \`publish_evidence\` status |
-| \`primary_domain\` / \`reason_code\` | Precise failure attribution or \`none\` |
-| \`assertions\`, \`regressions\`, \`missing_artifacts\` | Independent verifier references |
-| \`source_sha\`, \`guest_sha256\`, \`binary_sha256\` | Actual existing hashes only |
-| \`first_bad_event_seq\` / \`guest_pc\` | Null when no guest execution occurred |
-| \`artifact_inventory\`, \`artifact_manifest_sha256\` | Only created files and their hashes |
-| \`resolution\` / \`next_action\` | Concrete, limited remedy; no automatic destructive action |
+| `schema_version` | `dana-result-v1` |
+| `run_id`, `case_id`, `increment_id`, `variant` | Identity, cross-check every evidence file |
+| `overall_status` | `PASS` / `FAIL` / `BLOCKED`; never infer from rc=0 |
+| `stage_status` | Separate `source`, `build`, `launch`, `guest`, `verification`, `publish_evidence` status |
+| `primary_domain` / `reason_code` | Precise failure attribution or `none` |
+| `assertions`, `regressions`, `missing_artifacts` | Independent verifier references |
+| `source_sha`, `guest_sha256`, `binary_sha256` | Actual existing hashes only |
+| `first_bad_event_seq` / `guest_pc` | Null when no guest execution occurred |
+| `artifact_inventory`, `artifact_manifest_sha256` | Only created files and their hashes |
+| `resolution` / `next_action` | Concrete, limited remedy; no automatic destructive action |
 
 Store secrets, private raw firmware and user media **outside Git**. Logs must not leak credentials or the contents of proprietary ROM. This test specification itself is safe to publish only under separate authorization; no Git visibility change was made.
 
