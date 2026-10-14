@@ -1,5 +1,7 @@
 # Arquitectura prevista — DANA-stable y DANA-diag
 
+**Binding build architecture, 2026-10-13:** from D1.1 there are **two independent reduced MAME builds**: `Dana-stable` and `Dana-diag`. Each has its own SUBTARGET, BUILDDIR, executable, configuration and evidence; both use the same Dana MAME machine/CPU/device sources. Build them sequentially, exactly `-j3` each, in an isolated Dana-only MAME source snapshot that neither touches nor shares generated build products with AS2K. D6.1 later hardens launchers, persistent storage and user-facing deployment, **not** the creation of the two builds. Frozen commands and tests: [D0.6 candidate](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md). None has actually been built.
+
 **Estado: especificación inicial. Ninguna variante está implementada.**
 
 ## Un motor común, dos productos
