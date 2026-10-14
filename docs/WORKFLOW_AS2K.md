@@ -1,12 +1,12 @@
 # Directivas operativas heredadas del emulador AS2K
 
-**MANDATORY FOR NEW CONVERSATIONS:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). It consolidates the verified Drive operating records, canonical T deviceId, dcjob launcher, three-call maximum subject to new explicit authorization, English Git rule and exact D0.6 checkpoint. No Commander for static documentary work.
+**MANDATORY FOR NEW CONVERSATIONS:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). It consolidates the verified Drive operating records, canonical T deviceId, dcjob launcher, three-call maximum subject to new explicit authorization, English Git rule and exact D1.1 checkpoint with two independent Dana builds. No Commander for static documentary work.
 
 **Objetivo:** producir un emulador estable y uno diagnóstico, reducidos, usando MAME como plataforma propia de pruebas.
 
 ## Plan autoritativo
 
-El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **No document-only increment may be marked as functional PASS.** D0.1–D0.5 are SPEC_READY documentation; **D0.6 is next** and requires no Commander calls.
+El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **No document-only increment may be marked as functional PASS.** D0.1–D0.6 are SPEC_READY documentation; **D1.1 is pending explicit approval**. Dana-stable and Dana-diag are independent MAME builds from D1.1; no Commander calls are authorized by this document.
 
 ## Metodología establecida
 
@@ -28,7 +28,7 @@ GitHub aloja fuentes y documentación; no sustituye compilación/ejecución real
 
 ## Separación estable/diagnóstico
 
-- Un único motor compartido de CPU/hardware en MAME; variantes por configuración de compilación, launcher e instrumentación.
+- From **D1.1**, compile **two separate Dana-stable and Dana-diag MAME targets**, independently of AS2K, with one shared CPU/hardware source code model; use distinct SUBTARGET and BUILDDIR settings. D6.1 later hardens runtime integration, not the first dual build.
 - Ejecutables, perfiles, imágenes RAM/ROM externas, SD, snapshots, registros y temporales separados.
 - **stable:** experiencia diaria y control de estado de sesión.
 - **diag:** trazas MMIO/CPU/IRQ/SPI, guards/snapshots, logs machine-readable y scripts de pruebas; siempre opt-in cuando una sonda pueda producir gran volumen.
