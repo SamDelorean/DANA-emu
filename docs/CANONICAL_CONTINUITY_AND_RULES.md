@@ -1,7 +1,7 @@
 # DANA-emu — Canonical continuity, universal rules, and no-drift operating contract
 
 **Status: ACTIVE / MANDATORY READING at the beginning of every new conversation.**
-**Updated: 2026-10-13. Exact technical cursor: D0.6 (PENDING, static documentation only). D0.1–D0.5 = SPEC_READY, documentation only.**
+**Updated: 2026-10-13. Exact technical cursor: D1.1 (PENDING, explicit authorization required). D0.1–D0.6 = SPEC_READY, documentation only.**
 
 This document exists so the user does not need to teach the assistant the project, correct repeated process errors, restore standing rules, or audit its actions. Treat the content as the minimum mandatory baseline for future work. Any later change requires an explicit project decision supported by Git evidence; never silently reinterpret this file or advance the cursor.
 
@@ -21,7 +21,7 @@ This document exists so the user does not need to teach the assistant the projec
 **Related research/firmware repository:** https://github.com/SamDelorean/Dana-OS3K.
 **Existing MAME reference:** https://github.com/SamDelorean/mame-as3k (source lock in research/sources.lock.json).
 
-Build an independent, reduced **MAME-based AlphaSmart Dana emulator** with two versions sharing **the exact same hardware emulation engine**:
+Build an independent, reduced **MAME-based AlphaSmart Dana emulator** with **two separately compiled executable products from D1.1**, sharing **the exact same hardware emulation engine** and source snapshot. The builds must not depend on, share object directories with, overwrite, or modify AS2K MAME:
 
 - **dana-stable:** everyday lightweight emulator, guest image selection, real 560x160 monochrome LCD, real keyboard interaction, session/reset/state controls and eventual easy installation.
 - **dana-diag:** same guest-visible hardware behavior, opt-in instrumentation, CPU/memory/MMIO/IRQ/GPIO/SPI/LCD/UART traces, bounded logs, deterministic headless tests, reproducible snapshots and evidence.
@@ -39,7 +39,8 @@ The target hardware is **MC68VZ328 DragonBall VZ and the Dana board**. First pro
 | **D0.3**, EmuTOS-Dana image and loader | **SPEC_READY, source/build recipe only** | docs/D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md |
 | **D0.4**, virtual RAM bootstrap CPU/bus state | **SPEC_READY, documentation only** | docs/D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md |
 | **D0.5**, deterministic harness and traces | **SPEC_READY, documentary only** | docs/D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md |
-| **D0.6**, frozen first MAME candidate | **PENDING: NEXT INCREMENT** | master plan |
+| **D0.6**, frozen first MAME candidate | **SPEC_READY, documentation only** | docs/D0_6_FIRST_MAME_DRIVER_CANDIDATE.md |
+| **D1.1**, two independent Dana machine builds | **PENDING — NOT AUTHORIZED** | Candidate D0.6; no binaries or tests exist |
 | **D1+**, functional emulator construction/testing | **PENDING** | no PASS yet |
 
 **No Dana emulator source/build has passed functional verification.** No MC68VZ328 MAME device, stable or diag executable, or successful EmuTOS-on-MAME run is proven in this repository. The specific machine T checkout path and revision for DANA-emu are not yet verified. No EmuTOS-Dana build artifacts or guest image SHA have been verified. Do not label documentary SPEC_READY as **PASS**. Do not claim a partial GUI/host rendering proves a real guest LCD.
@@ -115,21 +116,15 @@ These documents describe **known premises**; do not spend Remote Desktop calls r
 - **Do not touch** AS2K firmware, ROM Z stock, existing MAME AS2K, unrelated branches, the physical Dana, OS3K patching, Surface/Vontar/Armbian, Drive jobs belonging to other projects, or the status/cursor of another conversation's workflow.
 - In a cross-project conversation, treat a Dana aside as **separate recorded information only**; never advance an AS2K increment because of Dana work or vice versa.
 
-## 7. Immediate next task — D0.6 only
+## 7. Immediate next task — D1.1 (explicitly gated)
 
-**D0.5 is SPEC_READY documentary:** [deterministic fixture/trace and independent evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md). It specifies versioned fixture fields, source and guest hashes only after binaries exist, bounded events.ndjson with guest/host provenance, failure taxonomy, stable/diag parity, regression checks, Drive result bundle and independent verification. There is no harness implementation or executable.
+**D0.6 is SPEC_READY documentary:** [frozen candidate with independent Dana-stable and Dana-diag builds](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md). This is **not a source-code implementation, build or PASS**. D0.1–D0.6 remain documentary only.
 
-**D0.6 single technical question:** Which exact first MAME **D1.1** candidate can be frozen and later implemented with minimum scope while preserving AS2K and all existing drivers?
+**Binding user instruction:** From **D1.1, not D6**, there must be **two independent MAME reduced builds**: **Dana-stable** and **Dana-diag**. Use the same Dana C++ skeleton, shared hardware model and pinned MAME source revision, but distinct build directories/subtargets, binary paths, configs, media, state and evidence. Build sequentially with exactly **-j3** each when authorised. Neither build may use or modify the AS2K worktree, object cache, emulator executable or unrelated jobs. DIAG may initially differ by debug build configuration, before specialized probes are added; no second CPU/emulator model.
 
-Required D0.6 **static-only** document:
-1. Select the source-locked MAME baseline and identify exact files and device registration/build target to change, cross-checking existing MC68328/EZ code and preserved Neo reuse.
-2. State the minimal driver MC68VZ328 / Dana **skeleton** scope for D1.1, explicitly excluding CPU MMIO/peripherals and guest boot claims until their increments.
-3. State proposed D1.1 compile/selectability fixture, expected failures, smoke tests and preflight verification of actual source revision and safe checkout on T.
-4. Specify `stable` and `diag` build/config isolation without introducing separate hardware models.
-5. Fix the allowed workspace, revert/rollback, evidence paths, acceptance criteria and the exact **separate authorization needed** before creating code or sending a job.
-6. Carry forward unknown EmuTOS image/map hashes and unsatisfied hardware behaviors as open dependencies, not guessed facts.
+**Only D1.1 work after explicit approval:** implement the tiny `src/mame/skeleton/alphasdana.cpp` skeleton and two-line `mame.lst` registration as a DANA-owned overlay, then in a separately approved Drive-first T intervention stage a clean pinned source, build **both variants**, verify `asmdana` in each and save independent evidence. MAME VZ MMIO, RAM and guest boot remain future increments. D1.1 cannot PASS with one executable.
 
-**D0.6 does NOT authorize compiling, coding, Commander, creating a T checkout/job, installing tools, modifying third-party projects or physical Dana operations.** The next stage D1.1 will require explicit execution approval.
+**"Siguiente" is not prior authorisation for executable source edits, remote access, build, job dispatch, publication or filesystem changes.** Implementation and Commander require separately scoped explicit approval. The universal three-call ceiling, T deviceId, canonical dcjob launcher and no-polling rules remain in force.
 
 ## 8. Nonnegotiable self-audit before every response / tool use
 
@@ -145,6 +140,6 @@ Required D0.6 **static-only** document:
 
 **User prompt in the new conversation:**
 
-"Resume DANA-emu from D0.6. Read docs/CANONICAL_CONTINUITY_AND_RULES.md first, followed by HANDOFF, the authoritative incremental plan, the source lock and D0.5. Apply all universal AS2K/Commander/Drive rules and English-only Git. Freeze only the first D1.1 MAME reduced implementation candidate; no Commander, compilation or source changes without separate explicit authorization."
+"Resume DANA-emu at D1.1 PENDING. First read docs/CANONICAL_CONTINUITY_AND_RULES.md, HANDOFF, the master plan, D0.6 and source lock. Two independently compiled products — Dana-stable and Dana-diag — are mandatory from D1.1, sharing one Dana hardware engine and isolated from AS2K. Request explicit approval before implementing C++ or invoking T/Commander; never interpret Siguiente as remote authorization."
 
 **Never ask the user to reconstruct project history once these records are available in Git.**
