@@ -4,7 +4,7 @@
 
 ## Un motor común, dos productos
 
-El proyecto se basa en un **MAME reducido**, que reutiliza el núcleo Motorola 68000, planificador de dispositivos, mapa de direcciones, depurador y controladores ya disponibles cuando resulte apropiado. El dispositivo **MC68VZ328** debe tener una implementación propia que respete registros, temporización, reset y prioridades de interrupción. El MC68EZ328 existente no constituye por sí solo ese dispositivo.
+El proyecto se basa en un **MAME reducido**, que reutiliza el núcleo Motorola 68000, planificador de dispositivos, mapa de direcciones, depurador y controladores ya disponibles cuando resulte apropiado. El dispositivo **MC68VZ328** debe modelarse de forma fiel. **Primero se comprobará si existe ya un driver VZ/NEO reutilizable en la versión MAME real de trabajo**, y se adaptará en lugar de duplicarlo cuando corresponda. En los árboles MAME hasta ahora auditados sólo se encontró MC68328/MC68EZ328; no se ha demostrado VZ nativo. El MC68EZ328 existente no constituye por sí solo ese dispositivo.
 
 La lógica compartida modelará RAM y chip-select, MMIO VZ, LCD, SPI1/2, UART1, GPIO, Timer1, IRQ y el microcontrolador auxiliar ST del Dana. **Un solo modelo de hardware para ambas variantes**: no introducir parches distintos de hardware para que pasen sus respectivas pruebas.
 
@@ -29,6 +29,7 @@ No permitir que el perfil diagnóstico altere el orden de memoria, el estado de 
 ## Compatibilidad y reutilización
 
 - Motor y periféricos MAME: [SamDelorean/mame-as3k](https://github.com/SamDelorean/mame-as3k), como referencia; no modificar ni destruir el emulador AS2K existente.
+- Investigación NEO/NEO 2: [auditoría de código MAME y emulador NEO firmware-first](NEO_NEO2_REUSE_AUDIT.md). CPU VZ compartida, pero periféricos de placa diferentes; el proyecto Rust [neo-re/alpha-emu](https://github.com/ioma8/neo-re/tree/master/alpha-emu) es **referencia**, no la base MAME del producto.
 - Modelo VZ genérico: [POSE original, EmRegsVZ](https://github.com/cloudpilot-emu/pose-original) y [CloudpilotEmu](https://github.com/cloudpilot-emu/cloudpilot-emu).
 - Modelo específico Dana: [Retro68 / EmRegsVZAlphaSmart](https://github.com/csnover/Retro68/tree/palmos/PalmUtils/poser/SrcShared/Hardware) y EmSPISlaveSTMicro.
 - Hardware observado: [EmuTOS-Dana](https://github.com/davidgiven/emutos/tree/dana), inicialización, GPIO, ST, SD y LCD.
