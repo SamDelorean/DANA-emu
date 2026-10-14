@@ -24,6 +24,7 @@
 ## Auditorías de reutilización cerradas documentalmente
 
 - [D0.1 — MAME/EZ/VZ, POSE/Retro68 y Neo](D0_1_MAME_VZ_REUSE_AUDIT.md): **SPEC_READY**, revisión MAME de GitHub fijada y licencias registradas; checkout T pendiente de primer preflight autorizado.
+- [D0.2 — Equivalencias MMIO EZ/VZ](D0_2_EZ_VZ_REGISTER_CONTRACT.md): **SPEC_READY**, cruces MAME/POSE/EmuTOS y correcciones oficiales Motorola, sin pruebas funcionales.
 
 ## Evidencias ya documentadas
 
