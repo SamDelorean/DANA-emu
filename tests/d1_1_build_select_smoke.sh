@@ -116,7 +116,9 @@ for variant, binary in [('stable', stable), ('diag', diag)]:
             rows = [line for line in (work / 'listfull.log').read_text().splitlines()
                     if line.split() and line.split()[0] == 'asmdana']
             assert len(rows) == 1, 'Expected exactly one asmdana enumeration'
-            machines = ET.fromstring((work / 'listxml.log').read_text()).findall('machine')
+            # MAME also emits device definitions; only machine drivers count.
+            machines = [m for m in ET.fromstring((work / 'listxml.log').read_text()).findall('machine')
+                        if m.get('isdevice') != 'yes']
             assert len(machines) == 1 and machines[0].get('name') == 'asmdana', 'Unexpected machine'
             machine = machines[0]
             assert machine.get('sourcefile') == 'skeleton/alphasdana.cpp', 'Unexpected source driver'
