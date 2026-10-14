@@ -5,6 +5,7 @@
 | Prioridad | Repositorio y revisión fuente | Qué extraer para DANA-emu |
 |---|---|---|
 | **Base** | [SamDelorean/mame-as3k, c4e48388](https://github.com/SamDelorean/mame-as3k/tree/c4e48388ca620472643110db2941ce70aa5f3c07) | CPU 68000, DragonBall 68328/EZ, LCD, infraestructuras y debugger MAME. No contiene dispositivo VZ identificado |
+| **NEO / NEO 2 (firmware-first; externo a MAME)** | [ioma8/neo-re, 73281487](https://github.com/ioma8/neo-re/tree/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu) | Modelo de ROM/boot System 3, MMIO VZ, PLL/timers, trazas, teclado/LCD NEO, GUI y prueba headless. **No** es driver MAME, y los periféricos de placa NEO difieren de Dana; verificar licencia antes de reutilizar código |
 | **Placa real** | [davidgiven/emutos, rama dana, 9c42ef0f](https://github.com/davidgiven/emutos/tree/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b) | Registros MMIO, LCD, GPIO, teclado ST, SPI1/2, RAM, UART, IRQ y modelo de loader desde RAM |
 | **Emulación específica Dana** | [csnover/Retro68, palmos, d917b67b](https://github.com/csnover/Retro68/tree/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser) | **EmRegsVZAlphaSmart** y **EmSPISlaveSTMicro**: dispositivo placa AlphaSmart y microcontrolador del teclado; también ADC y USB |
 | **Modelo VZ general** | [cloudpilot-emu/pose-original, 97b10711](https://github.com/cloudpilot-emu/pose-original/tree/97b10711fe4ca50c1bd47072378eaab26ba8e81d) | **EmRegsVZ.cpp**, tablas de reset, chip-select, timer, UART, IRQ, SPI, LCD y layout **M68VZ328Hwr.h** |
@@ -12,6 +13,13 @@
 | **Bootstrap** | [davidgiven/dbztool, d3270238](https://github.com/davidgiven/dbztool/tree/d32702383c2ea3523ea58599c52345435c74e900) | Secuencias **danainit.sh** para chip-select, DRAM y carga RAM. Estudiar; **no ejecutar en Dana físico** |
 | **UI y automatización** | [clintonthegeek/pose64, 9354edd5](https://github.com/clintonthegeek/pose64/tree/9354edd5b0a2cdadfa0f736e65d080b59500c78f) | Diseño de captura, sesiones, watches y automatización; no usarlo como núcleo alternativo MAME |
 | **ABI OS3K** | [SamDelorean/betawise, ad557fcf](https://github.com/SamDelorean/betawise/tree/ad557fcf4efbf07fcf0ff3f398a71a7987b7a41c) | Referencia de firmware invitado, sólo en fase OS3K |
+
+## Reutilización diferenciada NEO/Dana
+
+- [Auditoría NEO/NEO 2 y estado real de MAME](NEO_NEO2_REUSE_AUDIT.md).
+- En el árbol MAME auditado se encontró **AlphaSmart 3000 (EZ)**, no un driver Neo/Neo 2 completo. La lista `hash/alphasmart_kapps.xml` cataloga applets System 3 y no demuestra emulación del NEO.
+- El Neo físico reporta DragonBall **VZ**, de la misma familia que Dana. Debemos reutilizar el contrato de CPU/MMIO interno, **no** asumir equivalencia del LCD ni del teclado.
+- El código firmware-first de `ioma8/neo-re/alpha-emu` constituye evidencia técnica adicional valiosa, aunque está hecho en Rust fuera de MAME.
 
 ## Evidencias ya documentadas
 
