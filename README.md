@@ -1,5 +1,7 @@
 # DANA-emu
 
+**Start of any future session:** read [CANONICAL_CONTINUITY_AND_RULES.md](docs/CANONICAL_CONTINUITY_AND_RULES.md) first. It preserves the authoritative D0.4 cursor, all AS2K/Commander/Drive constraints, the English-only Git policy and the pre-action checklist; do not ask the user to reconstruct these rules. No remote authorization is inherited.
+
 **Emulador propio y reducido del AlphaSmart Dana, basado en MAME.**
 
 Proyecto de ingeniería para reproducir el hardware **AlphaSmart Dana / MC68VZ328 (DragonBall VZ)** y disponer de un banco de pruebas para **DANA-OS3K**. Se adopta la filosofía del emulador AS2K: dos variantes reducidas, un núcleo compartido y evidencia funcional antes de cerrar incrementos.
