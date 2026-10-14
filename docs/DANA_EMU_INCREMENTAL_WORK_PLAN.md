@@ -50,7 +50,7 @@ MAME inventariado contiene CPU 68000 y dispositivos MC68328/MC68EZ328; **no** se
 | ID | Único objetivo | Cierre documental |
 |---|---|---|
 | **D0.1** | Fijar versión/revisión del MAME de referencia y confirmar qué recursos Neo/VZ y EZ son reutilizables | **SPEC_READY**: [auditoría fechada](D0_1_MAME_VZ_REUSE_AUDIT.md). SHA de GitHub fijado; instalación T no verificada hasta preflight posterior |
-| **D0.2** | Completar tabla EZ frente a VZ por bloque | Dirección, ancho, reset, bits y efecto documentados para CPU, RAM/CS, PLL, IRQ, Timer1, UART1, LCD y SPI; fuentes y desconocidos |
+| **D0.2** | Completar tabla EZ frente a VZ por bloque | **SPEC_READY documental**: [contrato de registros y correcciones Motorola](D0_2_EZ_VZ_REGISTER_CONTRACT.md); bitfields finos aún se validarán por subsistema |
 | **D0.3** | Fijar invitado de prueba EmuTOS-Dana | Imagen verificable **o** receta reproducible de construcción, formato real, hash, entrada/relocación, sin confundir cargador RAM con reset físico |
 | **D0.4** | Especificar el estado CPU/bus del loader RAM | Estado RAM 4 MiB, excepciones, SSP/PC/SR, vectores, CS/DRAM mínimos y tabla de primer contacto MMIO |
 | **D0.5** | Definir harness reproducible y trazas mínimas | Formatos, fixtures, marcadores independientes, límite de traza, reporte máquina y verificador host/guest |
@@ -174,7 +174,8 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 | Bloque | Estado al elaborar plan | Primera actividad autorizable |
 |---|---|---|
 | **D0.1** | **SPEC_READY (cierre documental)** | [Auditoría de reutilización MAME/VZ](D0_1_MAME_VZ_REUSE_AUDIT.md); commit de baseline GitHub fijado, checkout de T pendiente del primer preflight |
-| **D0.2–D0.6** | **PENDING** | Análisis estático de registros, firmware/loader y definición de fixtures |
+| **D0.2** | **SPEC_READY (cierre documental)** | [Tabla EZ/VZ y correcciones de addendum](D0_2_EZ_VZ_REGISTER_CONTRACT.md), sin PASS de emulación |
+| **D0.3–D0.6** | **PENDING** | Imagen/loader EmuTOS, bus y fixture reproducible |
 | D1.1–D1.5 | **PENDING** | Sólo después de D0 |
 | D2.1–D2.6 | **PENDING** | Sólo después de D1 |
 | D3.1–D3.5 | **PENDING** | Sólo después de D2 |
@@ -186,7 +187,7 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 
 **No saltar un bloqueo usando un stub que devuelva éxito artificialmente.** Ante evidencia insuficiente registrar exactamente el registro, evento, archivo o señal que falta, estudiar fuentes/repositorios y retomar ese mismo incremento. Cambios de orden requieren modificar este plan de forma explícita, motivada y trazable.
 
-**Punto de continuidad exacto: D0.2 — tabla de diferencias de registros MC68EZ328/MC68VZ328.** D0.1 quedó **SPEC_READY**, no PASS funcional. No hay comandos de ejecución autorizados por este documento.
+**Punto de continuidad exacto: D0.3 — imagen y procedimiento reproducible del invitado EmuTOS-Dana.** D0.1 y D0.2 quedaron **SPEC_READY documentales**, sin PASS funcional. No hay comandos de ejecución autorizados por este documento.
 
 ## 7. Referencias de control
 
