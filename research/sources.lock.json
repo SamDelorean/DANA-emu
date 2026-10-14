@@ -1,11 +1,11 @@
 {
   "project": "DANA-OS3K",
-  "purpose": "Levantamiento teorico de fuentes para emulador reducido propio basado en MAME",
+  "purpose": "Theoretical source survey for an independent reduced MAME-based emulator",
   "locked_on": "2026-10-13",
   "no_implementation": true,
   "implementation_repo": "https://github.com/SamDelorean/DANA-emu",
   "research_repo": "https://github.com/SamDelorean/Dana-OS3K",
-  "source_lock_policy": "Usar enlaces al SHA de cada repositorio, nunca asumir que una rama mutable conserva el mismo contenido",
+  "source_lock_policy": "Use commit-pinned repository links; never assume a mutable branch retains the same contents",
   "sources": [
     {
       "id": "mame",
@@ -13,7 +13,7 @@
       "branch_at_lock": "master",
       "commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
       "role": "MOTOR / BASE",
-      "license_note": "MAME: licencias por archivo; comprobar SPDX y LICENSE antes de distribuir",
+      "license_note": "MAME: licenses vary by file; inspect SPDX and LICENSE before distribution",
       "files": [
         {
           "path": "src/devices/machine/mc68328.cpp",
@@ -46,8 +46,8 @@
       "repository": "https://github.com/davidgiven/emutos",
       "branch_at_lock": "dana",
       "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
-      "role": "PLACA DANA / REGISTROS / PROTOCOLOS (port experimental)",
-      "license_note": "GPL-2.0-or-later en los archivos del port; comprobar cabeceras individuales",
+      "role": "DANA BOARD / REGISTERS / PROTOCOLS (experimental port)",
+      "license_note": "GPL-2.0-or-later in port files; inspect individual headers",
       "files": [
         {
           "path": "bios/dana.c",
@@ -104,8 +104,8 @@
       "repository": "https://github.com/csnover/Retro68",
       "branch_at_lock": "palmos",
       "commit": "d917b67b16bef7bcf5c75a74f617710c32addcbc",
-      "role": "EMULACION GPL ESPECIFICA DE PLACA ALPHASMART DANA (VZ/ST/SPI/GPIO/LCD)",
-      "license_note": "GPL-2.0-or-later, confirmado en cabeceras de EmRegsVZAlphaSmart.cpp y EmSPISlaveSTMicro.cpp; evitar copiar código GPL a MAME sin revisión de licencias",
+      "role": "GPL ALPHASMART DANA BOARD-SPECIFIC EMULATION (VZ/ST/SPI/GPIO/LCD)",
+      "license_note": "GPL-2.0-or-later confirmed in EmRegsVZAlphaSmart.cpp and EmSPISlaveSTMicro.cpp headers; do not copy GPL code into MAME without a license review",
       "files": [
         {
           "path": "PalmUtils/poser/SrcShared/Hardware/EmRegsVZAlphaSmart.cpp",
@@ -154,7 +154,7 @@
       "repository": "https://github.com/davidgiven/dbztool",
       "branch_at_lock": "master",
       "commit": "d32702383c2ea3523ea58599c52345435c74e900",
-      "role": "BOOTSTRAP / CONFIGURACION DRAM Y CHIP SELECT (no ejecutar)",
+      "role": "BOOTSTRAP / DRAM AND CHIP-SELECT CONFIGURATION (do not execute)",
       "license_note": "BSD-2-Clause",
       "files": [
         {
@@ -176,8 +176,8 @@
       "repository": "https://github.com/cloudpilot-emu/pose-original",
       "branch_at_lock": "master",
       "commit": "97b10711fe4ca50c1bd47072378eaab26ba8e81d",
-      "role": "MODELO ABIERTO DRAGONBALL VZ / ESTRUCTURAS MMIO",
-      "license_note": "GPL-2.0-or-later en EmRegsVZ y otros archivos; verificar cabeceras",
+      "role": "OPEN DRAGONBALL VZ MODEL / MMIO STRUCTURES",
+      "license_note": "GPL-2.0-or-later in EmRegsVZ and other files; inspect headers",
       "files": [
         {
           "path": "SrcShared/Hardware/EmRegsVZ.cpp",
@@ -226,8 +226,8 @@
       "repository": "https://github.com/cloudpilot-emu/cloudpilot-emu",
       "branch_at_lock": "master",
       "commit": "064d5d578bcd1f9072de384d05aa217f83db2f7f",
-      "role": "MODELO VZ MODERNIZADO / REFERENCIA SECUNDARIA",
-      "license_note": "GPL-3.0-or-later conforme README y LICENSE",
+      "role": "MODERNIZED VZ MODEL / SECONDARY REFERENCE",
+      "license_note": "GPL-3.0-or-later according to README and LICENSE",
       "files": [
         {
           "path": "src/cloudpilot/emulator/hardware/EmRegsVZ.cpp",
@@ -260,7 +260,7 @@
       "repository": "https://github.com/clintonthegeek/pose64",
       "branch_at_lock": "main",
       "commit": "9354edd5b0a2cdadfa0f736e65d080b59500c78f",
-      "role": "EJEMPLO INSTRUMENTACION / SESIONES / AUTOMATIZACION",
+      "role": "INSTRUMENTATION / SESSIONS / AUTOMATION EXAMPLE",
       "license_note": "GPL-3.0",
       "files": [
         {
@@ -282,8 +282,8 @@
       "repository": "https://github.com/SamDelorean/betawise",
       "branch_at_lock": "master",
       "commit": "ad557fcf4efbf07fcf0ff3f398a71a7987b7a41c",
-      "role": "ABI OS3K / FASE FUTURA",
-      "license_note": "Licencias por confirmar antes de copia/reutilizacion",
+      "role": "OS3K ABI / FUTURE PHASE",
+      "license_note": "Licenses must be confirmed before copying/reuse",
       "files": [
         {
           "path": "docs/abi-reconstruction-index.md",
@@ -304,8 +304,8 @@
       "repository": "https://github.com/ioma8/neo-re",
       "branch_at_lock": "master",
       "commit": "732814871fe493e80ed1ab1f959d8dad174ee540",
-      "role": "EMULADOR EXPERIMENTAL NEO FIRMWARE-FIRST INDEPENDIENTE DE MAME; REFERENCIA AL DRAGONBALL VZ, ROM SYSTEM3, MMIO Y PRUEBAS",
-      "license_note": "No se verificó licencia explícita en raíz; consultar y no copiar código hasta conocer los derechos de reutilización",
+      "role": "EXPERIMENTAL FIRMWARE-FIRST NEO EMULATOR INDEPENDENT OF MAME; DRAGONBALL VZ, SYSTEM 3 ROM, MMIO AND TEST REFERENCE",
+      "license_note": "No explicit root license was verified; inspect and do not copy code until reuse rights are established",
       "files": [
         {
           "path": "alpha-emu/README.md",
@@ -350,8 +350,8 @@
       "repository": "https://github.com/mamedev/mame",
       "branch_at_lock": "master",
       "commit": "98e60b54d0718171636f50e39794d861564aac08",
-      "role": "REFERENCIA CRUZADA MAME OFICIAL: DRIVER AS3000 EZ, CORE 328/EZ, LISTA DE SMARTAPPLETS; NO SE ENCONTRO DRIVER NEO/NEO2 EN REVISION AUDITADA",
-      "license_note": "Consultar SPDX por archivo",
+      "role": "OFFICIAL MAME CROSS-CHECK: AS3000 EZ DRIVER, 328/EZ CORE, SMARTAPPLET LIST; NO NEO/NEO2 DRIVER FOUND IN AUDITED REVISION",
+      "license_note": "Inspect SPDX per file",
       "files": [
         {
           "path": "src/mame/skeleton/alphasma3k.cpp",
@@ -376,26 +376,26 @@
     {
       "name": "EmuTOS PR #29",
       "url": "https://github.com/emutos/emutos/pull/29",
-      "scope": "proveniencia del port, codigo fuente fijado en davidgiven/emutos"
+      "scope": "port provenance, source pinned in davidgiven/emutos"
     },
     {
-      "name": "Pose-Dana historico",
+      "name": "Historical Pose-Dana",
       "url": "https://palmdb.net/app/palm-emulator",
-      "scope": "binario/especializacion de Dana pendiente de auditar; fuente Dana no encontrada"
+      "scope": "Dana binary/specialization pending audit; Dana source not found"
     },
     {
-      "name": "Actualizador Flash Dana US/UK 1.2/1.5",
+      "name": "Dana US/UK 1.2/1.5 Flash updater",
       "url": "https://drive.google.com/file/d/1LY_Ykm3RysWe4vutxWeFRnwSTCxlIcFg/view",
-      "scope": "firmware stock propietario, separado del emulador y NO versionado"
+      "scope": "proprietary stock firmware, separate from the emulator and NOT versioned"
     }
   ],
   "primary_source_for_dana_board": "retro68_pose_dana",
   "primary_runtime_crosscheck": "emutos_dana",
   "primary_emulator_engine": "mame",
-  "license_rule": "No mezclar directamente código GPL de Retro68/POSE/EmuTOS con dispositivos MAME de licencias distintas sin revisión de términos; documentar el hardware y establecer implementación adecuada",
+  "license_rule": "Do not directly combine GPL Retro68/POSE/EmuTOS code with differently licensed MAME devices without reviewing license terms; document hardware behavior and design a suitable implementation",
   "record_type": "handoff_snapshot",
   "copied_from": "https://github.com/SamDelorean/Dana-OS3K/blob/main/research/sources.lock.json",
   "copied_to": "https://github.com/SamDelorean/DANA-emu",
   "snapshot_date": "2026-10-13",
-  "notes": "Referencia congelada al abrir frente de emulador; fuentes no descargadas ni vendorizadas y no implican permiso para copiar GPL a MAME"
+  "notes": "Reference snapshot frozen at emulator workstream initiation; sources were neither downloaded nor vendored, and this does not grant permission to copy GPL code into MAME"
 }
