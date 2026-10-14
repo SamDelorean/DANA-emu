@@ -21,6 +21,10 @@
 - El Neo físico reporta DragonBall **VZ**, de la misma familia que Dana. Debemos reutilizar el contrato de CPU/MMIO interno, **no** asumir equivalencia del LCD ni del teclado.
 - El código firmware-first de `ioma8/neo-re/alpha-emu` constituye evidencia técnica adicional valiosa, aunque está hecho en Rust fuera de MAME.
 
+## Auditorías de reutilización cerradas documentalmente
+
+- [D0.1 — MAME/EZ/VZ, POSE/Retro68 y Neo](D0_1_MAME_VZ_REUSE_AUDIT.md): **SPEC_READY**, revisión MAME de GitHub fijada y licencias registradas; checkout T pendiente de primer preflight autorizado.
+
 ## Evidencias ya documentadas
 
 - [MMIO, GPIO y vectores VZ](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/09-EMULADOR-MAPA-MMIO-Y-GPIO.md).
