@@ -4,7 +4,7 @@
 
 ## 1. Single objective, exclusions and decision
 
-**D1.1 objective:** build and enumerate one new **AlphaSmart Dana skeleton machine driver** in a minimal MAME target without disturbing the existing AS2K, AlphaSmart 3000, Palm or DragonBall EZ implementations.
+**D1.1 objective:** create one new **AlphaSmart Dana skeleton machine driver** and independently compile **two reduced Dana executables from the first build**: **Dana-stable** and **Dana-diag**. Both must enumerate the same driver and share precisely one source/hardware model. Builds and artifacts must be separate from AS2K, AlphaSmart 3000, Palm and DragonBall EZ trees and outputs.
 
 **First-candidate architecture decision:** the D1.1 skeleton uses the existing **MAME M68000 CPU core**, explicitly as a placeholder for machine registration and build verification. It **must not claim to implement a DragonBall VZ**. A dedicated VZ device/MMIO integration is part of D1.3; D1.2 supplies guest RAM first. This is the smallest honest scope under the authoritative sequence, even though DANA ultimately requires the MC68VZ328. A skeleton CPU clock used solely to instantiate the device is an arbitrary test parameter, **not** a measured Dana clock and not allowed as a timing reference in later tests.
 
@@ -34,7 +34,7 @@ Do not commit a complete copy of MAME to DANA-emu. A future approved test may st
 |---|---|---|
 | **src/mame/skeleton/alphasdana.cpp** | One short machine driver class, required M68000 CPU, empty/input definitions, ROM-less test-only declaration, COMP registration and honest MACHINE_NOT_WORKING / no-audio flags | Machine discovery and skeleton build |
 | **overlays/mame-driverlist/alphasdana.lst.fragment** | Exactly two lines: `@source:skeleton/alphasdana.cpp` and `asmdana`, with application point defined below | Reproducible, narrow edit to MAME master driver list; do not vendor the ~50,000-line list |
-| **tests/d1_1_build_select_smoke.sh** | Optional short local smoke/verifier invoked by the separately authorised job. Only build/selectability, list/validate and existing-driver integrity checks | Independent reporting rather than relying on a successful shell exit alone |
+| **tests/d1_1_build_select_smoke.sh** | Optional short local smoke/verifier for **both** variants. Only build/selectability, list/validate and old-driver integrity checks | Independent per-variant PASS/FAIL/BLOCKED reports; a single passing executable is insufficient |
 
 A standalone self-contained Drive `.job.sh` may be generated separately as a **transient execution artifact**, with source SHA recorded in evidence, once a future D1.1 execution is explicitly approved. It is not part of D0.6 and must not be placed in the shared inbox yet.
 
@@ -52,15 +52,27 @@ A standalone self-contained Drive `.job.sh` may be generated separately as a **t
 
 **MAME driver code constraints (source-only, for D1.1):** inherit `driver_device`; instantiate `M68000` as the temporary CPU class; use no required LCD or cartridge/ROM region; no fake 4 MiB RAM, VZ model or arbitrary interrupt response; register as **not working**. A self-contained C++ driver source with minimal machine_config/input/COMP sections is sufficient to establish discoverability. Whether an empty ROM declaration or absent screen passes the pinned MAME validation must be verified by the actual compiled tool rather than assumed.
 
-## 4. Minimal target build: proposal to validate on the first approved T run
+## 4. Two independent Dana builds from D1.1 (new binding requirement)
 
-The pinned MAME Makefile exposes **SOURCES**, **SUBTARGET**, **REGENIE**, **TOOLS** and **-j**. scripts/genie.lua confirms SOURCE-filtered projects; scripts/src/main.lua generates a filtered driver list. The following is a **candidate command**, NOT a command already executed:
+**Binding decision of 2026-10-13:** There is **NO single developmental `danadev` executable**. Both named products must be built independently from D1.1 onward, rather than postponing the build split until D6.1. They use **one pinned source snapshot, one Dana driver and one hardware implementation**; no duplicated MAME CPU/SoC code or borrowed AS2K checkout.
 
-`make -j3 TARGET=mame SUBTARGET=danadev SOURCES=src/mame/skeleton/alphasdana.cpp REGENIE=1 TOOLS=0`
+The pinned MAME makefile provides `TARGET`, `SUBTARGET`, `SOURCES`, `BUILDDIR`, `DEBUG`, `REGENIE` and `TOOLS`. `BUILDDIR` determines generated/build project paths; the actual produced executable location must be determined from the first build, not guessed. Proposed **sequential** commands, only for a separately approved T job:
 
-**D1.1 must first check** that this combination is accepted by the actual pinned snapshot/toolchain on T, that only the intended driver is selected, and that the output executable's actual path/name can be obtained from generated build logs. **Do not hardcode a presumed `mamedanadev` path** in a runner. If this exact build mode fails because of build syntax or environment, classify **BLOCKED_BUILD_INFRA** and fix the build fixture without broadening driver implementation.
+```sh
+# Isolated Dana source snapshot, not the existing AS2K tree
+make -j3 TARGET=mame SUBTARGET=danastable SOURCES=src/mame/skeleton/alphasdana.cpp BUILDDIR=build/dana-stable REGENIE=1 TOOLS=0
+make -j3 TARGET=mame SUBTARGET=danadiag   SOURCES=src/mame/skeleton/alphasdana.cpp BUILDDIR=build/dana-diag   REGENIE=1 TOOLS=0 DEBUG=1
+```
 
-The first build is **one developmental reduced target** (`danadev`). The final stable/diag variants are a D6.1 product milestone. The eventual split should reuse one C++ hardware core while placing configs, trace output, RAM/ROM/SD media, NVRAM and snapshots in separate roots; instrumentation must not modify guest-visible behavior. D1.1 does not need two separate executables yet.
+**Naming:** user-facing deliverables are **Dana-stable** and **Dana-diag** (or lowercase `dana-stable`/`dana-diag` when installed); MAME build subtarget IDs `danastable` and `danadiag` are implementation identifiers, not proof of executable filenames. Explicitly install/copy verified resulting binaries into distinct Dana-only output folders, recording their real names and SHA-256 values. Use isolated configuration, NVRAM, input mapping, guest media, snapshots and test artifacts, with no shared mutable runtime state.
+
+**Differences for D1.1:** both may use the **same skeleton C++ and hardware behavior**. DIAG is initially a **debug-symbol/configuration build**, not a second CPU/device implementation; detailed bounded probes follow their allocated increments. DEBUG=1 is an **unverified candidate configuration**, not proof that this exact revision builds successfully. If unsupported, fix build flags in the same D1.1 build contract; do not omit the second executable or silently defer it to D6.
+
+**Important isolation:** invoke the builds **sequentially**, one at a time with `-j3`, because the underlying MAME source tree and tools may share intermediate/generated resources outside `BUILDDIR`. Separate build directories, final executable destinations and explicit source SHA checks are mandatory. An even stronger option, if the first build exposes shared mutable paths, is **two distinct disposable Dana-only staged source trees** extracted from the *same pinned archive*; both remain entirely independent of AS2K. Never build concurrently until no collision has been demonstrated.
+
+**Acceptance for both builds:** the real generated executable for **each variant** must individually enumerate exactly one `asmdana` driver and report the declared nonworking skeleton. D1.1 is not PASS if only Dana-stable or only Dana-diag compiles. Record variant-specific compile/enumeration/validation results and binary hashes. The exact make syntax, DEBUG behavior, binary paths and ROM-less/no-screen skeleton validity remain unverified until the approved T job runs.
+
+**Later D6.1 does not create the two builds for the first time.** It upgrades already-independent binaries with production launchers, full persistent runtime media isolation and daily-use behavior. The required two-artifact build contract begins at D1.1.
 
 ## 5. First approved productive job: ordered stages, no exploratory Commander calls
 
@@ -71,10 +83,10 @@ Future job contract:
 1. **PRECHECK:** identify the actual, accessible source revision through read-only Git metadata or a vetted pinned archive; verify required MAME files and toolchain; validate the DANA overlay provenance; check shared Drive inbox occupancy **outside Commander**. If pinned baseline is missing, stop **BLOCKED_SOURCE**, never invent a checkout path, reclone over another tree or reset an existing worktree.
 2. **STAGE:** create a unique isolated work area (record its resolved path); obtain read-only pinned source material without changing any existing working tree; overlay the driver and apply precisely the master-list two-line insertion. Record SHA-256 for driver, list, source base and applied diff.
 3. **STATIC DIFF GUARD:** assert only the two permitted MAME source paths changed; verify existing `alphasma.cpp`, `alphasma3k.cpp` and `mc68328.cpp/h` bytes match baseline and prior machine list entries remain unchanged. Unrelated edits are automatic **FAIL_SCOPE** and abort before compiling.
-4. **BUILD:** execute the bounded reduced make invocation using exactly **-j3**, capture build tool versions, command, output executable path, compile/link status, first error and exit code.
-5. **ENUMERATE/VALIDATE:** run actual built executable's machine enumeration (candidate commands `-listfull asmdana` and `-validate`, to be checked against the installed MAME revision). Verify exactly one `asmdana` entry, owner/source association and correct not-working status; existing `asma3k`/`asma2k` definitions must still be present in the staged master list. No guest execution, image loading or claim of VZ peripheral support.
-6. **EVIDENCE:** publish manifest.json, build.log, selected_driver_list.txt, validation.log, scope_diff.patch, integrity hashes and machine-readable result.json through Drive. If no guest ran, mark all guest-state/trace/framebuffer artifacts `not_applicable` — never fabricate them.
-7. **GATE:** only a build, source-diff, enumeration and validation with objective evidence can mark **D1.1 PASS (build/selectability scope only)**. A failed toolchain/launcher/connector is **BLOCKED** with reason; an actual source compile failure is **FAIL_BUILD**. No merge of untested candidate as functional product; record qualified commit and retain rollback checkpoint.
+4. **BUILD:** run **both independently configured reduced builds sequentially**, each using exactly **-j3** and its own BUILDDIR, capturing per-variant build flags, tools, actual executable path, compile/link status, first error and exit code. Stop on unsafe shared-path collision without modifying AS2K.
+5. **ENUMERATE/VALIDATE:** for **each executable**, run real machine enumeration (candidate commands `-listfull asmdana` and `-validate`, verified against MAME revision). Both must list exactly one `asmdana`, with expected source and nonworking status. Existing `asma3k`/`asma2k` entries remain unmodified in master list. No guest run or VZ peripheral claim.
+6. **EVIDENCE:** publish per-variant manifest.json, build.log, selected_driver_list.txt, validation.log, binary SHA-256 and result.json, plus shared source diff and master result through Drive. If no guest ran, mark guest-state/trace/framebuffer artifacts `not_applicable`. Preserve separate stable/diag build roots and evidence.
+7. **GATE:** only successful source-diff guard, **both independent builds**, **both enumerations** and both validation reports can mark **D1.1 PASS (build/selectability scope only)**. A failed toolchain/launcher/connector is **BLOCKED** with reason; an actual source compile failure is **FAIL_BUILD**. No merge of untested candidate as functional product; record qualified commit and retain rollback checkpoint.
 
 **Regression boundary:** D1.1 must demonstrate that existing source/registration entries were not damaged; full AS2K firmware runtime regression is **not** required or falsely claimed for a source-isolated driver addition. No AS2K binary or checkout may be written. Any unexpected global script/header change requires a new explicit scope decision.
 
@@ -84,10 +96,10 @@ Future job contract:
 
 Mandatory first-run evidence:
 
-- Source lock SHAs, checked MAME revision, overlay source SHA, fixture ID, host toolchain/build environment and **actual** built executable SHA-256, or null on failure.
-- Generated build/regeneration logs; stage/compile/validation exit codes separately.
+- Source lock SHAs, checked MAME revision, overlay source SHA, fixture ID, host toolchain/build environment and **both independently built executable SHA-256 values**, or null separately on failure.
+- Separate stable/diag generated build/regeneration logs, stage/compile/validation exit codes, configuration and runtime-state directories.
 - One-line source-diff scope: exactly `src/mame/skeleton/alphasdana.cpp` and `src/mame/mame.lst`.
-- Actual machine list evidence, precisely `asmdana`, and regression inventory of old AlphaSmart MAME entries.
+- Actual machine list evidence for **both** executables, precisely `asmdana`, and regression inventory of old AlphaSmart MAME entries.
 - Result verdict with `overall_status = PASS / FAIL / BLOCKED`, `stage_status` and `reason_code`.
 - Reproducible staging script provenance, not just an asserted "it compiled".
 - Guest execution evidence `not_applicable`, since D1.1 is an enumerability test only.
@@ -103,11 +115,11 @@ Open dependencies, without guesswork:
 1. Actual accessible MAME snapshot/path, OS/compiler and binary generation on T **unknown**.
 2. `emutos.img`, `emutos-dana.rom`, `emutos.map`, exact linked symbols and image hashes **missing**; **not needed for D1.1**, mandatory later D1.4/D1.5.
 3. MC68VZ328 MMIO/reset/IRQ/PLL/LCD/SPI implementations **not built**; M68000 skeleton does not implement these.
-4. No live stable/diag parity, device traces, guest runtime assertions or test fixtures exist.
-5. Subtarget command syntax/output path and no-screen/no-ROM skeleton acceptability remain **runtime/build checks**, not established results.
+4. No existing Dana-stable or Dana-diag executables, parity, device traces, guest runtime assertions or test fixtures; D1.1 must produce **two distinct binaries**, but guest parity tests begin later.
+5. Two-subtarget command syntax, DEBUG=1 compatibility, shared build-tools safety, produced executable paths and no-screen/no-ROM skeleton acceptability remain **runtime/build checks**, not established results.
 6. Third-party GPL software must not be vendored into MAME; only MAME-licensed new code or separately licensed references may be used.
 
-**D0.6 documentary closure criterion:** this document fixes minimal source and registration changes, pinned baseline, source ownership, target build proposal, independent D1.1 scope validation, isolated staging/reversal, failure taxonomy and authorisation boundary. D0.6 is **SPEC_READY (documentary)**, not a compiled candidate.
+**D0.6 documentary closure criterion:** this document fixes minimal source and registration changes, pinned baseline, source ownership, **two independently compiled Dana-stable and Dana-diag artifacts from D1.1**, independent test/rollback, staged build isolation, failure taxonomy and authorisation boundary. D0.6 is **SPEC_READY (documentary)**, not a compiled candidate.
 
 **Exact next cursor: D1.1 PENDING, not READY or PASS.** No MAME C++ source, SH job, target machine, compiler or Commander tool has been touched.
 
