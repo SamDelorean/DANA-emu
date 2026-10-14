@@ -1,0 +1,329 @@
+{
+  "project": "DANA-OS3K",
+  "purpose": "Levantamiento teorico de fuentes para emulador reducido propio basado en MAME",
+  "locked_on": "2026-10-13",
+  "no_implementation": true,
+  "implementation_repo": "https://github.com/SamDelorean/DANA-emu",
+  "research_repo": "https://github.com/SamDelorean/Dana-OS3K",
+  "source_lock_policy": "Usar enlaces al SHA de cada repositorio, nunca asumir que una rama mutable conserva el mismo contenido",
+  "sources": [
+    {
+      "id": "mame",
+      "repository": "https://github.com/SamDelorean/mame-as3k",
+      "branch_at_lock": "master",
+      "commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+      "role": "MOTOR / BASE",
+      "license_note": "MAME: licencias por archivo; comprobar SPDX y LICENSE antes de distribuir",
+      "files": [
+        {
+          "path": "src/devices/machine/mc68328.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/machine/mc68328.cpp"
+        },
+        {
+          "path": "src/devices/machine/mc68328.h",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/machine/mc68328.h"
+        },
+        {
+          "path": "src/devices/video/mc68328lcd.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/video/mc68328lcd.cpp"
+        },
+        {
+          "path": "src/devices/video/mc68328lcd.h",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/video/mc68328lcd.h"
+        },
+        {
+          "path": "src/mame/skeleton/alphasma3k.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/mame/skeleton/alphasma3k.cpp"
+        },
+        {
+          "path": "src/mame/palm/palm.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/mame/palm/palm.cpp"
+        }
+      ]
+    },
+    {
+      "id": "emutos_dana",
+      "repository": "https://github.com/davidgiven/emutos",
+      "branch_at_lock": "dana",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "role": "PLACA DANA / REGISTROS / PROTOCOLOS (port experimental)",
+      "license_note": "GPL-2.0-or-later en los archivos del port; comprobar cabeceras individuales",
+      "files": [
+        {
+          "path": "bios/dana.c",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/dana.c"
+        },
+        {
+          "path": "bios/dana.h",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/dana.h"
+        },
+        {
+          "path": "bios/dana2.S",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/dana2.S"
+        },
+        {
+          "path": "bios/dana_keymap.h",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/dana_keymap.h"
+        },
+        {
+          "path": "bios/sd.c",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/sd.c"
+        },
+        {
+          "path": "bios/screen.c",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/screen.c"
+        },
+        {
+          "path": "util/danaboot.S",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/util/danaboot.S"
+        },
+        {
+          "path": "util/danaboot.ld",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/util/danaboot.ld"
+        },
+        {
+          "path": "tools/danarun/danarun.c",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/tools/danarun/danarun.c"
+        },
+        {
+          "path": "tools/danarun/palmboot.S",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/tools/danarun/palmboot.S"
+        },
+        {
+          "path": "doc/readme-dana.txt",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/doc/readme-dana.txt"
+        },
+        {
+          "path": "Makefile",
+          "pinned_url": "https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/Makefile"
+        }
+      ]
+    },
+    {
+      "id": "retro68_pose_dana",
+      "repository": "https://github.com/csnover/Retro68",
+      "branch_at_lock": "palmos",
+      "commit": "d917b67b16bef7bcf5c75a74f617710c32addcbc",
+      "role": "EMULACION GPL ESPECIFICA DE PLACA ALPHASMART DANA (VZ/ST/SPI/GPIO/LCD)",
+      "license_note": "GPL-2.0-or-later, confirmado en cabeceras de EmRegsVZAlphaSmart.cpp y EmSPISlaveSTMicro.cpp; evitar copiar código GPL a MAME sin revisión de licencias",
+      "files": [
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmRegsVZAlphaSmart.cpp",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmRegsVZAlphaSmart.cpp"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmRegsVZAlphaSmart.h",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmRegsVZAlphaSmart.h"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmSPISlaveSTMicro.cpp",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmSPISlaveSTMicro.cpp"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmSPISlaveSTMicro.h",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmSPISlaveSTMicro.h"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmRegsVZ.cpp",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmRegsVZ.cpp"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmRegsVZ.h",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmRegsVZ.h"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmSPISlaveADS784x.cpp",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmSPISlaveADS784x.cpp"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmSPISlaveADS784x.h",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmSPISlaveADS784x.h"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmRegsUSBISP_1161.cpp",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmRegsUSBISP_1161.cpp"
+        },
+        {
+          "path": "PalmUtils/poser/SrcShared/Hardware/EmRegsUSBISP_1161.h",
+          "pinned_url": "https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmRegsUSBISP_1161.h"
+        }
+      ]
+    },
+    {
+      "id": "dbztool",
+      "repository": "https://github.com/davidgiven/dbztool",
+      "branch_at_lock": "master",
+      "commit": "d32702383c2ea3523ea58599c52345435c74e900",
+      "role": "BOOTSTRAP / CONFIGURACION DRAM Y CHIP SELECT (no ejecutar)",
+      "license_note": "BSD-2-Clause",
+      "files": [
+        {
+          "path": "danainit.sh",
+          "pinned_url": "https://github.com/davidgiven/dbztool/blob/d32702383c2ea3523ea58599c52345435c74e900/danainit.sh"
+        },
+        {
+          "path": "README.md",
+          "pinned_url": "https://github.com/davidgiven/dbztool/blob/d32702383c2ea3523ea58599c52345435c74e900/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "pinned_url": "https://github.com/davidgiven/dbztool/blob/d32702383c2ea3523ea58599c52345435c74e900/LICENSE"
+        }
+      ]
+    },
+    {
+      "id": "pose_original",
+      "repository": "https://github.com/cloudpilot-emu/pose-original",
+      "branch_at_lock": "master",
+      "commit": "97b10711fe4ca50c1bd47072378eaab26ba8e81d",
+      "role": "MODELO ABIERTO DRAGONBALL VZ / ESTRUCTURAS MMIO",
+      "license_note": "GPL-2.0-or-later en EmRegsVZ y otros archivos; verificar cabeceras",
+      "files": [
+        {
+          "path": "SrcShared/Hardware/EmRegsVZ.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmRegsVZ.cpp"
+        },
+        {
+          "path": "SrcShared/Hardware/EmRegsVZ.h",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmRegsVZ.h"
+        },
+        {
+          "path": "SrcShared/Hardware/EmRegsVZPrv.h",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmRegsVZPrv.h"
+        },
+        {
+          "path": "SrcShared/Palm/Platform/Core/Hardware/IncsPrv/M68VZ328Hwr.h",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Palm/Platform/Core/Hardware/IncsPrv/M68VZ328Hwr.h"
+        },
+        {
+          "path": "SrcShared/Hardware/EmMemory.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmMemory.cpp"
+        },
+        {
+          "path": "SrcShared/Hardware/EmRegsFrameBuffer.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmRegsFrameBuffer.cpp"
+        },
+        {
+          "path": "SrcShared/Hardware/EmUARTDragonball.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmUARTDragonball.cpp"
+        },
+        {
+          "path": "SrcShared/Hardware/EmSPISlave.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmSPISlave.cpp"
+        },
+        {
+          "path": "SrcShared/Hardware/EmSPISlaveADS784x.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmSPISlaveADS784x.cpp"
+        },
+        {
+          "path": "SrcShared/Hardware/EmRegsVZHandEra330.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmRegsVZHandEra330.cpp"
+        }
+      ]
+    },
+    {
+      "id": "cloudpilot",
+      "repository": "https://github.com/cloudpilot-emu/cloudpilot-emu",
+      "branch_at_lock": "master",
+      "commit": "064d5d578bcd1f9072de384d05aa217f83db2f7f",
+      "role": "MODELO VZ MODERNIZADO / REFERENCIA SECUNDARIA",
+      "license_note": "GPL-3.0-or-later conforme README y LICENSE",
+      "files": [
+        {
+          "path": "src/cloudpilot/emulator/hardware/EmRegsVZ.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/cloudpilot-emu/blob/064d5d578bcd1f9072de384d05aa217f83db2f7f/src/cloudpilot/emulator/hardware/EmRegsVZ.cpp"
+        },
+        {
+          "path": "src/cloudpilot/emulator/hardware/EmRegsVZ.h",
+          "pinned_url": "https://github.com/cloudpilot-emu/cloudpilot-emu/blob/064d5d578bcd1f9072de384d05aa217f83db2f7f/src/cloudpilot/emulator/hardware/EmRegsVZ.h"
+        },
+        {
+          "path": "src/cloudpilot/emulator/hardware/EmUARTDragonball.cpp",
+          "pinned_url": "https://github.com/cloudpilot-emu/cloudpilot-emu/blob/064d5d578bcd1f9072de384d05aa217f83db2f7f/src/cloudpilot/emulator/hardware/EmUARTDragonball.cpp"
+        },
+        {
+          "path": "src/cloudpilot/emulator/palm/Platform/Core/Hardware/IncsPrv/M68VZ328Hwr.h",
+          "pinned_url": "https://github.com/cloudpilot-emu/cloudpilot-emu/blob/064d5d578bcd1f9072de384d05aa217f83db2f7f/src/cloudpilot/emulator/palm/Platform/Core/Hardware/IncsPrv/M68VZ328Hwr.h"
+        },
+        {
+          "path": "README.md",
+          "pinned_url": "https://github.com/cloudpilot-emu/cloudpilot-emu/blob/064d5d578bcd1f9072de384d05aa217f83db2f7f/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "pinned_url": "https://github.com/cloudpilot-emu/cloudpilot-emu/blob/064d5d578bcd1f9072de384d05aa217f83db2f7f/LICENSE"
+        }
+      ]
+    },
+    {
+      "id": "pose64",
+      "repository": "https://github.com/clintonthegeek/pose64",
+      "branch_at_lock": "main",
+      "commit": "9354edd5b0a2cdadfa0f736e65d080b59500c78f",
+      "role": "EJEMPLO INSTRUMENTACION / SESIONES / AUTOMATIZACION",
+      "license_note": "GPL-3.0",
+      "files": [
+        {
+          "path": "README.md",
+          "pinned_url": "https://github.com/clintonthegeek/pose64/blob/9354edd5b0a2cdadfa0f736e65d080b59500c78f/README.md"
+        },
+        {
+          "path": "LICENSE",
+          "pinned_url": "https://github.com/clintonthegeek/pose64/blob/9354edd5b0a2cdadfa0f736e65d080b59500c78f/LICENSE"
+        },
+        {
+          "path": "docs/recontrol-protocol.md",
+          "pinned_url": "https://github.com/clintonthegeek/pose64/blob/9354edd5b0a2cdadfa0f736e65d080b59500c78f/docs/recontrol-protocol.md"
+        }
+      ]
+    },
+    {
+      "id": "betawise",
+      "repository": "https://github.com/SamDelorean/betawise",
+      "branch_at_lock": "master",
+      "commit": "ad557fcf4efbf07fcf0ff3f398a71a7987b7a41c",
+      "role": "ABI OS3K / FASE FUTURA",
+      "license_note": "Licencias por confirmar antes de copia/reutilizacion",
+      "files": [
+        {
+          "path": "docs/abi-reconstruction-index.md",
+          "pinned_url": "https://github.com/SamDelorean/betawise/blob/ad557fcf4efbf07fcf0ff3f398a71a7987b7a41c/docs/abi-reconstruction-index.md"
+        },
+        {
+          "path": "docs/file-api-current-reference.md",
+          "pinned_url": "https://github.com/SamDelorean/betawise/blob/ad557fcf4efbf07fcf0ff3f398a71a7987b7a41c/docs/file-api-current-reference.md"
+        },
+        {
+          "path": "docs/applet-runtime-api-closure.md",
+          "pinned_url": "https://github.com/SamDelorean/betawise/blob/ad557fcf4efbf07fcf0ff3f398a71a7987b7a41c/docs/applet-runtime-api-closure.md"
+        }
+      ]
+    }
+  ],
+  "external_sources": [
+    {
+      "name": "EmuTOS PR #29",
+      "url": "https://github.com/emutos/emutos/pull/29",
+      "scope": "proveniencia del port, codigo fuente fijado en davidgiven/emutos"
+    },
+    {
+      "name": "Pose-Dana historico",
+      "url": "https://palmdb.net/app/palm-emulator",
+      "scope": "binario/especializacion de Dana pendiente de auditar; fuente Dana no encontrada"
+    },
+    {
+      "name": "Actualizador Flash Dana US/UK 1.2/1.5",
+      "url": "https://drive.google.com/file/d/1LY_Ykm3RysWe4vutxWeFRnwSTCxlIcFg/view",
+      "scope": "firmware stock propietario, separado del emulador y NO versionado"
+    }
+  ],
+  "primary_source_for_dana_board": "retro68_pose_dana",
+  "primary_runtime_crosscheck": "emutos_dana",
+  "primary_emulator_engine": "mame",
+  "license_rule": "No mezclar directamente código GPL de Retro68/POSE/EmuTOS con dispositivos MAME de licencias distintas sin revisión de términos; documentar el hardware y establecer implementación adecuada",
+  "record_type": "handoff_snapshot",
+  "copied_from": "https://github.com/SamDelorean/Dana-OS3K/blob/main/research/sources.lock.json",
+  "copied_to": "https://github.com/SamDelorean/DANA-emu",
+  "snapshot_date": "2026-10-13",
+  "notes": "Referencia congelada al abrir frente de emulador; fuentes no descargadas ni vendorizadas y no implican permiso para copiar GPL a MAME"
+}
