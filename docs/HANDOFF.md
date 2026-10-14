@@ -2,11 +2,11 @@
 
 **MANDATORY FIRST READ:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). This contains the permanent no-drift startup protocol, remote Commander identity/call accounting, Drive pipeline, tests, isolation rules and current cursor. Do not restart past work or request the rules again.
 
-**Updated: 2026-10-13 source review; current technical cursor D0.6.** This file supersedes older D0.3 handoff text preserved in Git history.
+**Updated: 2026-10-13 source review; current technical cursor D1.1 (PENDING; not authorized).** This file supersedes older D0.3 handoff text preserved in Git history.
 
 ## 1. Purpose and immutable architecture
 
-This repository, [SamDelorean/DANA-emu](https://github.com/SamDelorean/DANA-emu), is dedicated to a **reduced MAME-based emulator of AlphaSmart Dana** with two products sharing one modeled hardware engine: **dana-stable** (everyday UI and state management) and **dana-diag** (opt-in instrumentation, repeatable headless tests, bounded traces and evidence). The hardware target is Dana's **MC68VZ328 DragonBall VZ**, using the existing MAME 68000 CPU infrastructure. EmuTOS-Dana is the first guest, followed by OS3K/NEO firmware patches developed separately in [DANA-OS3K](https://github.com/SamDelorean/Dana-OS3K). MAME upstream acceptance and eventual publication are optional.
+This repository, [SamDelorean/DANA-emu](https://github.com/SamDelorean/DANA-emu), is dedicated to a **reduced MAME-based emulator of AlphaSmart Dana** with two products sharing one modeled hardware engine: **dana-stable** (independently compiled everyday variant) and **dana-diag** (independently compiled diagnostic variant, later enabling opt-in instrumentation, repeatable headless tests, bounded traces and evidence). **Both distinct executable builds begin at D1.1, never wait until D6**, and share one Dana engine/codebase. They must be completely isolated from AS2K builds and files. The hardware target is Dana's **MC68VZ328 DragonBall VZ**, using the existing MAME 68000 CPU infrastructure. EmuTOS-Dana is the first guest, followed by OS3K/NEO firmware patches developed separately in [DANA-OS3K](https://github.com/SamDelorean/Dana-OS3K). MAME upstream acceptance and eventual publication are optional.
 
 No functional Dana emulator, MC68VZ328 MAME device, Dana stable/diag executable or EmuTOS-on-MAME test has been demonstrated to date.
 
@@ -28,7 +28,8 @@ No functional Dana emulator, MC68VZ328 MAME device, Dana stable/diag executable 
 | **D0.3** — EmuTOS-Dana image/loader contract | **SPEC_READY, source/build recipe only** | [D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md) | No built image, SHA-256 or guest boot test |
 | **D0.4** — CPU/RAM/VZ post-bootstrap profile | **SPEC_READY, documentary** | [D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md) | No guest/image/map or MAME execution |
 | **D0.5** — deterministic fixture/trace and evidence | **SPEC_READY, documentary** | [D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md) | No harness code or runtime test |
-| **D0.6** — freeze first MAME candidate | **PENDING: NEXT** | Plan only | Not started |
+| **D0.6** — first dual-build MAME candidate | **SPEC_READY, documentary** | [D0_6_FIRST_MAME_DRIVER_CANDIDATE.md](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md) | No built executables |
+| **D1.1** — minimum Dana machine | **PENDING, not authorized** | D0.6 dual-build contract | Neither stable nor diag built |
 | **D1 and later** | **PENDING** | Plan only | No emulator code or tests |
 
 Relevant pinned sources are in [research/sources.lock.json](../research/sources.lock.json).
@@ -42,14 +43,14 @@ Relevant pinned sources are in [research/sources.lock.json](../research/sources.
 - Linker image start/entry still needs confirmation against the **actual emutos.map**. The historical loader assumes the embedded image is aligned to four bytes and up to **256 KiB** (16-bit DBF counter); the Palm block array is also only safely sized for **at most eight 32-KiB kernel blocks** (256 KiB payload), even though KERNEL_SIZE is defined as 300 KiB.
 - Drive filename search did **not** locate emutos-dana.rom, danarun or kernel.img. No output hashes exist. **Never fabricate image sizes/hashes or claim an EmuTOS build is already available on T.**
 
-## 5. Exact next increment: D0.6 (static-first)
+## 5. Exact next increment: D1.1 (approval required)
 
-**D0.5 completed as SPEC_READY documentary:** [test harness/trace/evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md). No actual fixture, compiled emulator, guest image, verified guest SHA, or independent verifier exists.
+**D0.6 SPEC_READY:** [frozen minimal MAME driver and two-build contract](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md). Source-locked baseline: `SamDelorean/mame-as3k @ c4e48388ca620472643110db2941ce70aa5f3c07`; actual T checkout remains unknown.
 
-**D0.6 question:** freeze the first minimal **D1.1** implementation candidate against the source-locked MAME baseline. Document the exact file allowlist/device registration, reduced build target, stable/diag isolation strategy, preflight source revision, compile/selectability smoke, regression coverage, rollback and Drive evidence arrangement. Preserve the missing guest build/map dependency for later D1.4/D1.5.
+**User-mandated first implementation:** independently compile **Dana-stable** and **Dana-diag**, from one new `alphasdana.cpp` and one `asmdana` machine registration, while keeping both build roots/output executables/evidence separate and entirely outside AS2K. The temporary M68000 skeleton proves only build/selectability; no VZ RAM/MMIO or EmuTOS claim. Stable and DIAG both must compile and enumerate for a D1.1 PASS.
 
-The D0.6 output remains documentary. **No Commander, compile, source implementation, T jobs or installation without a separate new authorization for later D1.1.**
+**No existing implementation or binaries:** both remain PENDING. The user must explicitly authorize source implementation and a later remote build intervention; no Commander allowance is inherited, and no job has been staged. Follow the approved `-j3`, Drive-first `dcjob launch`, independent verifier and rollback workflow.
 
 ## 6. Starting prompt for another conversation
 
-> Resume DANA-emu from **D0.6**. Read the canonical continuity rules, incremental plan, D0.5 test-harness contract, AS2K workflow and source lock. Freeze only the first minimal D1.1 MAME candidate in English Git documents. Do not spend Commander calls, compile, or implement without separate explicit authorization.
+> Resume DANA-emu at **D1.1 PENDING**. Read the canonical rules, incremental plan, D0.6 dual-build candidate, AS2K workflow and source lock. Dana-stable and Dana-diag must be compiled independently from the very first D1.1 build, using the same Dana hardware code and no AS2K build tree. Do not implement or run remotely without explicit new approval.
