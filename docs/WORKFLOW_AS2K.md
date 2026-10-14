@@ -1,12 +1,12 @@
 # Directivas operativas heredadas del emulador AS2K
 
-**MANDATORY FOR NEW CONVERSATIONS:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). It consolidates the verified Drive operating records, canonical T deviceId, dcjob launcher, three-call maximum subject to new explicit authorization, English Git rule and exact D0.5 checkpoint. No Commander for static documentary work.
+**MANDATORY FOR NEW CONVERSATIONS:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). It consolidates the verified Drive operating records, canonical T deviceId, dcjob launcher, three-call maximum subject to new explicit authorization, English Git rule and exact D0.6 checkpoint. No Commander for static documentary work.
 
 **Objetivo:** producir un emulador estable y uno diagnóstico, reducidos, usando MAME como plataforma propia de pruebas.
 
 ## Plan autoritativo
 
-El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **No document-only increment may be marked as functional PASS.** D0.1–D0.4 are SPEC_READY documentation; **D0.5 is next** and requires no Commander calls.
+El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **No document-only increment may be marked as functional PASS.** D0.1–D0.5 are SPEC_READY documentation; **D0.6 is next** and requires no Commander calls.
 
 ## Metodología establecida
 
