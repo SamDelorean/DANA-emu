@@ -13,7 +13,7 @@ Construir **DANA-stable** (uso cotidiano) y **DANA-diag** (instrumentación, eje
 
 ## 2. Reglas de operación y cierre (obligatorias)
 
-1. **Trabajo estrictamente lineal.** Una pregunta técnica y un cambio pequeño por incremento. No comenzar N+1 hasta cerrar N como **PASS** o **BLOCKED con impedimento localizado** y definir un desvío explícito, mínimo y documentado. Nunca llamar PASS a una hipótesis.
+1. **Trabajo estrictamente lineal.** Una pregunta técnica y un cambio pequeño por incremento. Para **D0.x exclusivamente documentales**, el cierre **SPEC_READY** requiere inventario completo y fuentes verificadas; permite pasar al siguiente D0.x **sin fingir PASS funcional**. A partir de D1, no comenzar N+1 hasta cerrar N como **PASS** con prueba real en T, o **BLOCKED** con impedimento localizado y desvío mínimo documentado. Nunca llamar PASS a una hipótesis.
 2. **STATIC_FIRST:** revisar versiones y commits ya fijados en research/sources.lock.json y en DANA-OS3K; preferir código reutilizable. No recomenzar análisis que ya terminó satisfactoriamente.
 3. **Contrato de cambio previo:** antes de implementar cada incremento, registrar objetivo, prerequisitos, archivos permitidos, efectos esperados, fixture/imagen exacta, comando de prueba, señales observables, criterios PASS/FAIL/BLOCKED y reversión. No ampliar el contrato dentro de la ejecución.
 4. **Diagnóstico antes de depurar:** incorporar observabilidad mínima en el motor desde D1. Registrar PC, vector, operación MMIO y causa del fallo. Evitar hacks de host que sustituyan acciones reales del invitado.
@@ -49,7 +49,7 @@ MAME inventariado contiene CPU 68000 y dispositivos MC68328/MC68EZ328; **no** se
 
 | ID | Único objetivo | Cierre documental |
 |---|---|---|
-| **D0.1** | Fijar versión/revisión de MAME de partida y confirmar qué recursos Neo/VZ y EZ son reutilizables | Inventario de archivos exactos, commits, licencias; diferenciar driver AS3000/EZ y NEO/VZ externo |
+| **D0.1** | Fijar versión/revisión del MAME de referencia y confirmar qué recursos Neo/VZ y EZ son reutilizables | **SPEC_READY**: [auditoría fechada](D0_1_MAME_VZ_REUSE_AUDIT.md). SHA de GitHub fijado; instalación T no verificada hasta preflight posterior |
 | **D0.2** | Completar tabla EZ frente a VZ por bloque | Dirección, ancho, reset, bits y efecto documentados para CPU, RAM/CS, PLL, IRQ, Timer1, UART1, LCD y SPI; fuentes y desconocidos |
 | **D0.3** | Fijar invitado de prueba EmuTOS-Dana | Imagen verificable **o** receta reproducible de construcción, formato real, hash, entrada/relocación, sin confundir cargador RAM con reset físico |
 | **D0.4** | Especificar el estado CPU/bus del loader RAM | Estado RAM 4 MiB, excepciones, SSP/PC/SR, vectores, CS/DRAM mínimos y tabla de primer contacto MMIO |
@@ -173,7 +173,8 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 
 | Bloque | Estado al elaborar plan | Primera actividad autorizable |
 |---|---|---|
-| D0.1–D0.6 | **PENDING** | Inventario estático, fuente MAME real, especificación/fixture |
+| **D0.1** | **SPEC_READY (cierre documental)** | [Auditoría de reutilización MAME/VZ](D0_1_MAME_VZ_REUSE_AUDIT.md); commit de baseline GitHub fijado, checkout de T pendiente del primer preflight |
+| **D0.2–D0.6** | **PENDING** | Análisis estático de registros, firmware/loader y definición de fixtures |
 | D1.1–D1.5 | **PENDING** | Sólo después de D0 |
 | D2.1–D2.6 | **PENDING** | Sólo después de D1 |
 | D3.1–D3.5 | **PENDING** | Sólo después de D2 |
@@ -185,7 +186,7 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 
 **No saltar un bloqueo usando un stub que devuelva éxito artificialmente.** Ante evidencia insuficiente registrar exactamente el registro, evento, archivo o señal que falta, estudiar fuentes/repositorios y retomar ese mismo incremento. Cambios de orden requieren modificar este plan de forma explícita, motivada y trazable.
 
-**Punto de continuidad exacto: D0.1 — auditoría del baseline MAME y del posible trabajo NEO/VZ reutilizable.** No hay comandos de ejecución autorizados por este documento.
+**Punto de continuidad exacto: D0.2 — tabla de diferencias de registros MC68EZ328/MC68VZ328.** D0.1 quedó **SPEC_READY**, no PASS funcional. No hay comandos de ejecución autorizados por este documento.
 
 ## 7. Referencias de control
 
