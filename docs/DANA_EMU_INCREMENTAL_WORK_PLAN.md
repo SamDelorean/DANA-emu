@@ -1,5 +1,7 @@
 # DANA-emu — plan maestro incremental y de calificación
 
+**Mandatory session guard:** read [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md) before any action. It preserves the universal AS2K rules, execution authorization limits, source checkpoints, and exact next cursor. This plan alone does not authorize remote execution.
+
 **Plan autoritativo del emulador reducido.** Elaborado el 2026-10-13. Sustituye la granularidad del esquema D0–D8 previo sin invalidar la arquitectura, fuentes ni reglas AS2K. **Development status: no functional increments have passed. Current next task: D0.4 (RAM loader CPU/bus initial state); D0.1–D0.3 are SPEC_READY documentation only.** No remote execution is authorized by this plan.
 
 ## 1. Objetivo y productos
