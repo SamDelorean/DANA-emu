@@ -1,7 +1,7 @@
 # DANA-emu — Canonical continuity, universal rules, and no-drift operating contract
 
 **Status: ACTIVE / MANDATORY READING at the beginning of every new conversation.**
-**Updated: 2026-10-13. Exact technical cursor: D0.5 (PENDING, static documentation only). D0.4 = SPEC_READY.**
+**Updated: 2026-10-13. Exact technical cursor: D0.6 (PENDING, static documentation only). D0.1–D0.5 = SPEC_READY, documentation only.**
 
 This document exists so the user does not need to teach the assistant the project, correct repeated process errors, restore standing rules, or audit its actions. Treat the content as the minimum mandatory baseline for future work. Any later change requires an explicit project decision supported by Git evidence; never silently reinterpret this file or advance the cursor.
 
@@ -38,8 +38,8 @@ The target hardware is **MC68VZ328 DragonBall VZ and the Dana board**. First pro
 | **D0.2**, EZ vs VZ register contract | **SPEC_READY, documentation only** | docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md |
 | **D0.3**, EmuTOS-Dana image and loader | **SPEC_READY, source/build recipe only** | docs/D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md |
 | **D0.4**, virtual RAM bootstrap CPU/bus state | **SPEC_READY, documentation only** | docs/D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md |
-| **D0.5**, deterministic harness and traces | **PENDING: NEXT INCREMENT** | master plan |
-| **D0.6**, frozen candidate | **PENDING** | master plan |
+| **D0.5**, deterministic harness and traces | **SPEC_READY, documentary only** | docs/D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md |
+| **D0.6**, frozen first MAME candidate | **PENDING: NEXT INCREMENT** | master plan |
 | **D1+**, functional emulator construction/testing | **PENDING** | no PASS yet |
 
 **No Dana emulator source/build has passed functional verification.** No MC68VZ328 MAME device, stable or diag executable, or successful EmuTOS-on-MAME run is proven in this repository. The specific machine T checkout path and revision for DANA-emu are not yet verified. No EmuTOS-Dana build artifacts or guest image SHA have been verified. Do not label documentary SPEC_READY as **PASS**. Do not claim a partial GUI/host rendering proves a real guest LCD.
@@ -115,20 +115,21 @@ These documents describe **known premises**; do not spend Remote Desktop calls r
 - **Do not touch** AS2K firmware, ROM Z stock, existing MAME AS2K, unrelated branches, the physical Dana, OS3K patching, Surface/Vontar/Armbian, Drive jobs belonging to other projects, or the status/cursor of another conversation's workflow.
 - In a cross-project conversation, treat a Dana aside as **separate recorded information only**; never advance an AS2K increment because of Dana work or vice versa.
 
-## 7. Immediate next task — D0.5 only
+## 7. Immediate next task — D0.6 only
 
-**D0.4 is SPEC_READY documentary:** [D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md). The contract fixes 4 MiB RAM, low vector/sysvar ownership, a synthetic supervisor entry, the guest startup order and unresolved exact symbol addresses. It distinguishes the historical R-booter from R-direct, and confirms memory.S consults phystop at **0x42E** and warm_magic at **0x6FC** before later dana_init() changes phystop. No guest binary or runtime result exists.
+**D0.5 is SPEC_READY documentary:** [deterministic fixture/trace and independent evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md). It specifies versioned fixture fields, source and guest hashes only after binaries exist, bounded events.ndjson with guest/host provenance, failure taxonomy, stable/diag parity, regression checks, Drive result bundle and independent verification. There is no harness implementation or executable.
 
-**D0.5 single question:** what is the smallest **deterministic test-fixture and trace/evidence contract** that will distinguish legitimate guest execution, missing peripherals, CPU/address errors, and infrastructure failures without falsifying stable/diag parity?
+**D0.6 single technical question:** Which exact first MAME **D1.1** candidate can be frozen and later implemented with minimum scope while preserving AS2K and all existing drivers?
 
-Document in English without implementing:
-1. Input manifest schema: image SHA (only after available), source revision, map/symbol verification, CPU/bootstrap profile, deterministic RAM initial values, VZ register profile and machine/host/variant identifiers.
-2. Bounded, versioned trace schema for instruction transitions, vector writes/exceptions, MMIO read/write (width, endian lanes, PC, value), IRQ and assert/fail records.
-3. Independent host/guest assertions of D1–D5 tests, negative cases, stable/diag parity and regression evidence.
-4. Drive job-result bundle format and strict distinction between BUILD, LAUNCH, HARNESS, GUEST and CONNECTOR outcomes; PASS/FAIL/BLOCKED logic.
-5. Handoff to D0.6 for the first implementation candidate, specifying what still requires real EmuTOS image/map and an approved T run.
+Required D0.6 **static-only** document:
+1. Select the source-locked MAME baseline and identify exact files and device registration/build target to change, cross-checking existing MC68328/EZ code and preserved Neo reuse.
+2. State the minimal driver MC68VZ328 / Dana **skeleton** scope for D1.1, explicitly excluding CPU MMIO/peripherals and guest boot claims until their increments.
+3. State proposed D1.1 compile/selectability fixture, expected failures, smoke tests and preflight verification of actual source revision and safe checkout on T.
+4. Specify `stable` and `diag` build/config isolation without introducing separate hardware models.
+5. Fix the allowed workspace, revert/rollback, evidence paths, acceptance criteria and the exact **separate authorization needed** before creating code or sending a job.
+6. Carry forward unknown EmuTOS image/map hashes and unsatisfied hardware behaviors as open dependencies, not guessed facts.
 
-**No Commander, job dispatch, compilation, MAME modification, guest execution or external publication is authorized by the D0.5 documentation task.**
+**D0.6 does NOT authorize compiling, coding, Commander, creating a T checkout/job, installing tools, modifying third-party projects or physical Dana operations.** The next stage D1.1 will require explicit execution approval.
 
 ## 8. Nonnegotiable self-audit before every response / tool use
 
@@ -144,6 +145,6 @@ Document in English without implementing:
 
 **User prompt in the new conversation:**
 
-"Resume DANA-emu from D0.5. Read docs/CANONICAL_CONTINUITY_AND_RULES.md first, followed by HANDOFF, the authoritative incremental plan, the source lock and D0.4. Apply all universal AS2K/Commander/Drive rules and English-only Git. Complete only the static deterministic test-harness specification D0.5 without Commander or implementation."
+"Resume DANA-emu from D0.6. Read docs/CANONICAL_CONTINUITY_AND_RULES.md first, followed by HANDOFF, the authoritative incremental plan, the source lock and D0.5. Apply all universal AS2K/Commander/Drive rules and English-only Git. Freeze only the first D1.1 MAME reduced implementation candidate; no Commander, compilation or source changes without separate explicit authorization."
 
 **Never ask the user to reconstruct project history once these records are available in Git.**
