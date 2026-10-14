@@ -2,7 +2,7 @@
 
 **Mandatory session guard:** read [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md) before any action. It preserves the universal AS2K rules, execution authorization limits, source checkpoints, and exact next cursor. This plan alone does not authorize remote execution.
 
-**Authoritative reduced-emulator plan.** Prepared on 2026-10-13. It refines the previous D0–D8 outline without invalidating the architecture, sources or AS2K rules. **Development status: no functional increments have passed. The next technical increment is D1.1 PENDING; D0.1–D0.6 are documentary SPEC_READY only. Dana-stable and Dana-diag require independent builds from D1.1, not D6.** No remote execution is authorized by this plan. Subsequent source preparation in a candidate branch does not itself qualify D1.1.
+**Authoritative reduced-emulator plan.** Prepared on 2026-10-13; progress reconciled on 2026-10-14 after real T R5 qualification and authorized Git integration. It refines the previous D0–D8 outline without invalidating architecture, sources or AS2K rules. **D1.1: PASS (two separate MAME skeleton builds and selectability; no guest behavior). Exact next increment: D1.2 PENDING (4 MiB RAM, 8/16/32-bit bus accesses). D0.1–D0.6 remain documentary SPEC_READY only.** New source implementation and remote/Commander runs are not authorized by this plan.
 
 ## 1. Objective and products
 
@@ -20,7 +20,7 @@ Build **DANA-stable** (daily use) and **DANA-diag** (instrumentation, automated 
 3. **Pre-change contract:** before implementing each increment, record its objective, prerequisites, allowed files, expected effects, exact image/fixture, test command, observable signals, PASS/FAIL/BLOCKED criteria and rollback. Do not expand scope while executing.
 4. **Diagnostics before debugging:** introduce minimum engine observability from D1. Record PC, vector, MMIO operation and failure cause. Avoid host hacks that replace actual guest operations.
 5. **Deterministic tests and regression:** retain source/commit, image and executable hashes, arguments, inputs, outputs, state transitions and a machine-readable report. Re-run at least the smoke tests for affected closed increments. Compile with **`-j3` on T** when appropriate.
-6. **PASS requires real T evidence:** compilation alone does not demonstrate functionality. A host-drawn image does not prove the LCD works. A log message does not prove the guest received an interrupt. The verifier must distinguish infrastructure, harness and product failures.
+6. **PASS requires the evidence defined by each increment on real T:** D1.1 explicitly qualifies *build/registration/selectability* by separately compiling and running CLI validations of both binaries; it cannot claim a guest behavior. D1.2 onward require actual guest-visible tests of RAM/peripherals where specified: compilation alone, host-drawn images or synthetic host success logs do not qualify those behaviors. Distinguish infrastructure, harness and product failures.
 7. **Commander/Drive:** stage exactly one prevalidated self-contained SH job in Drive inbox, confirming the queue does not already contain another job. Execute through the canonical T launcher only after explicit authorization and a per-increment call budget. Retrieve results through Drive; do not spend Commander on polling, log reading, exploratory path searches or ad hoc repairs. Previous-conversation budgets are not inherited.
 8. **Isolated work:** do not alter AS2K emulators/ROMs, unrelated repositories or physical Dana firmware. Never delete, clean or reset another workstream's trees. Record source, docs and PR/commit only for appropriately qualified increments in GitHub.
 9. **Single status taxonomy:** PENDING, SPEC_READY (reviewed specification, not executed), READY (execution expressly approved), PASS, FAIL, BLOCKED. FAIL/BLOCKED must identify the cause and next technical question; do not inflate unrelated milestones.
@@ -41,17 +41,17 @@ A harness failure caused by a nonexistent path or file is not a functional hardw
 
 The surveyed MAME tree contains a 68000 CPU and MC68328/MC68EZ328 devices; **no MC68VZ328 device or integrated NEO/NEO2 machine driver was confirmed** in the inspected revisions. [ioma8/neo-re/alpha-emu](https://github.com/ioma8/neo-re/tree/master/alpha-emu) examines NEO firmware and VZ outside MAME. The [EmuTOS-Dana](https://github.com/davidgiven/emutos/tree/dana) port uses 4 MiB operational RAM, a 560×160 LCD, Timer1, UART1, SPI1/SD and SPI2/ST keyboard. [Retro68 POSE Dana](https://github.com/csnover/Retro68/tree/palmos/PalmUtils/poser) already contains Dana-specific VZ and ST components; this GPL implementation is a **behavioral reference**, not directly importable without license analysis.
 
-**Original D0 research dependencies:** confirm the particular MAME revision/checkout for Dana on T; find or produce the EmuTOS-Dana guest image and its SHA and format (never invent Drive availability); specify exact RAM bootstrap/CPU state and MMIO/bus map for the chosen VZ revision. Do not create an indiscriminate extra copy of MAME.
+**Original D0 research dependencies and later verification:** the pinned MAME revision `c4e48388ca620472643110db2941ce70aa5f3c07` was verified on T as a read-only donor in R3; the Dana product Git checkout was likewise verified. The EmuTOS-Dana guest image, SHA and actual build map are **still unavailable/unverified** and belong to later stages. D0.4 specifies the intended RAM/CPU bootstrap state; VZ MMIO remains unimplemented. Do not create an indiscriminate extra MAME copy outside Dana-owned isolated staging.
 
 ## 4. Atomic increments
 
-**Status:** D0.1–D0.6 have documentary SPEC_READY records. D1.1 remains PENDING until authorized real builds pass. None of the documentary closures is a functional PASS.
+**Status:** D0.1–D0.6 have documentary SPEC_READY records. **D1.1 PASSED its exact build/selectability contract** in the T R5 run with two different binaries; no guest-functional increment has yet passed. **D1.2 is PENDING.** [Qualification record](https://github.com/SamDelorean/DANA-emu/pull/5#issuecomment-6179533751) and [R5 package](https://drive.google.com/file/d/1NLIydtsa6t2XTyeXG4SvleIZI-jfYeo7/view).
 
 ### D0 — References, initial model and reproducible bench (static only)
 
 | ID | Single objective | Documentary closure |
 |---|---|---|
-| **D0.1** | Pin reference MAME revision and determine reusable NEO/VZ and EZ resources | **SPEC_READY:** [dated reuse audit](D0_1_MAME_VZ_REUSE_AUDIT.md); pinned GitHub SHA, T checkout not verified until later preflight |
+| **D0.1** | Pin reference MAME revision and determine reusable NEO/VZ and EZ resources | **SPEC_READY:** [dated reuse audit](D0_1_MAME_VZ_REUSE_AUDIT.md); pinned GitHub SHA; T donor verified later in R3 |
 | **D0.2** | Complete EZ-versus-VZ block comparison | **Documentary SPEC_READY:** [register contract and Motorola corrections](D0_2_EZ_VZ_REGISTER_CONTRACT.md); detailed bitfields remain subsystem-specific |
 | **D0.3** | Define EmuTOS-Dana guest image reference | **SPEC_READY:** [source/build and RAM bootstrap contract](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md); source revision, make target, raw binary stages and 0x2140 relocation recorded. **No built image/hash yet** |
 | **D0.4** | Specify virtual RAM bootstrap CPU/bus state | **Documentary SPEC_READY:** [contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md); 4 MiB RAM, vectors, SSP/PC/SR, memory initialization and first MMIO; no runtime verification |
@@ -181,8 +181,9 @@ Only when an adapted OS3K binary with defined provenance and mapping exists: cre
 | **D0.4** | **SPEC_READY (documentation only)** | [Post-bootstrap RAM/CPU/bus entry contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md); no MAME functional PASS |
 | **D0.5** | **SPEC_READY (documentation only)** | [Deterministic fixture/trace/evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md); no actual tests |
 | **D0.6** | **SPEC_READY (documentation only)** | [First MAME driver, dual-build test and rollback contract](D0_6_FIRST_MAME_DRIVER_CANDIDATE.md); no compilation |
-| **D1.1** | **PENDING — actual dual-build qualification required** | Two independent reduced Dana-stable and Dana-diag builds with shared source and isolated evidence |
-| D1.2–D1.5 | **PENDING** | Only after D1.1 |
+| **D1.1** | **PASS — build/selectability only** | Two separate Clang 21 / `PRECOMPILE=0` builds and `asmdana` CLI smoke on T, source/list preservation and binary SHA-256 verified in [R5](https://drive.google.com/file/d/1NLIydtsa6t2XTyeXG4SvleIZI-jfYeo7/view); integrated by [PR #5](https://github.com/SamDelorean/DANA-emu/pull/5) |
+| **D1.2** | **PENDING — next increment, not yet authorized** | 4 MiB guest RAM, 8/16/32-bit big-endian read/write fixture, alignment and boundary checks; D1.1 regression |
+| D1.3–D1.5 | **PENDING** | Only after D1.2 |
 | D2.1–D2.6 | **PENDING** | Only after D1 |
 | D3.1–D3.5 | **PENDING** | Only after D2 |
 | D4.1–D4.6 | **PENDING** | Only after D3 |
@@ -193,7 +194,7 @@ Only when an adapted OS3K binary with defined provenance and mapping exists: cre
 
 **Never bypass a blocker using a stub that reports artificial success.** If evidence is insufficient, record the exact missing register, event, file or signal, investigate the pinned source material, and resume the *same* increment. Any reordering requires an explicit, reasoned, traceable change to this plan.
 
-**Exact continuation cursor: D1.1 PENDING — first isolated dual build of Dana-stable and Dana-diag, subject to independent implementation and remote authorization.** D0.1–D0.6 are **SPEC_READY documentation only**, not functional PASS. Do not build, invoke Commander or run a guest without fresh explicit authorization.
+**Exact continuation cursor: D1.2 PENDING — 4 MiB RAM and 68k 8/16/32-bit read/write semantics, with big-endian byte lanes, alignment, bounds and D1.1 regression.** D1.1 is closed **PASS only for two separate T-compiled MAME skeleton builds/selectability**. The tested product head is `92e39eff050fa7a62486569be6a34994682ce44c`; the stable and diag binary SHA-256 values are respectively `ec055d08b66d46181d26cd9371f7f961f52732ad36f468a8aae0a4e1b7bc83d1` and `dd877c9cb36c491e675b82ce2aba78548519cccf2bd16bf2a9c61cbd3000435c`. For R5 builds on T use Clang 21 with `OVERRIDE_CC=clang OVERRIDE_CXX=clang++ OVERRIDE_LD=clang++ PRECOMPILE=0`, sequential `make -j3`, separate stable/diag stages. **Do not claim a functional guest, VZ or LCD.** D0.1–D0.6 remain SPEC_READY documentary. Next action is static D1.2 contract and fixture review; no source implementation, Commander/T, launch, or publication without new explicit user authorization.
 
 ## 7. Control references
 
