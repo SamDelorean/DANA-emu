@@ -22,7 +22,13 @@ Meta: **dana-stable** y **dana-diag**, emuladores **reducidos** basados en un mi
 
 Documentación y estructura inicial listas. **No existe en este repositorio una compilación del emulador Dana, ni un núcleo VZ implementado y validado, ni dos ejecutables stable/diag terminados.** Ninguna prueba del firmware fue ejecutada en T por este frente. No se autorizó consumir Commander para crear esta estructura documental.
 
-## Siguiente incremento propuesto: D0 (sólo preparación técnica)
+## Punto exacto de continuación: D0.1
+
+**PLAN AUTORITATIVO:** [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). La sección D0 subdivide lo que antes era una única preparación general.
+
+**D0.1 = fijar la versión y revisión del MAME reutilizable, confirmar qué existe realmente de Neo/Neo2/VZ en código ya accesible, registrar archivos, licencias y diferencias respecto a Dana.** Esto es revisión estática, no compilación ni prueba T. No declarar PASS hasta completar tabla con procedencia, SHA y rutas verificadas.
+
+### Alcance histórico de D0, ahora dividido en D0.1–D0.6
 
 1. Fijar con evidencia la versión y la revisión del MAME que se reutilizará, y la ruta real del árbol de trabajo en T cuando haga falta; no inventar checkout/rutas.
 2. Elaborar diferencia precisa del MAME MC68EZ328, la arquitectura compartida Neo/Dana DragonBall VZ, y la implementación VZ de POSE/Retro68. Examinar también el emulador firmware-first `ioma8/neo-re/alpha-emu` (fuera de MAME) y cualquier controlador Neo/VZ WIP presente en el árbol MAME real de T; distinguir periféricos externos para no duplicarlos ni confundirlos.
@@ -33,4 +39,4 @@ No iniciar un árbol completo nuevo de MAME, la implementación de OS3K ni el co
 
 ## Frase de continuidad
 
-«Retoma DANA-emu en D0. Lee README, docs/HANDOFF.md, docs/WORKFLOW_AS2K.md, docs/ARCHITECTURE.md, docs/INCREMENTAL_PLAN.md y el manifiesto fuente de DANA-OS3K. Sólo prepara el primer incremento definido, sin usar Commander ni compilar hasta que exista autorización explícita».
+«Retoma DANA-emu en D0.1. Lee el PLAN MAESTRO docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md, las reglas WORKFLOW_AS2K.md y la auditoría NEO_NEO2_REUSE_AUDIT.md, además de research/sources.lock.json. Completa sólo la auditoría estática D0.1; sin Commander ni compilación salvo autorización explícita».
