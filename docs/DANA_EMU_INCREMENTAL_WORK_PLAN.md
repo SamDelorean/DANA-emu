@@ -114,13 +114,15 @@ La matriz de NEO no se reutiliza como si fuera ST. La referencia prioritaria es 
 |---|---|---|
 | **D5.1** | ¿Arranca EmuTOS sin emulación de llamadas TOS por el host? | Repetición determinista de guest hasta interfaz real en LCD |
 | **D5.2** | ¿Funciona interacción de teclado de punta a punta? | Secuencia de entrada y reacción visible desde el sistema invitado |
-| **D5.3** | ¿Reset/relanzamiento reprodu­cen estado limpio? | Dos corridas desde snapshot/configuración base con resultados comparables |
+| **D5.3** | ¿Reset/relanzamiento reproducen estado limpio? | Dos corridas desde snapshot/configuración base con resultados comparables |
 | **D5.4** | ¿Son correctas RAM/IRQ bajo carga básica? | Sesión prolongada de pulsaciones, redibujado y ticks sin corrupciones ni loops |
-| **D5.5** | ¿Stable/DIAG producen el mismo resultado del guest? | Capturas/estado comparable; trazas extra solo en DIAG, sin alterar semántica |
+| **D5.5** | ¿El diagnóstico opt-in preserva la ejecución del guest? | Capturas/estado comparables con instrumentación encendida/apagada; la separación final de productos ocurre en D6.1 |
 
 **D5 es el primer hito donde puede afirmarse «emulador Dana funcional»**, con alcance claro: **modo RAM/EmuTOS + LCD + teclado**. No es garantía de boot Palm, USB, SD, suspensión ni OS3K.
 
 ### D6 — Productos stable y diag de calidad diaria
+
+D5 valida primero la paridad al encender/desactivar sondas dentro de una base común; **D6.1 formaliza por primera vez los dos productos separados**. No confundir ambos criterios.
 
 | ID | Único incremento | Prueba de cierre en T |
 |---|---|---|
