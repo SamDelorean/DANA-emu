@@ -298,6 +298,78 @@
           "pinned_url": "https://github.com/SamDelorean/betawise/blob/ad557fcf4efbf07fcf0ff3f398a71a7987b7a41c/docs/applet-runtime-api-closure.md"
         }
       ]
+    },
+    {
+      "id": "neo_re_alpha_emu",
+      "repository": "https://github.com/ioma8/neo-re",
+      "branch_at_lock": "master",
+      "commit": "732814871fe493e80ed1ab1f959d8dad174ee540",
+      "role": "EMULADOR EXPERIMENTAL NEO FIRMWARE-FIRST INDEPENDIENTE DE MAME; REFERENCIA AL DRAGONBALL VZ, ROM SYSTEM3, MMIO Y PRUEBAS",
+      "license_note": "No se verificó licencia explícita en raíz; consultar y no copiar código hasta conocer los derechos de reutilización",
+      "files": [
+        {
+          "path": "alpha-emu/README.md",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu/README.md"
+        },
+        {
+          "path": "alpha-emu/src/firmware.rs",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu/src/firmware.rs"
+        },
+        {
+          "path": "alpha-emu/src/firmware_session.rs",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu/src/firmware_session.rs"
+        },
+        {
+          "path": "alpha-emu/src/memory.rs",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu/src/memory.rs"
+        },
+        {
+          "path": "alpha-emu/src/keyboard.rs",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu/src/keyboard.rs"
+        },
+        {
+          "path": "alpha-emu/src/lcd.rs",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu/src/lcd.rs"
+        },
+        {
+          "path": "alpha-emu/src/gui.rs",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/alpha-emu/src/gui.rs"
+        },
+        {
+          "path": "docs/2026-04-20-alpha-emu-memory-map.md",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/docs/2026-04-20-alpha-emu-memory-map.md"
+        },
+        {
+          "path": "docs/2026-04-22-alpha-emu-headless-usage.md",
+          "pinned_url": "https://github.com/ioma8/neo-re/blob/732814871fe493e80ed1ab1f959d8dad174ee540/docs/2026-04-22-alpha-emu-headless-usage.md"
+        }
+      ]
+    },
+    {
+      "id": "mame_official_crosscheck",
+      "repository": "https://github.com/mamedev/mame",
+      "branch_at_lock": "master",
+      "commit": "98e60b54d0718171636f50e39794d861564aac08",
+      "role": "REFERENCIA CRUZADA MAME OFICIAL: DRIVER AS3000 EZ, CORE 328/EZ, LISTA DE SMARTAPPLETS; NO SE ENCONTRO DRIVER NEO/NEO2 EN REVISION AUDITADA",
+      "license_note": "Consultar SPDX por archivo",
+      "files": [
+        {
+          "path": "src/mame/skeleton/alphasma3k.cpp",
+          "pinned_url": "https://github.com/mamedev/mame/blob/98e60b54d0718171636f50e39794d861564aac08/src/mame/skeleton/alphasma3k.cpp"
+        },
+        {
+          "path": "src/devices/machine/mc68328.cpp",
+          "pinned_url": "https://github.com/mamedev/mame/blob/98e60b54d0718171636f50e39794d861564aac08/src/devices/machine/mc68328.cpp"
+        },
+        {
+          "path": "src/devices/machine/mc68328.h",
+          "pinned_url": "https://github.com/mamedev/mame/blob/98e60b54d0718171636f50e39794d861564aac08/src/devices/machine/mc68328.h"
+        },
+        {
+          "path": "hash/alphasmart_kapps.xml",
+          "pinned_url": "https://github.com/mamedev/mame/blob/98e60b54d0718171636f50e39794d861564aac08/hash/alphasmart_kapps.xml"
+        }
+      ]
     }
   ],
   "external_sources": [
