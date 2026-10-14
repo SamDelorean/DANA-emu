@@ -4,7 +4,7 @@
 
 ## Plan autoritativo
 
-El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **Ningún incremento cerrado por mera documentación puede marcarse PASS funcional.** El siguiente es D0.1 y no usa Commander.
+El plan completo, con incrementos atómicos y sus pruebas, se guarda en [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md). **No document-only increment may be marked as functional PASS.** D0.1–D0.3 are SPEC_READY documentation; **D0.4 is next** and requires no Commander calls.
 
 ## Metodología establecida
 
