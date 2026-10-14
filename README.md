@@ -34,7 +34,8 @@ Este repositorio documenta una implementación **todavía no construida** y no i
 - [Índice del plan anterior D0–D8](docs/INCREMENTAL_PLAN.md): equivalencias históricas, supersedidas en detalle por el plan maestro.
 - [Reglas de trabajo AS2K](docs/WORKFLOW_AS2K.md).
 - [Fuentes técnicas y revisiones fijadas](docs/SOURCES.md).
-- [**D0.1 — Auditoría de reutilización MAME/VZ**](docs/D0_1_MAME_VZ_REUSE_AUDIT.md): cerrada documentalmente en SPEC_READY; próximo D0.2.
+- [**D0.1 — Auditoría de reutilización MAME/VZ**](docs/D0_1_MAME_VZ_REUSE_AUDIT.md): SPEC_READY documental.
+- [**D0.2 — Contrato de registros EZ/VZ**](docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md): SPEC_READY; mapa MMIO y correcciones de reset oficial; próximo D0.3.
 - [Punto de continuación en otro chat](docs/HANDOFF.md).
 
 ## Relación con otros repositorios
@@ -46,4 +47,4 @@ Este repositorio documenta una implementación **todavía no construida** y no i
 
 ## Estado de traslado — 2026-10-13
 
-**Preparación documental.** Todavía no existe un controlador MC68VZ328 de este proyecto dentro de MAME, ni ejecutable Dana, ni prueba EmuTOS dentro del emulador. No se utilizó Commander durante esta preparación. **D0.1 quedó SPEC_READY documental**, con revisión GitHub fijada y mapa de reutilización; el checkout de T todavía no está comprobado. El siguiente incremento es **D0.2, equivalencia de registros EZ/VZ**. No se ha probado ningún emulador Dana. Consultar [plan maestro](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) y [HANDOFF](docs/HANDOFF.md).
+**Preparación documental.** Todavía no existe un controlador MC68VZ328 de este proyecto dentro de MAME, ni ejecutable Dana, ni prueba EmuTOS dentro del emulador. No se utilizó Commander durante esta preparación. **D0.1 quedó SPEC_READY documental**, con revisión GitHub fijada y mapa de reutilización; el checkout de T todavía no está comprobado. El siguiente incremento es **D0.3, contrato de imagen/loader EmuTOS-Dana**. No se ha probado ningún emulador Dana. Consultar [plan maestro](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) y [HANDOFF](docs/HANDOFF.md).
