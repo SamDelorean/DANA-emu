@@ -29,6 +29,7 @@ Proyecto de ingeniería para reproducir el hardware **AlphaSmart Dana / MC68VZ32
 - [Índice del plan anterior D0–D8](docs/INCREMENTAL_PLAN.md): equivalencias históricas, supersedidas en detalle por el plan maestro.
 - [Reglas de trabajo AS2K](docs/WORKFLOW_AS2K.md).
 - [Fuentes técnicas y revisiones fijadas](docs/SOURCES.md).
+- [**D0.1 — Auditoría de reutilización MAME/VZ**](docs/D0_1_MAME_VZ_REUSE_AUDIT.md): cerrada documentalmente en SPEC_READY; próximo D0.2.
 - [Punto de continuación en otro chat](docs/HANDOFF.md).
 
 ## Relación con otros repositorios
@@ -40,4 +41,4 @@ Proyecto de ingeniería para reproducir el hardware **AlphaSmart Dana / MC68VZ32
 
 ## Estado de traslado — 2026-10-13
 
-**Preparación documental.** Todavía no existe un controlador MC68VZ328 de este proyecto dentro de MAME, ni ejecutable Dana, ni prueba EmuTOS dentro del emulador. No se utilizó Commander durante esta preparación. El siguiente incremento técnico es **D0.1 (auditoría estática del MAME de base y reutilización NEO/VZ)**; el detalle y los requisitos de cierre están en el [plan maestro](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) y en [HANDOFF](docs/HANDOFF.md).
+**Preparación documental.** Todavía no existe un controlador MC68VZ328 de este proyecto dentro de MAME, ni ejecutable Dana, ni prueba EmuTOS dentro del emulador. No se utilizó Commander durante esta preparación. **D0.1 quedó SPEC_READY documental**, con revisión GitHub fijada y mapa de reutilización; el checkout de T todavía no está comprobado. El siguiente incremento es **D0.2, equivalencia de registros EZ/VZ**. No se ha probado ningún emulador Dana. Consultar [plan maestro](docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md) y [HANDOFF](docs/HANDOFF.md).
