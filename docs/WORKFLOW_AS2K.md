@@ -1,5 +1,7 @@
 # Directivas operativas heredadas del emulador AS2K
 
+**MANDATORY FOR NEW CONVERSATIONS:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). It consolidates the verified Drive operating records, canonical T deviceId, dcjob launcher, three-call maximum subject to new explicit authorization, English Git rule and exact D0.4 checkpoint. No Commander for static documentary work.
+
 **Objetivo:** producir un emulador estable y uno diagnóstico, reducidos, usando MAME como plataforma propia de pruebas.
 
 ## Plan autoritativo
