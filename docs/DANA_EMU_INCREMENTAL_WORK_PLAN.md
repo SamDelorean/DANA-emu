@@ -2,7 +2,7 @@
 
 **Mandatory session guard:** read [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md) before any action. It preserves the universal AS2K rules, execution authorization limits, source checkpoints, and exact next cursor. This plan alone does not authorize remote execution.
 
-**Plan autoritativo del emulador reducido.** Elaborado el 2026-10-13. Sustituye la granularidad del esquema D0–D8 previo sin invalidar la arquitectura, fuentes ni reglas AS2K. **Development status: no functional increments have passed. Current next task: D0.5 (deterministic test harness and trace contract); D0.1–D0.4 are SPEC_READY documentation only.** No remote execution is authorized by this plan.
+**Plan autoritativo del emulador reducido.** Elaborado el 2026-10-13. Sustituye la granularidad del esquema D0–D8 previo sin invalidar la arquitectura, fuentes ni reglas AS2K. **Development status: no functional increments have passed. Current next task: D0.6 (freeze the first D1.1 MAME candidate); D0.1–D0.5 are SPEC_READY documentation only.** No remote execution is authorized by this plan.
 
 ## 1. Objetivo y productos
 
@@ -55,7 +55,7 @@ MAME inventariado contiene CPU 68000 y dispositivos MC68328/MC68EZ328; **no** se
 | **D0.2** | Completar tabla EZ frente a VZ por bloque | **SPEC_READY documental**: [contrato de registros y correcciones Motorola](D0_2_EZ_VZ_REGISTER_CONTRACT.md); bitfields finos aún se validarán por subsistema |
 | **D0.3** | Fix the EmuTOS-Dana reference guest artifact | **SPEC_READY:** [source/build and RAM bootstrap contract](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md). Source commit, make target, raw binary stages and 0x2140 relocation recorded. **No built image/hash exists yet**; actual binary validation belongs to a future authorized build |
 | **D0.4** | Specify virtual RAM bootstrap CPU/bus state | **SPEC_READY documentary:** [contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md); includes 4 MiB RAM, vectors, SSP/PC/SR policy, memory-init ordering and first MMIO; no runtime validation |
-| **D0.5** | Definir harness reproducible y trazas mínimas | Formatos, fixtures, marcadores independientes, límite de traza, reporte máquina y verificador host/guest |
+| **D0.5** | Specify deterministic fixtures, trace and evidence schema | **SPEC_READY documentary:** [trace/evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md). No harness, fixture files or runtime PASS yet |
 | **D0.6** | Congelar candidata D1.1 | Archivos y dispositivos MAME concretos, límites, reversión y primer test; ninguna compilación implícita |
 
 **Entrega D0:** contrato ejecutable para el primer incremento MAME, no un emulador funcional. D0.1–D0.6 no consumen Commander mientras sólo se puedan resolver mediante fuentes/Drive.
@@ -179,7 +179,8 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 | **D0.2** | **SPEC_READY (cierre documental)** | [Tabla EZ/VZ y correcciones de addendum](D0_2_EZ_VZ_REGISTER_CONTRACT.md), sin PASS de emulación |
 | **D0.3** | **SPEC_READY (documentation only)** | [EmuTOS-Dana source/build and RAM handoff audit](D0_3_EMUTOS_DANA_GUEST_IMAGE_CONTRACT.md); no binary SHA or test |
 | **D0.4** | **SPEC_READY (documentation only)** | [Post-bootstrap RAM/CPU/bus entry contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md), no MAME functional PASS |
-| **D0.5–D0.6** | **PENDING** | Deterministic harness/trace specification, then frozen D1 candidate |
+| **D0.5** | **SPEC_READY (documentation only)** | [Deterministic fixture, bounded trace and evidence contract](D0_5_DETERMINISTIC_TEST_HARNESS_CONTRACT.md), no actual tests |
+| **D0.6** | **PENDING: NEXT** | Freeze the initial D1.1 MAME candidate, exact file allowlist and test/rollback plan |
 | D1.1–D1.5 | **PENDING** | Sólo después de D0 |
 | D2.1–D2.6 | **PENDING** | Sólo después de D1 |
 | D3.1–D3.5 | **PENDING** | Sólo después de D2 |
@@ -191,7 +192,7 @@ Sólo cuando haya un binario OS3K adaptado con procedencia y mapa definidos: cre
 
 **No saltar un bloqueo usando un stub que devuelva éxito artificialmente.** Ante evidencia insuficiente registrar exactamente el registro, evento, archivo o señal que falta, estudiar fuentes/repositorios y retomar ese mismo incremento. Cambios de orden requieren modificar este plan de forma explícita, motivada y trazable.
 
-**Exact continuation cursor: D0.5 — design the deterministic test harness, bounded trace and independent PASS/FAIL/BLOCKED evidence contract.** D0.1–D0.4 are **SPEC_READY documentation only**, not functional PASS. Do not build, use Commander, or execute a guest without a new explicit authorization.
+**Exact continuation cursor: D0.6 — freeze the initial D1.1 MAME reduced candidate and its file/test/evidence/rollback contract.** D0.1–D0.5 are **SPEC_READY documentation only**, not functional PASS. Do not build, use Commander, or execute a guest without a new explicit authorization.
 
 ## 7. Referencias de control
 
