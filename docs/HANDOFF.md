@@ -1,5 +1,11 @@
 # Continuidad para el nuevo chat / frente DANA-emu
 
+> **2026-10-13 publication/language aside (separate from emulator development):**
+> See [the publication aside and English Git policy](PUBLICATION_ASIDE_AND_GIT_LANGUAGE_20261013.md).
+> Publication-readiness PR #1 was merged, but DANA-emu remains **private** until the owner changes visibility.
+> All future Git artifacts should be written in English; historical Spanish documents are retained for traceability.
+> This note does not alter the technical handoff: **D0.3 remains the next Dana increment**.
+
 **Fecha de traslado: 2026-10-13.**
 
 ## Qué se decidió
