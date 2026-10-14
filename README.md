@@ -22,6 +22,11 @@ Proyecto de ingeniería para reproducir el hardware **AlphaSmart Dana / MC68VZ32
 
 **No** se busca emular Palm OS por sí mismo, implementar Atari TOS ni lograr aceptación del proyecto oficial MAME. La publicación independiente y las contribuciones upstream son opcionales. No sustituir MMIO con hooks que simulen resultados exitosos.
 
+## Publicación y uso del repositorio
+
+Este repositorio documenta una implementación **todavía no construida** y no incluye ROM, firmware comercial ni código de terceros copiado. El proyecto no está afiliado a AlphaSmart, Palm ni MAMEDev. Las implementaciones externas enlazadas conservan sus respectivas licencias y titulares; **un enlace no autoriza copiar su código**.
+
+**[Revisión de procedencia, riesgos y costos de GitHub Actions](docs/PUBLICATION_REVIEW_20261013.md).** Un repositorio público no equivale automáticamente a un proyecto con licencia abierta: la licencia del futuro código propio y las obligaciones al incorporar MAME/EmuTOS/POSE deberán revisarse antes de su redistribución.
 ## Documentación
 
 - [Arquitectura stable/diag](docs/ARCHITECTURE.md).
