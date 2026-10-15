@@ -1,0 +1,300 @@
+{
+  "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "assembler": "LLVM M68k MC (M68000)",
+  "cases": {
+    "RAM-01": {
+      "hex": "207c00010000117c00a50001317cbeef0002217c123456780004217c89abcdef000a1028000132280002242800042628000a4e722700",
+      "length": 54,
+      "sha256": "a8494fe2b0118329b7627ff9787c9811859dadbda5c8e1dbc5b61d27fd71ddae",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c00010000",
+          "source": "MOVEA.L #$00010000,A0",
+          "disassembly": "move.l\t#65536, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "117c00a50001",
+          "source": "MOVE.B #$A5,1(A0)",
+          "disassembly": "move.b\t#165, (1,%a0)"
+        },
+        {
+          "pc": 16396,
+          "hex": "317cbeef0002",
+          "source": "MOVE.W #$BEEF,2(A0)",
+          "disassembly": "move.w\t#48879, (2,%a0)"
+        },
+        {
+          "pc": 16402,
+          "hex": "217c123456780004",
+          "source": "MOVE.L #$12345678,4(A0)",
+          "disassembly": "move.l\t#305419896, (4,%a0)"
+        },
+        {
+          "pc": 16410,
+          "hex": "217c89abcdef000a",
+          "source": "MOVE.L #$89ABCDEF,10(A0)",
+          "disassembly": "move.l\t#2309737967, (10,%a0)"
+        },
+        {
+          "pc": 16418,
+          "hex": "10280001",
+          "source": "MOVE.B 1(A0),D0",
+          "disassembly": "move.b\t(1,%a0), %d0"
+        },
+        {
+          "pc": 16422,
+          "hex": "32280002",
+          "source": "MOVE.W 2(A0),D1",
+          "disassembly": "move.w\t(2,%a0), %d1"
+        },
+        {
+          "pc": 16426,
+          "hex": "24280004",
+          "source": "MOVE.L 4(A0),D2",
+          "disassembly": "move.l\t(4,%a0), %d2"
+        },
+        {
+          "pc": 16430,
+          "hex": "2628000a",
+          "source": "MOVE.L 10(A0),D3",
+          "disassembly": "move.l\t(10,%a0), %d3"
+        },
+        {
+          "pc": 16434,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16434,
+      "endpoint": 16434
+    },
+    "RAM-02": {
+      "hex": "207c0000008020bc1234567820104e722700",
+      "length": 18,
+      "sha256": "23273910c3147b058117c2b30c6bf90095264c26bb18d1903ee944668aa0bc9d",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c00000080",
+          "source": "MOVEA.L #$80,A0",
+          "disassembly": "move.l\t#128, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "20bc12345678",
+          "source": "MOVE.L #$12345678,(A0)",
+          "disassembly": "move.l\t#305419896, (%a0)"
+        },
+        {
+          "pc": 16396,
+          "hex": "2010",
+          "source": "MOVE.L (A0),D0",
+          "disassembly": "move.l\t(%a0), %d0"
+        },
+        {
+          "pc": 16398,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16398,
+      "endpoint": 16398
+    },
+    "RAM-03": {
+      "hex": "207c003ffffe30bcbeef30104e722700",
+      "length": 16,
+      "sha256": "61149b32bd89796519f938b5ba30402e1ed431735b21b66f8b611f03aeac797b",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c003ffffe",
+          "source": "MOVEA.L #$003FFFFE,A0",
+          "disassembly": "move.l\t#4194302, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "30bcbeef",
+          "source": "MOVE.W #$BEEF,(A0)",
+          "disassembly": "move.w\t#48879, (%a0)"
+        },
+        {
+          "pc": 16394,
+          "hex": "3010",
+          "source": "MOVE.W (A0),D0",
+          "disassembly": "move.w\t(%a0), %d0"
+        },
+        {
+          "pc": 16396,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16396,
+      "endpoint": 16396
+    },
+    "RAM-04": {
+      "hex": "207c003ffffc20bc1234567820104e722700",
+      "length": 18,
+      "sha256": "681905ff1a33d0d6739b21d047b1b4c4e964ee2ffe6d57b7f10dd4fdd62b16e0",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c003ffffc",
+          "source": "MOVEA.L #$003FFFFC,A0",
+          "disassembly": "move.l\t#4194300, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "20bc12345678",
+          "source": "MOVE.L #$12345678,(A0)",
+          "disassembly": "move.l\t#305419896, (%a0)"
+        },
+        {
+          "pc": 16396,
+          "hex": "2010",
+          "source": "MOVE.L (A0),D0",
+          "disassembly": "move.l\t(%a0), %d0"
+        },
+        {
+          "pc": 16398,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16398,
+      "endpoint": 16398
+    },
+    "RAM-05": {
+      "hex": "207c003fffff10bc00a510104e722700",
+      "length": 16,
+      "sha256": "5a1f82d7ce14305a5f5a8cc3750f0f26f0667229a9f5551aa61e6397cb2553e6",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c003fffff",
+          "source": "MOVEA.L #$003FFFFF,A0",
+          "disassembly": "move.l\t#4194303, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "10bc00a5",
+          "source": "MOVE.B #$A5,(A0)",
+          "disassembly": "move.b\t#165, (%a0)"
+        },
+        {
+          "pc": 16394,
+          "hex": "1010",
+          "source": "MOVE.B (A0),D0",
+          "disassembly": "move.b\t(%a0), %d0"
+        },
+        {
+          "pc": 16396,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16396,
+      "endpoint": 16396
+    },
+    "RAM-06": {
+      "hex": "207c00010000302800014e722700",
+      "length": 14,
+      "sha256": "97c8334825b13cc187b14526c2da421628b6e0329b8201581171cf8089295ee7",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c00010000",
+          "source": "MOVEA.L #$00010000,A0",
+          "disassembly": "move.l\t#65536, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "30280001",
+          "source": "MOVE.W 1(A0),D0",
+          "disassembly": "move.w\t(1,%a0), %d0"
+        },
+        {
+          "pc": 16394,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16394,
+      "endpoint": 20480
+    },
+    "RAM-07": {
+      "hex": "207c00010000202800014e722700",
+      "length": 14,
+      "sha256": "dad488f66035d0d5a507a6054a7bdfe296447735739b5380d5c326aec6424716",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c00010000",
+          "source": "MOVEA.L #$00010000,A0",
+          "disassembly": "move.l\t#65536, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "20280001",
+          "source": "MOVE.L 1(A0),D0",
+          "disassembly": "move.l\t(1,%a0), %d0"
+        },
+        {
+          "pc": 16394,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16394,
+      "endpoint": 20480
+    },
+    "RAM-08": {
+      "hex": "207c0040000020bcdeadbeef20104e722700",
+      "length": 18,
+      "sha256": "138fc2a58061bd2e8ce5ee6f1cf4428e17f97302975ed0683a7dce2d199638cc",
+      "instructions": [
+        {
+          "pc": 16384,
+          "hex": "207c00400000",
+          "source": "MOVEA.L #$00400000,A0",
+          "disassembly": "move.l\t#4194304, %a0"
+        },
+        {
+          "pc": 16390,
+          "hex": "20bcdeadbeef",
+          "source": "MOVE.L #$DEADBEEF,(A0)",
+          "disassembly": "move.l\t#3735928559, (%a0)"
+        },
+        {
+          "pc": 16396,
+          "hex": "2010",
+          "source": "MOVE.L (A0),D0",
+          "disassembly": "move.l\t(%a0), %d0"
+        },
+        {
+          "pc": 16398,
+          "hex": "4e722700",
+          "source": "STOP #$2700",
+          "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+        }
+      ],
+      "stop_pc": 16398,
+      "endpoint": 16398
+    }
+  },
+  "handler": {
+    "address": 20480,
+    "hex": "4e722700",
+    "sha256": "82b95775091935d5d1ce0641e86fedf8f658787ef0ce0930321363f98f2f9a3e",
+    "disassembly": "stop #$2700 [pinned MAME opcode-table decode]"
+  }
+}

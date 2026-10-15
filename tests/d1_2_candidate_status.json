@@ -1,0 +1,17 @@
+{
+  "increment": "D1.2",
+  "status": "SOURCE_CANDIDATE_PREPARED",
+  "qualification": "AWAITING_INDEPENDENT_T_QUALIFICATION",
+  "base_commit": "3408d5849a132da5647d839c51cf174e94dff94b",
+  "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "bootstrap_runtime_status": "UNVERIFIED",
+  "guest_memory_tests_executed": false,
+  "local_verification": {
+    "fixture_assembly_and_regeneration": "completed",
+    "python_and_lua_syntax": "checked",
+    "verifier_unit_tests": 15,
+    "unit_test_evidence": "synthetic_only",
+    "missing_binary_runner": "BLOCKED_as_expected"
+  },
+  "next_step": "Review candidate, then separately authorize independent sequential stable/diag T builds, bootstrap evidence and RAM-01 through RAM-10 plus D1.1 regressions."
+}

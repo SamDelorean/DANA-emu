@@ -18,13 +18,22 @@ public:
 	void alphasdana(machine_config &config);
 
 private:
+	void program_map(address_map &map) ATTR_COLD;
+
 	required_device<m68000_device> m_maincpu;
 };
 
+void alphasdana_state::program_map(address_map &map)
+{
+	// Synthetic post-bootstrap RAM profile, not physical Dana reset decoding.
+	map(0x00000000, 0x003fffff).ram().share("ram");
+}
+
 void alphasdana_state::alphasdana(machine_config &config)
 {
-	// Registration-only placeholder; this clock is not a Dana timing model.
+	// Placeholder CPU and clock; this does not model the DragonBall VZ.
 	M68000(config, m_maincpu, 1'000'000);
+	m_maincpu->set_addrmap(AS_PROGRAM, &alphasdana_state::program_map);
 }
 
 static INPUT_PORTS_START(alphasdana)
