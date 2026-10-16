@@ -1,5 +1,8 @@
 # DANA-emu — Canonical handoff and exact continuation
 
+> **LATEST HANDOFF — 2026-10-16: DIAG-FIRST OVERRIDE.** [DIAG_FIRST_DEVELOPMENT_POLICY.md](DIAG_FIRST_DEVELOPMENT_POLICY.md) is binding. Only `dana-diag` is active; `dana-stable` is deferred. D1.1 dual-build PASS is preserved as historical evidence, D1.2 is PENDING; old stable/diag parity requirements are not current gates. The R2 dual-build SH was withdrawn from Drive inbox to hold and renamed SUPERSEDED_DUAL_BUILD; no R2 build/result was confirmed at withdrawal. Next task is a STATIC_FIRST diagnostic-only R3 runner/verifier/fixture review, then separately approved T execution. No Commander calls are authorized by this document.
+
+
 **MANDATORY FIRST READ:** [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md). This contains the permanent no-drift startup protocol, remote Commander identity/call accounting, Drive pipeline, tests, isolation rules and current cursor. Do not restart past work or request the rules again.
 
 **Updated: 2026-10-14 after the two authorized PR merges and T R5 qualification. Current technical cursor: D1.2 (PENDING; no implementation or remote authority). D1.1 is PASS for dual-build/selectability only.**
