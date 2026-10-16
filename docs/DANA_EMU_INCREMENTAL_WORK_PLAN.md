@@ -1,5 +1,8 @@
 # DANA-emu — incremental development and qualification master plan
 
+> **ACTIVE PLAN OVERRIDE — 2026-10-16:** [Diagnostic-first policy](DIAG_FIRST_DEVELOPMENT_POLICY.md) supersedes every requirement below to build/test stable and diag in parallel during development. Only `dana-diag` is an active development/qualification target. The D1.1 dual-build PASS is historical and remains closed. For D1.2, run the diagnostic-only real RAM/CPU matrix; RAM-10 stable/diag parity is deferred (not PASS), with instrumentation on/off equivalence separately specified if feasible. Later D5/D6 stable-parity, dual-launch and packaging clauses become **future stable activation** tasks, not development gates. Do not execute superseded R2. The D1.2 runner/verifier must be adjusted before diag-only R3; remote execution requires separate explicit authorization.
+
+
 **Mandatory session guard:** read [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md) before any action. It preserves the universal AS2K rules, execution authorization limits, source checkpoints, and exact next cursor. This plan alone does not authorize remote execution.
 
 **Authoritative reduced-emulator plan.** Prepared on 2026-10-13; progress reconciled on 2026-10-14 after real T R5 qualification and authorized Git integration. It refines the previous D0–D8 outline without invalidating architecture, sources or AS2K rules. **D1.1: PASS (two separate MAME skeleton builds and selectability; no guest behavior). Exact next increment: D1.2 PENDING (4 MiB RAM, 8/16/32-bit bus accesses). D0.1–D0.6 remain documentary SPEC_READY only.** New source implementation and remote/Commander runs are not authorized by this plan.
