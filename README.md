@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **Current execution plan (2026-10-16):** [DIAG-FIRST anti-gate incremental plan and zero-ramp handoff](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md). Develop and qualify **dana-diag only**. Resume at **D1.2-R3.1**; stable deferred. Read the linked plan first; earlier dual-build directions are historical.
+
+
 > **Current development mode (2026-10-16): DIAG ONLY.** [Diagnostic-first development policy and AS2K workflow](docs/DIAG_FIRST_DEVELOPMENT_POLICY.md) overrides historical dual-build requirements in older text below. Only `dana-diag` is developed and qualified; `dana-stable` will become the everyday-use version later. D1.1's two compiled binaries are historical PASS evidence only. D1.2 is pending diag-only qualification; the old dual-build R2 job was withdrawn and must not be launched.
 
 
