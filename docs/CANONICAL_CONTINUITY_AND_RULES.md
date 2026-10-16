@@ -1,5 +1,8 @@
 # DANA-emu — Canonical continuity, universal rules, and no-drift operating contract
 
+> **2026-10-16 USER OVERRIDE — DIAG-FIRST (ACTIVE).** Read [DIAG_FIRST_DEVELOPMENT_POLICY.md](DIAG_FIRST_DEVELOPMENT_POLICY.md) immediately after this file. Only `dana-diag` is built, executed and qualified during active development; `dana-stable` is deferred until a separately approved everyday-use phase. Older dual-build requirements below are **historical D1.1 evidence, not current execution instructions**. D1.2 remains PENDING, now with diag-only acceptance; RAM-10 stable/diag parity is DEFERRED, not PASS. R2 dual-build job was moved from inbox to hold as superseded; do not launch it. All other STATIC_FIRST, T, Commander, Drive, isolation and evidence rules remain binding.
+
+
 **Status: ACTIVE / MANDATORY READING at the beginning of every new conversation.**
 **Updated: 2026-10-14. Exact technical cursor: D1.2 (PENDING; no source or remote execution authorization). D1.1 = PASS (independent T-verified build/selectability only); D0.1–D0.6 = SPEC_READY, documentation only.**
 
