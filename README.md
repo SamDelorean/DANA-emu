@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **Current development mode (2026-10-16): DIAG ONLY.** [Diagnostic-first development policy and AS2K workflow](docs/DIAG_FIRST_DEVELOPMENT_POLICY.md) overrides historical dual-build requirements in older text below. Only `dana-diag` is developed and qualified; `dana-stable` will become the everyday-use version later. D1.1's two compiled binaries are historical PASS evidence only. D1.2 is pending diag-only qualification; the old dual-build R2 job was withdrawn and must not be launched.
+
+
 **Start of any future session:** read [CANONICAL_CONTINUITY_AND_RULES.md](docs/CANONICAL_CONTINUITY_AND_RULES.md) first. It preserves the authoritative D1.2 cursor, D1.1 dual-build qualification, and the separate Dana-stable/Dana-diag builds, all AS2K/Commander/Drive constraints, the English-only Git policy and the pre-action checklist; do not ask the user to reconstruct these rules. No remote authorization is inherited.
 
 **Independent, reduced AlphaSmart Dana emulator based on MAME.**
