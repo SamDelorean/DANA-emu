@@ -1,5 +1,8 @@
 # DANA-emu — Canonical handoff and exact continuation
 
+> **DIRECT CONTINUATION (2026-10-16):** Start with [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md), the canonical anti-gate DIAG-only plan and new-chat bootstrap. Exact cursor **D1.2-R3.1**: static inventory of PR #7 runner/verifier/manifest/Lua and DIAG-only D1.1 regression. D1.2 PENDING; D1.1 historical PASS; R2 dual-build withdrawn. Do not launch R2 or use Commander without new authorization. After each verified increment update the cursor and evidence link.
+
+
 > **LATEST HANDOFF — 2026-10-16: DIAG-FIRST OVERRIDE.** [DIAG_FIRST_DEVELOPMENT_POLICY.md](DIAG_FIRST_DEVELOPMENT_POLICY.md) is binding. Only `dana-diag` is active; `dana-stable` is deferred. D1.1 dual-build PASS is preserved as historical evidence, D1.2 is PENDING; old stable/diag parity requirements are not current gates. The R2 dual-build SH was withdrawn from Drive inbox to hold and renamed SUPERSEDED_DUAL_BUILD; no R2 build/result was confirmed at withdrawal. Next task is a STATIC_FIRST diagnostic-only R3 runner/verifier/fixture review, then separately approved T execution. No Commander calls are authorized by this document.
 
 
