@@ -1,0 +1,169 @@
+# DANA-emu — DIAG-FIRST incremental plan, anti-gate policy and zero-ramp handoff
+
+**AUTHORITATIVE EXECUTION ROADMAP — user-requested continuity checkpoint, 2026-10-16.**
+**Active target:** `dana-diag` only. **Cursor:** `D1.2-R3.1` (STATIC_FIRST audit). **Status:** not yet executed. **No Commander call or Codex task authorized by this document.**
+
+Read this document **first** in every new conversation, then [DIAG_FIRST_DEVELOPMENT_POLICY.md](DIAG_FIRST_DEVELOPMENT_POLICY.md), [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md), [WORKFLOW_AS2K.md](WORKFLOW_AS2K.md), [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md) for source-backed details. Where the older plan calls for stable/diag parallel builds, dual-binary parity, or stable packaging during development, **this plan and the diag-first policy supersede those requirements**. Preserve old records as history, not active gates.
+
+## A. State of record — resume without rediscovery
+
+- Repository: `SamDelorean/DANA-emu`; development PR [#7](https://github.com/SamDelorean/DANA-emu/pull/7), branch `codex/dana-d1-2-ram-bus`, candidate commit `9a549d1d44b4114ace714b14f6338614bac8afc1`. Do not merge without real diagnostic evidence and user approval.
+- MAME donor `SamDelorean/mame-as3k` pinned `c4e48388ca620472643110db2941ce70aa5f3c07` (read-only); source pins and licenses in `research/sources.lock.json`.
+- D0.1–D0.6 = **SPEC_READY (documentary only)**. D1.1 = **CLOSED/PASS for historical MAME build/registration/selectability**, not guest functionality. D1.2 = **PENDING**; no real RAM test PASS yet.
+- D1.2 candidate maps **4 MiB RAM `0x00000000..0x003FFFFF`**, 68000 big-endian 8/16/32-bit, odd-address exception vector 3, upper-bound and non-alias, repeatability. No new MMIO, loader, LCD, keyboard or firmware work in D1.2.
+- R1 dual-build job: exited 1 after 29 s due to Bash `variant: unbound variable` (same-`local` expansion with `set -u`); MAME builds **never started**. Infrastructure/harness error, not hardware failure.
+- R2 fixed Bash scope but remained **dual-build**, contrary to new policy. A `dcjob launch` was started (launcher PID `189618`) but no accepted job PID or R2 result was confirmed. The still-queued R2 SH was withdrawn to Drive `hold`, renamed `SUPERSEDED_DUAL_BUILD__000_dana_emu_d1_2_ram_bus_r2_20261016.job.sh` (file ID `1CDP8J3ljlqHcexQkO6WQCh74-nKUwldD`), and readback confirmed `inbox` empty. **Never relaunch R2.** Recheck results if needed before claiming no asynchronous execution.
+- Canonical T: `dee0b4b6-578a-41a5-88de-73dbeb808983`; `/home/spc/.local/bin/dcjob launch`; Drive `AS2K_TEMP/COMMANDER_PIPELINE/{inbox,outbox,archive,failed,hold}`. Read Drive folder directly (advanced parent search previously gave false empty results). No Commander for polling. Do not inherit a past Commander budget.
+- T paths: `/home/spc/Projects/alphasmart/DANA-emu`, donor `/home/spc/Projects/alphasmart/as2k-stable-eeepc900-local/mame-as3k-donor`, Dana-only sandbox `/home/spc/DANA_EMU_ISOLATED`.
+- Proven build strategy: **Clang 21**, `PRECOMPILE=0`, `OVERRIDE_CC=clang OVERRIDE_CXX=clang++ OVERRIDE_LD=clang++`, `SUBTARGET=danadiag DEBUG=1`, sequential bounded `-j3`. Avoid GCC15 ICE and Clang PCH retry. Build **only one DIAG executable**.
+- D1.2 tests already present on PR #7: `tests/d1_2_run.py`, `tests/d1_2_verify.py`, `tests/d1_2_test_verifier.py`, `tests/d1_2_fixture_manifest.json`, `tests/d1_2_boot.lua`, `tests/d1_1_build_select_smoke.sh`. The current D1.2 runner accepts both `stable` and `diag`; verifier loops both and RAM-10 compares them. This is **obsolete** and must be changed before R3; never pass the same binary twice to fake parity.
+- Actual evidence in Drive, source/decisions in GitHub. No proprietary firmware/ROM, credentials or unrelated projects in Git.
+
+## B. Anti-gate rules (AG-01 through AG-12)
+
+1. **AG-01 — Only real dependencies block.** A gate is permitted only when its absence prevents a specified observable test or creates a concrete safety/integrity risk. Record the precise dependency and evidence. No extra review, approval, re-audit, committee, infrastructure refactor or speculative prerequisite.
+2. **AG-02 — Closed work stays closed.** Do not reopen D0.x or D1.1, rerun all prior tests or re-research sources without new contradictory evidence. Regression scope follows affected behavior only.
+3. **AG-03 — One bounded increment.** Define objective, source/commit, allowed files, fixture, expected CPU/bus/MMIO/IRQ events, PASS/FAIL/BLOCKED, regression and rollback. No unrelated feature or UI change.
+4. **AG-04 — STATIC_FIRST and reuse.** Read pinned manuals, current MAME primitives, Dana VZ references and verified AS2K *methods* before coding; do not transplant HC11/DictROM/banked-RAM assumptions to M68000/VZ.
+5. **AG-05 — Proportional qualification.** An isolated memory or UART function needs its own real fixture and impacted regressions, not an already complete OS boot or finished GUI. Source plausibility/synthetic host tests are not guest-runtime PASS.
+6. **AG-06 — Localized failures.** Classify separately PRODUCT, HARNESS, BUILD/TOOLCHAIN, INFRA/QUEUE, SOURCE/INPUT. Repair only the demonstrated fault and rerun the smallest sufficient test; preserve unaffected evidence.
+7. **AG-07 — Deferred work is not a gate.** Stable, Palm OS, OS3K firmware, USB/IR, SD, cosmetic GUI, broad instrumentation and unneeded peripherals are deferred until a concrete use case requires them.
+8. **AG-08 — No fabricated results.** Never report PASS from an SH upload, launcher PID, compile success, host-side fabricated framebuffer, synthetic verifier output, same-binary dual parity, or missing log. Mark missing proof PENDING/BLOCKED.
+9. **AG-09 — Preserve regression assets.** Keep deterministic fixtures and hashes; add one case for a newly discovered failure instead of replacing existing accepted cases.
+10. **AG-10 — Evidence-first continuity.** After each increment record source SHA, toolchain, binary/fixture SHA, exact test invocation, expected/observed events, result location, outcome and **next single action**. Do not rely on conversational memory.
+11. **AG-11 — Explicit bounded remote authorization.** Prevalidate one self-contained SH, check exactly-one-job inbox and SHA, launch via canonical T only when user authorizes and within their call budget; Drive-only results. Never touch foreign queue jobs, donor, AS2K worktrees or physical Dana.
+12. **AG-12 — No auto-escalation.** A/B/C/D workers may execute only the approved atomic task. Supervisor A consumes prior results before dispatching next. B distinguishes NEW/SENT/NO_TASK; C independently checks PASS/FAIL/BLOCKED; D only transports an approved Codex prompt. No automatic advance to next technical increment or PR merge.
+
+**State taxonomy:** PENDING (not executed), SPEC_READY (documentary), READY (authorized and prepared), PASS (specified real evidence), FAIL (verified wrong result), BLOCKED (cannot determine product outcome, reason and remedy recorded). A FAIL of the runner is not automatically a FAIL of emulated hardware.
+
+## C. Atomic roadmap — the ONLY current development target is dana-diag
+
+### C1. Immediate D1.2 / R3 — memory and bus
+
+| ID | Single change or action | Completion evidence | Explicit exclusions |
+| --- | --- | --- | --- |
+| **D1.2-R3.1 — CURRENT** | STATIC_FIRST inspect exact PR #7 runner, verifier, D1.1 smoke, manifest and Lua; enumerate all stable/diag coupling and real DIAG prerequisites | Reviewed dependency inventory and exact edit/test matrix; no T call | No source edit, compile, launch or Codex |
+| D1.2-R3.2 | Adapt historical D1.1 CLI/provenance regression to one genuine DIAG executable | Test verifies `asmdana` registration, binary identity and provenance without stable | Do not alter D1.1 historical PASS |
+| D1.2-R3.3 | Change runner/verifier for one DIAG binary and RAM-01..RAM-09 | Deterministic fixture and verifier unit tests; no fake CPU observations | No hardware driver changes unless separately justified |
+| D1.2-R3.4 | Update RAM-10 disposition and synthetic negative tests | `RAM-10=DEFERRED_STABLE_PARITY` (not PASS); optional same-diag instrumentation-on/off equivalence only if feasible and separately specified | No stable compilation, no passing diag as stable |
+| D1.2-R3.5 | Prepare isolated one-build R3 SH | `bash -n`, `set -u` local-scope audit, diff scope, fixed hashes, one Clang21 DIAG build `-j3`, Drive output contract | No Commander or extra worktree |
+| D1.2-R3.6 | User-authorized one-job T launch | Verified inbox identity, launch acceptance, real `dana-diag` MAME binary, RAM-01..RAM-09 CPU/bus evidence, diagnostic CLI regression | No duplicate launch or stable build |
+| D1.2-R3.7 | Independent result audit and close | Machine-readable PASS/FAIL/BLOCKED, manifest, console, bounded trace, regression, rollback and exact next cursor | No PR merge on unproven result |
+
+RAM-10's historical stable/diag parity is **deferred** until stable activation. If DIAG instrumented/uninstrumented equivalence is technically measurable, scope a separate diagnostic case; it must not silently become a prerequisite for D1.2's memory contract.
+
+### C2. D1 — guest execution foundation
+
+| ID | Atomic capability | Acceptance evidence |
+| --- | --- | --- |
+| D1.3.1 | MC68VZ328 MMIO address-window decoding | Guest read/write reaches correct register/address |
+| D1.3.2 | MMIO 8/16/32-bit access and masks | Byte lanes, ordering and side effects match pinned reference |
+| D1.3.3 | Reset values and unsupported accesses | Explicit documented behavior and localized unknowns; no invented MMIO success |
+| D1.4.1 | Obtain/build and verify EmuTOS-Dana reference image | Real binary, SHA, source revision, link/load map; do not assume `0x2140` without image check |
+| D1.4.2 | Load guest image into RAM | Exact contents, boundaries and entry placement |
+| D1.4.3 | CPU handoff to guest | Actual SSP, PC, SR and first guest instruction trace |
+| D1.5.1 | Execute until first unsupported peripheral | PC/register/address/operation and reason; identifies next needed component |
+
+**Anti-gate:** the full EmuTOS UI is not needed to pass a single MMIO/register or loader fixture.
+
+### C3. D2 — clock, IRQ, timers, UART
+
+| ID | Atomic capability | Acceptance evidence |
+| --- | --- | --- |
+| D2.1 | Clock/PLL | Virtual timing and documented clock state |
+| D2.2 | Interrupt controller | Mask, pending, vector, acknowledge in guest-visible trace |
+| D2.3 | Timer1 | Count/compare/IRQ deterministically |
+| D2.4 | UART1 TX | Ordered bytes from actual guest writes |
+| D2.5 | UART1 RX | Guest input and IRQ when demanded by actual execution |
+| D2.6 | Resume EmuTOS | Guest progresses beyond implemented devices; next fault localized |
+
+**Anti-gate:** RX cannot block TX if the guest currently uses only TX.
+
+### C4. D3 — Dana LCD, 560 x 160
+
+| ID | Atomic capability | Acceptance evidence |
+| --- | --- | --- |
+| D3.1 | LCD registers | Real guest register writes |
+| D3.2 | Framebuffer from guest RAM | 560x160 1-bpp known fixture, 11,200 minimum pixel-data bytes (before stride/padding) |
+| D3.3 | Bit/line ordering and refresh | Reproducible pixel comparison |
+| D3.4 | Enable/contrast GPIO and register behavior | Guest-driven observable changes |
+| D3.5 | First guest-generated EmuTOS image | Capture generated by real guest execution |
+
+**Anti-gate:** no host-painted substitute and no stable GUI required.
+
+### C5. D4 — ST keyboard and SPI2
+
+| ID | Atomic capability | Acceptance evidence |
+| --- | --- | --- |
+| D4.1 | ST reset/ready/chip-select GPIO | Correct line state transitions |
+| D4.2 | SPI2 transfers | Ordered guest-visible transactions |
+| D4.3 | ST initialization | Reference-backed protocol response (e.g. `0xAA` where applicable) |
+| D4.4 | Key press/release packets | Letters, F1–F8 and release |
+| D4.5 | Host key to virtual ST | Real guest consumes event and changes screen/state |
+| D4.6 | No-key, multiple-key, reset and bounded queue | Deterministic edge cases |
+
+**Anti-gate:** reuse AS2K's keyboard *testing method*, not its HC11/electrical/protocol model.
+
+### C6. D5 — first interactive milestone
+
+| ID | Atomic capability | Acceptance evidence |
+| --- | --- | --- |
+| D5.1 | EmuTOS starts | Guest-generated UI, no OS-call interception |
+| D5.2 | End-to-end interaction | Host key -> ST/SPI2 -> EmuTOS -> changed guest framebuffer |
+| D5.3 | Clean restart | Two reproducible runs |
+| D5.4 | Basic redraw/timer/key load | No observed corruption under bounded test |
+| D5.5 | Instrumentation neutrality | Same guest behavior with DIAG observation on/off where applicable |
+
+**D5.2 is the first interactive functional milestone.** D5.3–D5.5 are reliability work, not reasons to deny the D5.2 milestone once proven.
+
+### C7. D6 — debugger and observability usability
+
+| ID | Atomic capability | Acceptance evidence |
+| --- | --- | --- |
+| D6.1 | CPU registers viewer | PC/SR/SP/general registers correct |
+| D6.2 | Memory-region map and browser | RAM/MMIO addresses and contents, usable navigation |
+| D6.3 | Selectable bounded trace | CPU/IRQ/MMIO/SPI/UART filters |
+| D6.4 | Headless automation improvements | Deterministic reports from actual guest execution |
+| D6.5 | Save/restore state | Complete repeatable state roundtrip |
+| D6.6 | Diagnostic UI/help/menus | Simplified navigation, avoid permanent help footer where it obscures data |
+
+**Anti-gate:** minimum headless probes are implemented when needed earlier; polished debugger UI waits for D6.
+
+### C8. Later optional phases — never block D1–D5
+
+- **D7 SD:** GPIO/card presence, SPI1, sector reads, filesystem, guarded writes, each only when guest needs it.
+- **D8 additional hardware:** touch, RTC, power, USB, IR, additional RAM, Palm/Flash — separate demand-driven increments.
+- **O0 OS3K guest compatibility:** test only after a verified independently sourced OS3K guest image and separately approved scope; do not implement DANA-OS3K here.
+- **S stable activation:** only by user decision after the shared hardware model is functional; derive `dana-stable` from qualified code, simplify UI, disable noisy diagnostics without guest-visible change, independently qualify and package. Stable parity is **future S work**, not a current gate.
+
+**Route critical:** D1.2 -> D1.3–D1.5 -> D2 (required devices only) -> D3 LCD -> D4 keyboard -> D5.2 interactive. The ordering of independent peripheral microincrements may be adjusted **only when actual guest traces prove a different immediate dependency**, with that evidence recorded; this is not license for scope drift.
+
+## D. Minimum increment record (in existing workflow, not a new bureaucracy)
+
+```text
+ID / status / base commit:
+One objective / permitted files / explicit exclusions:
+Pinned reference and relevant existing primitive:
+Exact fixture and test invocation:
+Expected guest CPU, bus, MMIO, IRQ or framebuffer observation:
+Actual result, evidence paths and SHA:
+Regression scope and outcome:
+PASS / FAIL / BLOCKED (specific cause):
+Rollback/base preserved:
+Commander calls used and remaining in this intervention:
+NEXT EXACT ACTION:
+```
+
+For executed increments, retain `manifest.json`, `result.json`, `console.log`, bounded `guest-trace.log` if applicable, fixture/output artifacts and regression summary. **Do not create new review documents for every microincrement** when the existing ledger suffices.
+
+## E. Mandatory new-chat bootstrap (direct continuation)
+
+When the user says **"Continuemos DANA-emu"**, **"siguiente"**, or **"recupera el flujo"**:
+
+1. Read this file and the four canonical references above; retrieve the latest PR #7 and result checkpoint **only to determine whether the cursor has advanced**. Do not assume a new result exists.
+2. Restate in one compact sentence the last independently proven state, the active increment and any blocker. Do not re-explain D0/D1 history unless asked.
+3. Execute **only** the exact next authorized action. If it is static, proceed without T; if remote execution is needed, check for fresh explicit authorization and call budget. Do not automatically reopen Codex or launch R2.
+4. Verify evidence and update the current cursor in this file or a linked authoritative checkpoint before ending. Always leave a precise NEXT ACTION and keep the historical record.
+5. User communication in Spanish; repository technical documentation in English.
+
+**CURRENT CURSOR (2026-10-16): `D1.2-R3.1` — static inspection and precise change matrix for DIAG-only D1.2 runner, verifier, manifest, D1.1 diagnostic CLI regression and Lua. No Commander. No new compilation. No Codex. Next after verified R3.1 is R3.2.**
