@@ -1,5 +1,8 @@
 # DANA-emu — Canonical continuity, universal rules, and no-drift operating contract
 
+> **ZERO-RAMP HANDOFF / ANTI-GATE PLAN (2026-10-16):** The current executable roadmap, detailed incremental acceptance matrix, anti-gate rules and exact continuation cursor are in [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md). Read that file FIRST in a new conversation. Current cursor: **D1.2-R3.1 STATIC_FIRST**; DIAG only; no T/Commander authorization inherited. This link supersedes obsolete dual-build execution steps below without erasing historical evidence.
+
+
 > **2026-10-16 USER OVERRIDE — DIAG-FIRST (ACTIVE).** Read [DIAG_FIRST_DEVELOPMENT_POLICY.md](DIAG_FIRST_DEVELOPMENT_POLICY.md) immediately after this file. Only `dana-diag` is built, executed and qualified during active development; `dana-stable` is deferred until a separately approved everyday-use phase. Older dual-build requirements below are **historical D1.1 evidence, not current execution instructions**. D1.2 remains PENDING, now with diag-only acceptance; RAM-10 stable/diag parity is DEFERRED, not PASS. R2 dual-build job was moved from inbox to hold as superseded; do not launch it. All other STATIC_FIRST, T, Commander, Drive, isolation and evidence rules remain binding.
 
 
