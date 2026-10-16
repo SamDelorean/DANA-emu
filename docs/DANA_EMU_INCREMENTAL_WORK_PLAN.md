@@ -1,5 +1,8 @@
 # DANA-emu — incremental development and qualification master plan
 
+> **AUTHORITATIVE INCREMENTAL ROADMAP (2026-10-16):** [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md) contains the active DIAG-only atomic sequence, anti-gate policies AG-01..AG-12, acceptance criteria, deferred stable phase and zero-ramp handoff. Older dual-build steps and gate ordering in this document are retained as history and are NOT active execution instructions. Exact next action **D1.2-R3.1 STATIC_FIRST**.
+
+
 > **ACTIVE PLAN OVERRIDE — 2026-10-16:** [Diagnostic-first policy](DIAG_FIRST_DEVELOPMENT_POLICY.md) supersedes every requirement below to build/test stable and diag in parallel during development. Only `dana-diag` is an active development/qualification target. The D1.1 dual-build PASS is historical and remains closed. For D1.2, run the diagnostic-only real RAM/CPU matrix; RAM-10 stable/diag parity is deferred (not PASS), with instrumentation on/off equivalence separately specified if feasible. Later D5/D6 stable-parity, dual-launch and packaging clauses become **future stable activation** tasks, not development gates. Do not execute superseded R2. The D1.2 runner/verifier must be adjusted before diag-only R3; remote execution requires separate explicit authorization.
 
 
