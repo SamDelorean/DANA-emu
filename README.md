@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **DANA-emu status — 2026-10-16:** `dana-diag` compiled and tested on the T; **D1.2 native 68000 4MiB post-bootstrap RAM/bus CLOSED/PASS** after R5, independently qualified RAM-01..RAM-09 **9/9 PASS** (25/25 verifier synthetic tests, D1.1 DIAG CLI regression PASS). This does **not** yet emulate DragonBall VZ MMIO, EmuTOS, LCD, keyboard or storage. Stable deferred. Next **D1.3.1 STATIC_FIRST MMIO decoder**. User Commander uses newly authorized **10-call blocks**, R5 spent 2 calls. See [canonical zero-ramp plan](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **Latest checkpoint — 2026-10-16:** R3.8 corrected the **DIAG test harness**, not the MAME driver, to accept real ordered M68000 CPU reset vector evidence without demanding an absent Lua reset notification. R5 DIAG-only SH has passed syntax and SHA/readback verification and is safely held in Drive. **25 new Python tests and actual RAM-01..09 still pending.** Next **D1.2-R3.9** single run **only after renewed Commander authorization**, previous 5/5 calls exhausted. [Canonical plan](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
