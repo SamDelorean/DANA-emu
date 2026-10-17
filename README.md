@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **2026-10-16 D1.3.1-A static audit:** MC68VZ328 canonical MMIO `0xFFFFF000..0xFFFFFFFF` requires native **32-bit-address-aware** CPU mapping, while the current standalone M68000 uses 24-bit addresses; the pinned MAME MC68EZ328 shows how the native engine exposes 32-bit address spaces. The very first diagnostic MMIO fixture targets **IVR 8-bit `0xFFFFF300`**, actual guest write/read `0x40`; no MMIO code has been changed or qualified yet. **Next D1.3.1-B** selective DIAG decoder and real CPU test; [source-backed contract](docs/D1_3_1_VZ_MMIO_ADDRESS_DECODE_CONTRACT.md). D1.2 4MiB RAM CLOSED/PASS preserved, stable deferred; Commander 0 used for this audit.
+
+
 > **DANA-emu status — 2026-10-16:** `dana-diag` compiled and tested on the T; **D1.2 native 68000 4MiB post-bootstrap RAM/bus CLOSED/PASS** after R5, independently qualified RAM-01..RAM-09 **9/9 PASS** (25/25 verifier synthetic tests, D1.1 DIAG CLI regression PASS). This does **not** yet emulate DragonBall VZ MMIO, EmuTOS, LCD, keyboard or storage. Stable deferred. Next **D1.3.1 STATIC_FIRST MMIO decoder**. User Commander uses newly authorized **10-call blocks**, R5 spent 2 calls. See [canonical zero-ramp plan](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
