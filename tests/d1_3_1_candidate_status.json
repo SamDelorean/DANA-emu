@@ -1,7 +1,7 @@
 {
-  "increment": "D1.3.1-B",
-  "status": "IMPLEMENTED_STATIC_UNBUILT",
-  "qualification": "REAL_T_PENDING",
+  "increment": "D1.3.1-D",
+  "status": "R7_LAUNCHED_GUEST_RESULT_PENDING",
+  "qualification": "LLVM21_ASSEMBLER_REAL_T_PASS_BUT_NO_MAME_RUNTIME_EVIDENCE",
   "development_variant": "diag",
   "product_commit": "5aed6d591d91f4e431ffb98b726d762876cd4a62",
   "mame_donor_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
@@ -20,12 +20,25 @@
     "device_mapper_ivr_address": "PASS_SOURCE_INSPECTION",
     "unit_test_methods_new": 11,
     "python_syntax": "NOT_RUN",
-    "llvm_m68k_assembler": "NOT_RUN",
-    "native_mame_compile": "NOT_RUN",
+    "llvm_m68k_assembler": "PASS_NATIVE_T_PRETEST",
+    "native_mame_compile": "R7_NOT_YET_CONFIRMED",
     "d1_2_regression": "NOT_RUN",
-    "mmio_01_guest": "NOT_RUN",
+    "mmio_01_guest": "PENDING_R7",
     "sh_bash_n": "PASS",
-    "drive_sha256_and_byte_readback": "PASS"
+    "drive_sha256_and_byte_readback": "PASS",
+    "m68k_instruction_syntax": "MAME_T_LLVM21_ASSEMBLED_AND_OBJDUMP_VERIFIED",
+    "guest_fixture_bytes": 30,
+    "guest_fixture_sha256": "04b7a227f9db4e5eb067740ab88dd6e2212ac3f58950a79645742197dab84e33",
+    "guest_instruction_offsets": [
+      0,
+      6,
+      10,
+      12,
+      18,
+      20,
+      26,
+      28
+    ]
   },
   "r6_job": {
     "name": "000_dana_emu_d1_3_1_r6_diag_20261016.job.sh",
@@ -47,6 +60,29 @@
     "32-bit CPU core physical bus access must be proven by MMIO-01, cannot infer from source configuration",
     "No EmuTOS, physical VZ cold-reset/DMAP alias, IRQ, keyboard, screen, SD, stable"
   ],
-  "commander_calls_this_increment": 0,
-  "next_step": "D1.3.1-C: after a freshly scoped approval, verify exact held R6 script and empty inbox, move exactly R6 into inbox, invoke one canonical T dcjob launch and independently audit Drive evidence. Do not claim D1.3.1 PASS until native MMIO-01 succeeds; classify compile vs assembler vs CPU/address errors separately."
+  "commander_calls_this_increment": 2,
+  "next_step": "D1.3.1-E: check R7 results in Drive only; independently verify LLVM test execution, fresh DIAG Clang21 build, D1.2 CPU-width RAM regression and actual 32-bit MMIO-01 guest CPU/handler proof. Never relaunch R7; new Commander authorization required if remote diagnostics are necessary.",
+  "r6_result": {
+    "status": "BLOCKED",
+    "reason": "MMIO01_LLVM_M68K_ASSEMBLY_FAILED",
+    "unit_tests": "36_OF_36_PASS",
+    "compiled_product": false,
+    "drive_run_folder_id": "1IqcKwvULKFvZ5DhO3PJCeHZ7r7Wc5uJX",
+    "runtime_result_file_id": "1EHjRt0Y8LA-2RN9GXiCkcpBYK7P1MCTL"
+  },
+  "r7_job": {
+    "name": "000_dana_emu_d1_3_1_r7_diag_20261017.job.sh",
+    "drive_file_id": "11nYK5xil5_AHPD1itMkfdmgbeoXPSlPZ",
+    "sha256": "33c29a6d752e3a3361224162f296474cbc4b4c32c8b058785915b6a1bb5b1943",
+    "size_bytes": 13900,
+    "product_sha": "73139d89d8cb28204747546fc1263c64cfe21496",
+    "script_syntax": "PASS",
+    "drive_readback": "PASS",
+    "commander_acceptance": "worker_pid_214409",
+    "build": "NOT_YET_VERIFIED",
+    "tests": "NOT_YET_VERIFIED"
+  },
+  "commander_calls_authorized_block_total": 10,
+  "commander_calls_authorized_block_used": 10,
+  "commander_calls_remaining": 0
 }
