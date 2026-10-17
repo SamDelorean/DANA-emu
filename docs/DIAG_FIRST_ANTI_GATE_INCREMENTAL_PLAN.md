@@ -5,6 +5,8 @@
 
 Read this document **first** in every new conversation, then [DIAG_FIRST_DEVELOPMENT_POLICY.md](DIAG_FIRST_DEVELOPMENT_POLICY.md), [CANONICAL_CONTINUITY_AND_RULES.md](CANONICAL_CONTINUITY_AND_RULES.md), [WORKFLOW_AS2K.md](WORKFLOW_AS2K.md), [DANA_EMU_INCREMENTAL_WORK_PLAN.md](DANA_EMU_INCREMENTAL_WORK_PLAN.md) for source-backed details. Where the older plan calls for stable/diag parallel builds, dual-binary parity, or stable packaging during development, **this plan and the diag-first policy supersede those requirements**. Preserve old records as history, not active gates.
 
+**CHECKPOINT 2026-10-16 — D1.2-R3.1 CLOSED/PASS (STATIC_ONLY).** Source-backed audit on PR #7 branch `codex/dana-d1-2-ram-bus`: `tests/d1_1_build_select_smoke.sh` dual prepare/verify; `tests/d1_2_run.py` positional stable+diag, distinct-binary guard, dual regression and per-variant loop; `tests/d1_2_verify.py` loops both variants and computes RAM-10 parity; `tests/d1_2_test_verifier.py` has stable-coded observations and parity assertions; `tests/d1_2_boot.lua` accepts generic `cfg.variant` and needs no hardware change; `tests/d1_2_fixture_manifest.json` fixtures remain unchanged. Exact edit sequence: R3.2 DIAG-only D1.1 CLI/provenance smoke; R3.3 DIAG-only runner/verifier RAM-01..09; R3.4 defer RAM-10 and update unit tests; R3.5 prepare one DIAG build SH. No product code change justified by this audit. No Commander, build, Codex, or runtime PASS. **NEXT: D1.2-R3.2.**
+
 ## A. State of record — resume without rediscovery
 
 - Repository: `SamDelorean/DANA-emu`; development PR [#7](https://github.com/SamDelorean/DANA-emu/pull/7), branch `codex/dana-d1-2-ram-bus`, candidate commit `9a549d1d44b4114ace714b14f6338614bac8afc1`. Do not merge without real diagnostic evidence and user approval.
@@ -166,4 +168,4 @@ When the user says **"Continuemos DANA-emu"**, **"siguiente"**, or **"recupera e
 4. Verify evidence and update the current cursor in this file or a linked authoritative checkpoint before ending. Always leave a precise NEXT ACTION and keep the historical record.
 5. User communication in Spanish; repository technical documentation in English.
 
-**CURRENT CURSOR (2026-10-16): `D1.2-R3.1` — static inspection and precise change matrix for DIAG-only D1.2 runner, verifier, manifest, D1.1 diagnostic CLI regression and Lua. No Commander. No new compilation. No Codex. Next after verified R3.1 is R3.2.**
+**CURRENT CURSOR (2026-10-16): `D1.2-R3.2` — adapt D1.1 diagnostic-only CLI/provenance smoke. R3.1 CLOSED/PASS STATIC_ONLY; no product runtime acceptance yet. No Commander authorized.**
