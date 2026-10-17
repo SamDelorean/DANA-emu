@@ -17,7 +17,7 @@ class MMIO01VerifierTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory(prefix='dana-mmio01-synthetic-')
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
-        self.fixture = bytes([0x4e]) * 32  # deliberately NOT an executable guest fixture
+        self.fixture = bytes([0x4e]) * 30  # deliberately NOT an executable guest fixture
         self.binary_hash = 'synthetic-only-not-a-real-binary'
         state = dict(CURPC=PCS[0], SP=0x8000, SR=0x2700, D0=0, A0=0)
         self.stops = [dict(state, CURPC=pc) for pc in PCS]
@@ -51,7 +51,7 @@ class MMIO01VerifierTests(unittest.TestCase):
         ram[0x10000:0x10010] = bytes([0xcc])*16
         for address,value in ((0,0x8000),(4,0x4000),(12,0x5000)):
             struct.pack_into('>I',ram,address,value)
-        ram[0x4000:0x4020] = self.fixture
+        ram[0x4000:0x401e] = self.fixture
         ram[0x5000:0x5004] = bytes.fromhex('4e722700')
         (self.root/'initial.ram').write_bytes(ram)
         (self.root/'final.ram').write_bytes(ram)
