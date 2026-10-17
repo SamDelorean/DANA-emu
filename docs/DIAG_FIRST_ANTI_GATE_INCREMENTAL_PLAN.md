@@ -9,6 +9,8 @@ Read this document **first** in every new conversation, then [DIAG_FIRST_DEVELOP
 
 **CHECKPOINT 2026-10-16 — D1.2-R3.2 IMPLEMENTED / STATIC_ONLY.** Added `tests/d1_1_diag_smoke.sh` on `codex/dana-d1-2-ram-bus`, commit `67f381f2fa51057bd8bfdd57d27a534e0bde184f`. This is an isolated derivative of the D1.1 historical smoke: `prepare REFERENCE NEW_STAGE_ROOT` stages DIAG only; `verify DIAG_BINARY NEW_EVIDENCE_ROOT` checks one executable, pinned source/driver/list hashes, unique Dana registration, preserved AS2K/AS3K registration, MAME listfull/listxml/validate, CPU and no-ROM metadata. Historical `tests/d1_1_build_select_smoke.sh` is unchanged. Static source checks PASS; **no execution or real binary PASS yet**. R3.3 must update `tests/d1_2_run.py` to invoke this new DIAG smoke. No Commander calls. **NEXT: D1.2-R3.3.**
 
+**CHECKPOINT 2026-10-16 — D1.2-R3.3 IMPLEMENTED / STATIC_ONLY.** On `codex/dana-d1-2-ram-bus`: `tests/d1_2_run.py` commit `d85fb769969591bd638d57a93d20e90986aa59d7` now accepts `DIAG_BINARY EVIDENCE`, invokes `bash tests/d1_1_diag_smoke.sh verify DIAG_BINARY EVIDENCE/d1_1-regression`, and runs RAM-01..RAM-09 only on `diag`; `tests/d1_2_verify.py` commit `87b7b3403e0a62cac5275132069ed3d78d2eca01` independently checks only DIAG and excludes old stable/diag parity from aggregate status. `tests/d1_2_boot.lua` and fixture manifest unchanged. Existing synthetic unit tests are still old dual-variant and **must be updated at R3.4 before qualification**. Static edits verified by source inspection; no Python unit execution, MAME build or guest-runtime PASS yet. No Commander calls. **NEXT: D1.2-R3.4.**
+
 ## A. State of record — resume without rediscovery
 
 - Repository: `SamDelorean/DANA-emu`; development PR [#7](https://github.com/SamDelorean/DANA-emu/pull/7), branch `codex/dana-d1-2-ram-bus`, candidate commit `9a549d1d44b4114ace714b14f6338614bac8afc1`. Do not merge without real diagnostic evidence and user approval.
@@ -170,4 +172,4 @@ When the user says **"Continuemos DANA-emu"**, **"siguiente"**, or **"recupera e
 4. Verify evidence and update the current cursor in this file or a linked authoritative checkpoint before ending. Always leave a precise NEXT ACTION and keep the historical record.
 5. User communication in Spanish; repository technical documentation in English.
 
-**CURRENT CURSOR (2026-10-16): `D1.2-R3.3` — adapt D1.2 runner/verifier to one real DIAG binary and RAM-01..RAM-09. R3.2 implementation committed; static-only, runtime regression PENDING. No Commander authorized.**
+**CURRENT CURSOR (2026-10-16): `D1.2-R3.4` — finalize RAM-10 DEFERRED_STABLE_PARITY disposition and update synthetic verifier tests for DIAG only. R3.3 implemented, real runtime tests PENDING. No Commander authorized.**
