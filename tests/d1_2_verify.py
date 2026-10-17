@@ -53,22 +53,50 @@ def check_run(directory, name, variant, repeat):
             raise Blocked('HOST_TIMEOUT')
         require(runner['exit_code'] == 0, 'Emulator command failed')
         require(runner['mame_commit'] == PIN, 'Donor mismatch')
-        if not observation['bootstrap_prepared'] or not observation['reset_seen']:
-            raise Blocked('BLOCKED_BOOTSTRAP: preparation/reset not observed')
+        if not observation['bootstrap_prepared']:
+            raise Blocked('BLOCKED_BOOTSTRAP: preparation not observed')
         events, stops = observation['events'], observation['stops']
         if not isinstance(events, list) or not isinstance(stops, list) or not stops:
             raise Blocked('BLOCKED_BOOTSTRAP: missing first instruction evidence')
         require(len(events) <= 20000 and len(json.dumps(events).encode()) <= 5*1024*1024, 'Trace budget exceeded')
         require(0 <= observation['virtual_seconds'] <= 0.02 and len(stops) <= 32, 'Execution budget exceeded')
         require([e['seq'] for e in events] == list(range(len(events))), 'Trace sequence truncated')
-        prepared = next(e['seq'] for e in events if e['kind'] == 'prepared')
-        reset = next(e['seq'] for e in events if e['kind'] == 'reset_notification')
+        prestarts = [e for e in events if e['kind'] == 'prestart']
+        preparations = [e for e in events if e['kind'] == 'prepared']
+        require(len(prestarts) == len(preparations) == 1, 'Prestart/prepared event count mismatch')
+        require(prestarts[0]['origin'] == preparations[0]['origin'] == 'fixture',
+                'Bootstrap event origin mismatch')
+        require(prestarts[0]['virtual_seconds'] == 0, 'Initial prestart not at virtual time zero')
+        prepared = preparations[0]['seq']
+        require(prestarts[0]['seq'] < prepared, 'Preparation order mismatch')
         cpu_events = [e for e in events if e['origin'] == 'cpu' and e['kind'] in ('read', 'write')]
-        if not cpu_events or not (prepared < reset < cpu_events[0]['seq']):
-            raise Blocked('BLOCKED_BOOTSTRAP: CPU activity before preparation/reset')
-        require(any(e['kind']=='prestart' and e['virtual_seconds']==0 for e in events), 'Initial reset was not at time zero')
-        require(all(any(e['kind']=='read' and e['address']==a for e in cpu_events) for a in (0,2,4,6)), 'CPU reset vector reads missing')
+        if not cpu_events or cpu_events[0]['seq'] <= prepared:
+            raise Blocked('BLOCKED_BOOTSTRAP: native CPU activity after preparation not observed')
+        # These four ordered, CPU-origin 16-bit bus reads are the native
+        # M68000 reset SSP and PC fetches; unlike a Lua notifier they cannot
+        # be inferred from host-seeded vectors or manufactured by this verifier.
+        if len(cpu_events) < 4:
+            raise Blocked('BLOCKED_BOOTSTRAP: incomplete native CPU reset vector fetches')
+        vector_reads = cpu_events[:4]
+        vector_words = ((0, 0x0000), (2, 0x8000), (4, 0x0000), (6, 0x4000))
+        require(all(e['kind'] == 'read' and e['address'] == address
+                    and e['data'] == value and e['mask'] == 0xffff
+                    and e['pc'] == 0 for e, (address, value) in zip(vector_reads, vector_words)),
+                'Native CPU reset vector read order/data mismatch')
+        notifications = [e for e in events if e['kind'] == 'reset_notification']
+        require(observation['reset_seen'] == bool(notifications),
+                'Reset notifier flag contradicts actual event log')
+        require(len(notifications) <= 1, 'Duplicate reset notification')
+        if notifications:
+            require(notifications[0]['origin'] == 'fixture'
+                    and prepared < notifications[0]['seq'] < cpu_events[0]['seq'],
+                    'Reset notification ordering/origin mismatch')
         first = stops[0]
+        report['reset_evidence'] = {
+            'basis': 'native_m68000_cpu_reset_vector_reads',
+            'addresses': [e['address'] for e in vector_reads],
+            'reset_notification_observed': bool(notifications)}
+
         require(first['CURPC'] == 0x4000 and first['SP'] == 0x8000 and first['SR'] == 0x2700, 'Initial PC/SSP/SR mismatch')
         require(all(first['D'+str(n)] == 0 for n in range(4)), 'Initial data registers not zero')
         expected_pcs = [i['pc'] for i in case['instructions']]
