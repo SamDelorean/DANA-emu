@@ -28,6 +28,16 @@
     "python_and_lua_syntax": "PASS"
   },
   "remote_execution": "NOT_AUTHORIZED_NOT_ATTEMPTED",
-  "qualification_job": "HOLD only",
+  "qualification_job": {
+    "state": "LOCAL_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+    "path": "tests/hold/000_dana_f1_emutos.job.sh",
+    "sha256": "a8163798a6e05dde8fd59e50fce85d7dad2f448daa7b4c53738728d65fb11daa",
+    "implementation_commit": "be8355103d137e4602b3090da6395d66e2166071",
+    "checks": [
+      "bash -n",
+      "embedded Python compile"
+    ],
+    "executed": false
+  },
   "next_action": "Review diff and provide compatible guest cross-toolchain, then separately authorize the single HOLD job."
 }
