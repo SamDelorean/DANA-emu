@@ -97,7 +97,7 @@ emu.register_prestart(protect(function()
         taps[#taps+1]=space['install_'..kind..'_tap'](space,0,0xffffff,'d1_2_'..kind,callback)
     end
     cpu.debug:bpclear()
-    for _,pc in ipairs(cfg.breakpoints) do cpu.debug:bpset(pc,nil,nil) end
+    for _,pc in ipairs(cfg.breakpoints) do cpu.debug:bpset(pc,"","") end
     prepared=true; event({kind='prepared',virtual_seconds=emu.time()})
     origin='cpu'
 end))
@@ -125,6 +125,6 @@ emu.register_periodic(protect(function()
     if current.CURPC==cfg.endpoint then finish('ENDPOINT_OBSERVED'); return end
     if #stops>32 then finish('INSTRUCTION_BUDGET'); return end
     cpu.debug:bpclear()
-    for i=next_stop,#cfg.breakpoints do cpu.debug:bpset(cfg.breakpoints[i],nil,nil) end
+    for i=next_stop,#cfg.breakpoints do cpu.debug:bpset(cfg.breakpoints[i],"","") end
     origin=previous; cpu.debug:go(0xffffffff)
 end))
