@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **Status 2026-10-16:** D1.3.1-B implemented in **source only**: native M68000 32-bit address-space variant and selective VZ 8-bit IVR MMIO at `0xFFFFF300`, plus LLVM-assembled DIAG guest test MMIO-01 and 11 synthetic verifier methods. **No compilation or MMIO runtime PASS** yet. One source-pinned new Clang21 DIAG build/test SH is verified in Drive HOLD (R6; not dispatched). Next **D1.3.1-C** after fresh authorization for bounded Commander calls; older D1.2 RAM 9/9 real-T PASS preserved. [Current technical contract](docs/D1_3_1_VZ_MMIO_ADDRESS_DECODE_CONTRACT.md) and [canonical checkpoint](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **2026-10-16 D1.3.1-A static audit:** MC68VZ328 canonical MMIO `0xFFFFF000..0xFFFFFFFF` requires native **32-bit-address-aware** CPU mapping, while the current standalone M68000 uses 24-bit addresses; the pinned MAME MC68EZ328 shows how the native engine exposes 32-bit address spaces. The very first diagnostic MMIO fixture targets **IVR 8-bit `0xFFFFF300`**, actual guest write/read `0x40`; no MMIO code has been changed or qualified yet. **Next D1.3.1-B** selective DIAG decoder and real CPU test; [source-backed contract](docs/D1_3_1_VZ_MMIO_ADDRESS_DECODE_CONTRACT.md). D1.2 4MiB RAM CLOSED/PASS preserved, stable deferred; Commander 0 used for this audit.
 
 
