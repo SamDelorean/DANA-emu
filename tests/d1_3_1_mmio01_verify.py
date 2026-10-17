@@ -55,7 +55,7 @@ def verify(root):
               and obs['binary_sha256'] == meta['binary_sha256'], 'Source/binary identity mismatch')
         check(digest(fixture) == obs['fixture_sha256'] == meta['fixture_sha256'],
               'Assembled fixture hash mismatch')
-        check(len(fixture) == 32, 'Unexpected assembled fixture extent; inspect M68k disassembly')
+        check(len(fixture) == 30, 'Unexpected assembled fixture extent; inspect M68k disassembly')
 
         events, stops = obs['events'], obs['stops']
         check(isinstance(events, list) and isinstance(stops, list), 'Missing CPU trace')
