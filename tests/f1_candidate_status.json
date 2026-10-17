@@ -51,9 +51,9 @@
     "existing_mmio_verifier_tests": 11,
     "python_and_lua_syntax": "PASS"
   },
-  "remote_execution": "T E1/E2 COMPLETED (2 OF 5 NEW COMMANDER CALLS USED). F1 E3 NOT DISPATCHED.",
+  "remote_execution": "E1/E2 actual T PASS in prior scope; E3 unrun. No E3 Commander calls.",
   "qualification_job": {
-    "state": "GIT_HOLD_ONLY_E3_NOT_STAGED_OR_DISPATCHED",
+    "state": "SUPERSEDED_FOR_E3_BY_E3_ONLY_JOB",
     "path": "tests/hold/000_dana_f1_emutos.job.sh",
     "sha256": "PENDING_INDEPENDENT_SHA256_OF_UPDATED_F1_SH",
     "implementation_commit": "9ba89114baaf1e031247484f3d1d8f0209bff775",
@@ -64,7 +64,7 @@
     ],
     "executed": false
   },
-  "next_action": "E3 only after renewed explicit scope/authorization: independently recheck updated F1 HOLD SH syntax/hash, rebuild reduced DIAG and execute genuine EmuTOS with preserved E1/E2 artifacts; do not rebuild guest or touch OS3K toolchain.",
+  "next_action": "Run ONLY the E3 DIAG-only SH after fresh explicit scoped Commander authorization; no guest images/ROM rebuild. Verify source/hash in HOLD, shared inbox exclusive, then one canonical dcjob launch and read results from Drive.",
   "toolchain_recovery": {
     "status": "PASS_REAL_MINT_MSHORT_LINK",
     "compiler": "m68k-atari-mint-gcc (MiNT 20230719) 4.6.4",
@@ -96,5 +96,24 @@
     "duration_seconds": 40,
     "dcjob_status": "PASS",
     "source_reused": true
+  },
+  "e3_execution": {
+    "status": "SOURCE_AND_JOB_VERIFIED_DRIVE_HOLD_ONLY",
+    "path": "tests/hold/001_dana_f1_e3_diag_guest_only_20261017.job.sh",
+    "source_commit": "be42c0cc2381cf16147d2ddf50e9f9acef2a971e",
+    "pinned_implementation_commit": "144365bf0028cde47e8c419132af82652b550042",
+    "sha256": "dc3208a95fdd929f1b09618fb161f92ed242258e47123f5fae939ff843f8ed86",
+    "drive_hold_id": "1439IQg75z0YLXNfAe-AqABVqQw202NIn",
+    "tests": [
+      "bash -n PASS",
+      "embedded Python AST PASS",
+      "E3-only source scope PASS",
+      "actual four E2 hashes independently rechecked against local original PASS",
+      "GitHub/Drive source readback exact-match PASS",
+      "Drive upload/readback SHA-256 PASS"
+    ],
+    "remote_execution": "NOT_PERFORMED",
+    "intent": "Compile ONLY changed native DIAG; verify smoke, RAM-01/RAM-08, MMIO-01, two authentic guest runs and native corrupt-image rejection.",
+    "superseded_legacy_job": "tests/hold/000_dana_f1_emutos.job.sh; do not launch for E3 as it allows guest recompilation"
   }
 }
