@@ -29,15 +29,25 @@
   },
   "remote_execution": "NOT_AUTHORIZED_NOT_ATTEMPTED",
   "qualification_job": {
-    "state": "LOCAL_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+    "state": "GIT_HOLD_ONLY_NOT_DRIVE_UPLOADED_NOT_LAUNCHED",
     "path": "tests/hold/000_dana_f1_emutos.job.sh",
-    "sha256": "fba276c2fcc3a47f300faedd19e0b6d80ddf7f7a0b28cd34bb6de7c5238f0f29",
-    "implementation_commit": "69dfbf14bc9a62490afdfd44aa1f7200d7b61bf7",
+    "sha256": "20afdeb6d869fe9267ffcf9c65991e4ca7f142a6198ff6d7f3af04245b7122f0",
+    "implementation_commit": "cf9916b3e1f7ec5ec548b5804a41dd1e844dc573",
     "checks": [
-      "bash -n",
-      "embedded Python compile"
+      "readback exact source/script pins",
+      "new offline mshort compiler + libgcc link probe syntax and negative missing-compiler case tested locally",
+      "full updated SH not executed or independently syntax-tested on T"
     ],
     "executed": false
   },
-  "next_action": "Review diff and provide compatible guest cross-toolchain, then separately authorize the single HOLD job."
+  "next_action": "Acquire/verify genuine CrossMiNT compiler and binutils in an isolated environment, then execute the single F1 job only after renewed Commander/T authorization; D1.2 remains PASS.",
+  "toolchain_recovery": {
+    "source": "Official CrossMiNT Linux x86_64 prebuilt MiNT GCC 4.6.4 plus MiNT binutils",
+    "compiler_archive": "gcc-4.6.4-mint-bin-linux64.tar.xz",
+    "binutils_archive": "binutils-2.45-mint-bin-linux64.tar.xz",
+    "reference": "https://tho-otto.de/crossmint.php",
+    "status": "OFFICIAL_PACKAGES_IDENTIFIED_NOT_DOWNLOADED_OR_INSTALLED",
+    "toolchain_probe": "tools/f1_crossmint_preflight.py",
+    "next": "Independently obtain and verify a relocatable/installed MiNT compiler with -m68000 -mshort libgcc. No job dispatch before real approval."
+  }
 }
