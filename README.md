@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **2026-10-17:** D1.3.1-D fixed LLVM 21 M68k MMIO-01 fixture syntax and verified the exact 30-byte assembly/disassembly on T; R6's 36/36 synthetic tests passed but no build ran. New R7 DIAG-only job, SHA verified, has been accepted by T (PID 214409); **new driver compilation and actual MMIO CPU result remain pending**. Next D1.3.1-E verify Drive result independently. Commander grant **10/10 used**. [Canonical continuity](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **Status 2026-10-16:** D1.3.1-B implemented in **source only**: native M68000 32-bit address-space variant and selective VZ 8-bit IVR MMIO at `0xFFFFF300`, plus LLVM-assembled DIAG guest test MMIO-01 and 11 synthetic verifier methods. **No compilation or MMIO runtime PASS** yet. One source-pinned new Clang21 DIAG build/test SH is verified in Drive HOLD (R6; not dispatched). Next **D1.3.1-C** after fresh authorization for bounded Commander calls; older D1.2 RAM 9/9 real-T PASS preserved. [Current technical contract](docs/D1_3_1_VZ_MMIO_ADDRESS_DECODE_CONTRACT.md) and [canonical checkpoint](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
