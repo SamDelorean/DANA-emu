@@ -7,6 +7,12 @@
 **Established:** 2026-10-17  
 **Status:** General plan. Live results, open blockers, binary identities, and the next authorized action belong in the current [DIAG-FIRST execution ledger](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md), not in this document.
 
+## Binding emulator-testing exclusivity — 2026-10-17 (user directive)
+
+**ONLY `dana-diag` is authorized to execute emulator/runtime tests.** `dana-stable`, reference MAME, release variants or any other emulator are **prohibited**. The **`asmdana`** system selector running inside `dana-diag` is permitted; `danadiagd` is the compilation intermediate of the same DIAG-only subtarget, not an independently authorized emulator. Static source inspection and standalone C++ register logic checks are permitted but do not qualify as emulator tests. All functional smoke, RAM, MMIO, and real EmuTOS tests must execute exclusively an SHA-identified staged `.../diag/bin/dana-diag` binary; any ambiguity is **BLOCKED**.
+
+This overrides older plan references to stable/diag parity. See [mandatory test policy](DANA_DIAG_EXCLUSIVE_TEST_POLICY.md). **D2.1 PLLFSR run authorized with a maximum of three Commander calls**; not authority to run alternative emulators.
+
 ## 1. Mission and definition of success
 
 Build a **working, reduced AlphaSmart Dana hardware emulator**, using **existing MAME infrastructure and previously identified MC68VZ328/Dana implementations rather than developing an emulator from scratch**.
