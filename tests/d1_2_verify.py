@@ -136,32 +136,24 @@ def check_run(directory, name, variant, repeat):
     return report
 
 def verify_suite(root):
-    root=Path(root); results={}; all_status=[]
-    for variant in ('stable','diag'):
-        cases={}
-        for number in range(1,9):
-            name=f'RAM-{number:02}'
-            cases[name]=check_run(root/variant/name, name, variant, 1)
-        repeat=check_run(root/variant/'RAM-09', 'RAM-01', variant, 2)
-        if repeat['status']=='PASS' and cases['RAM-01']['status']=='PASS':
-            repeat['status']='PASS' if repeat['normalized']==cases['RAM-01']['normalized'] else 'FAIL'
-            if repeat['status']=='FAIL': repeat['reason']='Clean-run determinism mismatch'
-        elif cases['RAM-01']['status']!='PASS':
-            repeat.update(status='BLOCKED',reason='RAM-01 not qualified for comparison')
-        cases['RAM-09']=repeat
-        results[variant]=cases
-    for variant in ('stable','diag'):
-        parity={'status':'PASS'}
-        for name in [f'RAM-{n:02}' for n in range(1,10)]:
-            a,b=results['stable'][name],results['diag'][name]
-            if a['status']!='PASS' or b['status']!='PASS':
-                parity={'status':'BLOCKED','reason':'Per-variant cases incomplete'}; break
-            if a['normalized']!=b['normalized']:
-                parity={'status':'FAIL','reason':'Guest-visible variant mismatch in '+name};break
-        results[variant]['RAM-10']=parity.copy()
-        all_status += [r['status'] for r in results[variant].values()]
+    root=Path(root); variant='diag'; cases={}
+    for number in range(1,9):
+        name=f'RAM-{number:02}'
+        cases[name]=check_run(root/variant/name, name, variant, 1)
+    repeat=check_run(root/variant/'RAM-09', 'RAM-01', variant, 2)
+    if repeat['status']=='PASS' and cases['RAM-01']['status']=='PASS':
+        repeat['status']='PASS' if repeat['normalized']==cases['RAM-01']['normalized'] else 'FAIL'
+        if repeat['status']=='FAIL': repeat['reason']='Clean-run determinism mismatch'
+    elif cases['RAM-01']['status']!='PASS':
+        repeat.update(status='BLOCKED',reason='RAM-01 not qualified for comparison')
+    cases['RAM-09']=repeat
+    # RAM-10 stable/diag parity is deferred to stable activation (R3.4 owns
+    # its final manifest/unit-test disposition). It is not counted as PASS.
+    all_status=[r['status'] for r in cases.values()]
     status='FAIL' if 'FAIL' in all_status else 'BLOCKED' if 'BLOCKED' in all_status else 'PASS'
-    return {'status':status,'scope':'Observed fixture assertions only; independent T qualification required', 'variants':results}
+    return {'status':status,
+            'scope':'Observed DIAG fixture assertions only; independent T qualification required',
+            'variants':{variant:cases}}
 
 if __name__=='__main__':
     import argparse
