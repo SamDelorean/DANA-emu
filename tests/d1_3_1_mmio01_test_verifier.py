@@ -17,7 +17,7 @@ class MMIO01VerifierTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory(prefix='dana-mmio01-synthetic-')
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
-        self.fixture = b'\\x4e' * 32  # deliberately NOT an executable guest fixture
+        self.fixture = bytes([0x4e]) * 32  # deliberately NOT an executable guest fixture
         self.binary_hash = 'synthetic-only-not-a-real-binary'
         state = dict(CURPC=PCS[0], SP=0x8000, SR=0x2700, D0=0, A0=0)
         self.stops = [dict(state, CURPC=pc) for pc in PCS]
@@ -56,8 +56,8 @@ class MMIO01VerifierTests(unittest.TestCase):
         (self.root/'initial.ram').write_bytes(ram)
         (self.root/'final.ram').write_bytes(ram)
         (self.root/'fixture.bin').write_bytes(self.fixture)
-        (self.root/'error.log').write_text('DANA_VZ_IVR_WRITE data=40 state=40\\n'
-                                           'DANA_VZ_IVR_READ state=40\\n')
+        (self.root/'error.log').write_text('DANA_VZ_IVR_WRITE data=40 state=40\n'
+                                           'DANA_VZ_IVR_READ state=40\n')
         self.save()
 
     def save(self):
@@ -97,12 +97,12 @@ class MMIO01VerifierTests(unittest.TestCase):
 
     def test_spurious_handler_dispatch_fails(self):
         with (self.root/'error.log').open('a') as fd:
-            fd.write('DANA_VZ_IVR_READ state=40\\n')
+            fd.write('DANA_VZ_IVR_READ state=40\n')
         self.assertEqual(self.checked()['status'],'FAIL')
 
     def test_invalid_register_mask_readback_fails(self):
-        (self.root/'error.log').write_text('DANA_VZ_IVR_WRITE data=40 state=41\\n'
-                                           'DANA_VZ_IVR_READ state=40\\n')
+        (self.root/'error.log').write_text('DANA_VZ_IVR_WRITE data=40 state=41\n'
+                                           'DANA_VZ_IVR_READ state=40\n')
         self.assertEqual(self.checked()['status'],'FAIL')
 
     def test_ram_alias_corruption_fails(self):
