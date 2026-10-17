@@ -35,7 +35,7 @@ Table offsets are added to **0xFFFFF000**. For example, offset 0x700 gives addre
 | EMUCS | 118 | 16 | Yes | 0x0060 UM/PV | Emulation chip select |
 | CSCTRL3 | 150 | 16 | Not EZ | **0x9C00 AD**; POSE incorrectly uses 0x0000 | Critical reset correction |
 | PLLCR | 200 | 16 | Yes; MAME EZ 0x2400 | 0x24B3 **POSE** | Recalculate clock and VZ model |
-| PLLFSR | 202 | 16 | Yes; MAME EZ 0x0123 | 0x0123 **POSE** | Bit 15 **changes**: ET waits for alternation |
+| PLLFSR | 202 | 16 | Yes; MAME EZ 0x0123 | **0x0347 UM**; POSE's 0x0123 is not the VZ reset | Bit15 **CLK32 changes over virtual oscillator time**; bit14 PROT sticky until reset; QC/PC 11:0 mask |
 | PCTLR | 207 | 8 | Yes | 0x1F **POSE** | Power/STOP states to cross-check |
 | IVR | 300 | 8 | Yes | 0x00 UM/PV | ET writes 0x40 before enabling IRQ |
 | ICR | 302 | 16 | Yes | 0x0000 UM/PV | ET writes 0x8000 |
