@@ -10,9 +10,13 @@ Produce **real, provenance-checked** `emutos.img`, `emutos-dana.rom`, and `emuto
 
 A targeted search found no independently usable prebuilt Dana guest; compilation is now the fallback explicitly selected by the user. Do not substitute standard Atari, Amiga or FireBee EmuTOS binaries.
 
-## E1 — Install and qualify existing MiNT cross tools (CURRENT)
+## E1 — Reuse the installed BetaWise compiler first; CrossMiNT only if necessary (CURRENT)
 
-**Scope:** obtain two **official Linux x86_64** prebuilt archives from Thorsten Otto's CrossMiNT distribution, without building GCC/binutils or systemwide installation.
+**Priority 1: reuse the existing BetaWise compiler.** The user reports an already used m68k cross compiler. [BetaWise `m68k-elf/Makefile`](https://github.com/SamDelorean/betawise/blob/master/m68k-elf/Makefile) declares GCC 16.1.0 targeting `m68k-elf`, `--with-cpu=68000`, `--disable-multilib`, installation to `$HOME/.local`; [Makefile.common](https://github.com/SamDelorean/betawise/blob/master/Makefile.common) uses `-mpcrel -ffixed-a5 -fshort-enums`, **not `-mshort`**. [Pinned EmuTOS Makefile](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/Makefile) explicitly supports `m68k-elf-gcc` through `ELF=1`, but requires `-m68000 -mshort` and `-lgcc`. Because the BetaWise toolchain recipe disables multilib, it may lack a matching `-mshort` runtime; **actual installed compiler version, location and runtime support remain unverified on T**.
+
+The existing F1 HOLD job now checks for `m68k-elf-gcc` in PATH or `$HOME/.local/bin` *first*, verifies exact target/ABI/multilib and compiles plus links against that compiler's actual libgcc. It selects `m68k-elf-` (and the already supported EmuTOS `ELF=1` mode) **only on an actual PASS**. An incompatible installed compiler yields a clearly recorded reason and continues to CrossMiNT **within the same job**, without a new iteration or system change.
+
+**Priority 2 fallback:** obtain two **official Linux x86_64** prebuilt archives from Thorsten Otto's CrossMiNT distribution, without building GCC/binutils or systemwide installation.
 
 - `gcc-4.6.4-mint-bin-linux64.tar.xz` — upstream CrossMiNT GCC 4.6.4 with `-mshort` multilib.
 - `binutils-2.30-mint-bin-linux64.tar.xz` — matching *classic m68k-a.out* binutils version. Prefer it to speculative upgrades for this historical guest; use the correct MiNT/a.out flavor, **not `mintelf`**.
@@ -21,9 +25,9 @@ A targeted search found no independently usable prebuilt Dana guest; compilation
 - Isolate under the already documented Dana work area; never install into system locations, overwrite donor, alter AS2K, or require sudo.
 - The source-controlled `tools/f1_crossmint_acquire.py` acquires or accepts already provided archives, computes SHA-256, checks bounded tar paths/links, and produces `toolchain_manifest.json` with resolved compiler directory. The existing `tools/f1_crossmint_preflight.py` must compile **and link** a real `-m68000 -mshort` 16-bit-int / 32-bit-long ABI probe using the candidate's own `libgcc`.
 
-**E1 PASS:** actual installed compiler and binutils from acquired archives are usable; executable `m68k-atari-mint-gcc` with `-mshort` runtime and `-lgcc` linker test PASS, actual package SHA and compiler version recorded. **An archive listing or a synthetic fixture test is not PASS.**
+**E1 PASS:** an already installed BetaWise ELF toolchain or isolated CrossMiNT toolchain is proven usable; executable `m68k-atari-mint-gcc` with `-mshort` runtime and `-lgcc` linker test PASS, actual package SHA and compiler version recorded. **An archive listing or a synthetic fixture test is not PASS.**
 
-**Current result:** helper syntax and synthetic offline installation-path test passed, missing-archive rejection passed; no genuine toolchain installed or executed in this chat. This container cannot resolve the vendor host (DNS/network unavailable). **E1=BLOCKED_ARCHIVE_NETWORK**, not a toolchain failure proven on T.
+**Current result:** BetaWise's source and EmuTOS ELF build support audited. A local BetaWise-prefix preflight has valid Python syntax and correctly reports missing GCC in this sandbox; the actual T compiler has not been inspected. CrossMiNT isolated helper syntax and synthetic extraction tests passed; no real vendor archive fetched. This sandbox cannot resolve the vendor host (DNS/network unavailable). **E1=BLOCKED_ACTUAL_COMPILER_UNVERIFIED**, not proof that the T's existing BetaWise compiler is unusable.
 
 ## E2 — Build exact EmuTOS-Dana artifacts in one run
 
@@ -37,7 +41,7 @@ Use `tools/f1_guest.py validate` to check the linked map (including `__text`, `_
 
 ## E3 — Qualify F1 in the real DIAG emulator, still one campaign
 
-The same source-controlled `tests/hold/000_dana_f1_emutos.job.sh` now prepares CrossMiNT when needed, runs the ABI probe, builds EmuTOS and validates it **before** compiling the changed production MAME DIAG driver using pinned MAME `c4e48388ca620472643110db2941ce70aa5f3c07`, Clang 21 and `make -j3`.
+The same source-controlled `tests/hold/000_dana_f1_emutos.job.sh` now probes an already installed BetaWise ELF toolchain first and prepares CrossMiNT only when needed, runs the ABI probe, builds EmuTOS and validates it **before** compiling the changed production MAME DIAG driver using pinned MAME `c4e48388ca620472643110db2941ce70aa5f3c07`, Clang 21 and `make -j3`.
 
 Then run the existing DIAG smoke, impacted RAM-01/RAM-08 and CPU-origin MMIO-01 regression, two fresh authentic guest runs, plus native rejected-corrupt-image test, preserving bounded logs, hashes and Drive results. The previously qualified D1.2 9/9 stays closed; R7 cannot be used as the F1 driver because C++ changed.
 
@@ -48,7 +52,7 @@ Then run the existing DIAG smoke, impacted RAM-01/RAM-08 and CPU-origin MMIO-01 
 - **Source preparation, document edits and local synthetic checks only** are performed without consuming Commander. No new Commander/T budget is inherited.
 - The SH remains **GIT HOLD ONLY**. A verified file and one approved Drive queue job, then the canonical `/home/spc/.local/bin/dcjob launch` on explicit T device, require the user's separate fresh Commander approval. No automatic merge or next milestone.
 - Run preflight and validation before the costly MAME build; do not repeat compiles merely to inspect a Python/script failure. Do not touch foreign Drive queue items.
-- **Current cursor:** E1 toolchain preparation complete at source level; actual vendor package download, ABI check and EmuTOS build remain unexecuted. The next useful operation is a **single user-authorized F1 T job** once its full SH syntax, package endpoints and file SHA are independently validated. If no T access is authorized, continue only work that can genuinely complete off-machine.
+- **Current cursor:** E1 toolchain selection prepared at source level; BetaWise ABI validation on T, optional vendor package acquisition and the EmuTOS build remain unexecuted. The next useful operation is a **single user-authorized F1 T job** once its full SH syntax, package endpoints and file SHA are independently validated. If no T access is authorized, continue only work that can genuinely complete off-machine.
 - Historic status and new results must be appended to [HANDOFF.md](HANDOFF.md) and [DIAG-FIRST execution ledger](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md) without reopening closed investigations or splitting F1 into artificial gates.
 
 **Never claim PASS for E1/E2/E3 solely from Git commits, an online package listing, syntax checks, upload, accepted PID or synthetic verifier counts.**
