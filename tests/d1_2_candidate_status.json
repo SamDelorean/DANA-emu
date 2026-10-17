@@ -1,21 +1,22 @@
 {
   "increment": "D1.2",
   "status": "SOURCE_CANDIDATE_PREPARED",
-  "qualification": "BLOCKED_HARNESS_REAL_T",
+  "qualification": "BLOCKED_HARNESS_R4_RESOLVED_IN_SOURCE_AWAITING_REAL_T",
   "base_commit": "3408d5849a132da5647d839c51cf174e94dff94b",
   "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
-  "bootstrap_runtime_status": "BLOCKED_RESET_NOTIFIER_ASSERTION_NATIVE_CPU_RESET_FETCH_CONFIRMED",
+  "bootstrap_runtime_status": "R3_8_CORRECTION_STATICALLY_VERIFIED_RUNTIME_RETEST_PENDING",
   "guest_memory_tests_executed": false,
   "local_verification": {
     "fixture_assembly_and_regeneration": "completed",
     "python_and_lua_syntax": "checked",
-    "verifier_unit_tests": "17_OF_17_PASS_ON_REAL_T_R3_AND_R4_SYNTHETIC_ONLY",
+    "verifier_unit_tests": "25_METHODS_PRESENT_CURRENT_REVISION_NOT_EXECUTED; R3/R4 PREVIOUS_17_OF_17_PASS",
     "unit_test_evidence": "synthetic_only",
     "missing_binary_runner": "BLOCKED_as_expected",
     "previous_synthetic_verifier_unit_tests": 15,
-    "r3_4_static_review": "completed; not a runtime PASS"
+    "r3_4_static_review": "completed; not a runtime PASS",
+    "r3_8": "Lua false notifier gate removed; independent verifier now checks ordered CPU-origin reset vector reads at 0,2,4,6 with exact 16-bit data and initial registers; synthetic negative cases added; R4 recorded vector trace and four tampered controls independently checked in isolated local Python predicate; full suite pending."
   },
-  "next_step": "D1.2-R3.8 STATIC_FIRST: update test-only Lua initial CPU/reset gate and Python verifier to treat ordered genuine M68000 reset-vector bus reads + CPU state as proof, not unobserved Lua reset notifier; add negative synthetic tests. Reuse prior verified DIAG binary, no product driver edit. Prepare new SH; obtain NEW explicit Commander authorization before remote launch.",
+  "next_step": "Prepare R5 DIAG-only isolated SH pinned to branch commit, run updated 25 Python verifier tests before any DIAG guest suite, reuse verified DIAG binary by SHA; store in Drive HOLD. New explicit Commander authorization required to move to INBOX and launch; historical 5/5 exhausted. No product driver or fixture changes.",
   "development_variant": "diag",
   "active_case_ids": [
     "RAM-01",
