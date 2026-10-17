@@ -1,0 +1,45 @@
+# D1.3.1 — MC68VZ328 MMIO address decode: static-first contract
+
+**Status 2026-10-16: D1.3.1-A STATIC_AUDIT/PASS; D1.3.1-B IMPLEMENTATION/REAL-T TEST PENDING.**
+**Scope:** define a native 68000 guest-visible VZ register address window and one observable IVR decode test on `dana-diag`. Do **not** claim MMIO functionality or close all of D1.3.1 merely because this document is complete. D1.2 is already CLOSED/PASS for synthetic post-bootstrap 4 MiB RAM and must stay closed. No Commander, compilation or source-code changes in this audit.
+
+## 1. Authoritative sources and exact findings
+
+1. **Motorola MC68VZ328UM/D, rev. 0 (02/2000), §§3.1, 5.2.1, 9.6.1:** [official user manual](https://www.nxp.com/docs/en/user-guide/MC68VZ328UM.pdf). The internal register window is **0xFFFFF000–0xFFFFFFFF (4 KiB)**. The manual explicitly permits **0xXXFFF000** where XX is don't-care when system-control **DMAP** is enabled; **SCR reset is 0x1C (DMAP=1)**. When DMAP is cleared, the documented register base is **0xFFFFF000 only**. Writes into undocumented portions of the 4 KiB register space have unpredictable physical effects; never pretend arbitrary reserved offsets contain RAM. The manual gives **IVR = 0xFFFFF300, 8 bits, reset 0x00**, and the upper five IVR bits select interrupt-vector group. EmuTOS-Dana writes **0x40** there.
+2. **MC68VZ328UMAD/D, rev. 7 (10/2001):** [official addendum](https://www.nxp.com/docs/en/user-guide/MC68VZ328UMAD.pdf). Corrected VZ register layout/widths/resets take precedence over old UM pages and POSE defaults, notably CSCTRL2/3, UBAUD, LRRA and SPI1. These corrections are already listed in [D0.2](D0_2_EZ_VZ_REGISTER_CONTRACT.md). They do not warrant implementing other peripherals within D1.3.1.
+3. **Pinned MAME donor** `SamDelorean/mame-as3k@c4e48388ca620472643110db2941ce70aa5f3c07`:
+   - `src/devices/cpu/m68000/m68000.cpp` lines 15–28: *standalone* `m68000_device` configures program/opcode/user/CPU address spaces to **24 bits**.
+   - `src/devices/machine/mc68328.cpp` lines 96–110: MAME **MC68EZ328** reuses `m68000_device`, but explicitly sets `m_program_config.m_addr_width`, `m_opcodes_config.m_addr_width`, `m_uprogram_config.m_addr_width`, `m_uopcodes_config.m_addr_width` and `m_cpu_space_config.m_addr_width` to **32 bits**.
+   - Same source lines 113–133 and 285–311 uses native MAME `address_map` and read/write handlers, with EZ `base_internal_map(0xfffff000,map)`, `IVR` offset `0x300`, and precisely-sized maps. This is a valid **architectural precedent**, **NOT permission** to copy EZ bitfields/resets/device behavior into VZ.
+   - The **DANA-emu D1.2 driver** currently installs `M68000(config,m_maincpu,1'000'000)` with `map(0x00000000,0x003fffff).ram().share("ram")` and NO MMIO. It therefore uses the standalone **24-bit** address configuration. Mapping IVR at `0x00fff300` on this CPU alone could make a 32-bit guest literal `0xfffff300` appear to work through truncation and cannot independently prove high-bit decoding or DMAP transitions. Do not accept that as a complete VZ MMIO result.
+4. **Guest and board references:** pinned [D0.4 entry contract](D0_4_RAM_CPU_BUS_ENTRY_CONTRACT.md), [D0.2 register matrix](D0_2_EZ_VZ_REGISTER_CONTRACT.md), `Dana-OS3K/docs/09-EMULADOR-MAPA-MMIO-Y-GPIO.md` and pinned EmuTOS-Dana `bios/dana.c` (ref `9c42ef0f2c2fa9d1e217fced9da68901b2326e8b`) identify actual guest **IVR byte write 0x40 to 0xFFFFF300**, followed later by ICR/IMR/ISR and PLL reads. This is a guest-derived register-access target, not a host-invented peripheral.
+
+## 2. Minimal implementation approach (D1.3.1-B; not yet executed)
+
+- Reuse **native MAME 68000 CPU implementation and address-map callbacks**; adapt the proven MAME EZ technique for **32-bit logical address-space configuration** in a VZ-specific minimal CPU/device class, or demonstrate an equally genuine native MAME alternative. **Do not silently mask a 0xFFFFFxxx logical access down to 0x00FFFxxx.**
+- Extend only the Dana-owned diagnostic machine's program map: preserve the closed 4 MiB RAM range; decode **`0xFFFFF300` IVR as an 8-bit register**. Implement the *real register latch* (only valid IVR bits, with 0x40 preserved), not a generic constant-success stub or a 4 KiB RAM bank. Initialize a deterministic post-bootstrap MMIO state and mark it as an **explicit test assumption**, not fabricated power-on completeness.
+- Record the **entire canonical register window** `0xFFFFF000..0xFFFFFFFF` for later selective device-backed entries. No writes outside defined entries, no wholesale `.ram()` or unconditional no-op success. The `0xXXFFFxxx` mirror is valid only when **SCR.DMAP=1**; never implement a permanent mirror that remains after DMAP is cleared. A testable SCR/DMAP transition belongs to the smallest later increment that actually introduces it; it is not an artificial prerequisite to the high canonical IVR decode fixture.
+- Full interrupt arbitration, ICR/IMR/ISR, GPIO, UART, timers, LCD, SPI, cold-boot physical chip selects and EmuTOS loader **remain separate D1.3.2/D1.3.3/D2–D5 work**. Do not alter the pinned donor or AS2K/OS3K repositories. Respect per-file license constraints.
+
+## 3. One native guest test: MMIO-01 (canonical high address)
+
+**Fixture source intent**, assembled using the already approved LLVM/M68k fixture method (do not hand-encode opcodes):
+
+```asm
+MOVEA.L #$FFFFF300,A0
+MOVE.B  #$40,(A0)
+MOVE.B  (A0),D0
+STOP    #$2700
+```
+
+- **Preparation:** isolated `dana-diag`; the existing synthetic D1.2 RAM/stack/vector bootstrap profile; native 68000 debug hook/tap and bounded trace; no EmuTOS image.
+- **Expected real CPU/bus observation:** guest executes the instructions above from a known PC; a CPU-origin **8-bit write to logical 0xFFFFF300** (data `0x40`) reaches the IVR handler exactly once; subsequent CPU-origin **8-bit read at 0xFFFFF300** returns `0x40` into D0 low byte; A0 remains `0xFFFFF300`. Log actual logical address, PC, direction, width/data/mask, selected register, IVR state, source SHA and binary SHA. No host-origin event may satisfy this assertion.
+- **Decode separation:** an explicitly probed non-register neighbor `0xFFFFF301` and different 4 KiB page `0xFFFEF300` must **not dispatch to IVR**. Their native unmapped data/bus-error semantics are recorded, not invented. Confirm there is **no alias to 4 MiB RAM**, which occupies only `0x00000000..0x003FFFFF`. Do **not** assert that `0x00FFF300` can never alias: in the actual VZ, reset SCR.DMAP permits this lower alias.
+- **Address-width discriminator:** the instrumentation must prove a **genuine 32-bit canonical 0xFFFFF300 access**, not just a host-side A0 register value followed by a **24-bit-masked** bus transaction at `0x00FFF300`. The latter is **BLOCKED_ADDRESS_WIDTH** for this first high-address fixture, not PASS.
+- **Outcome:** PASS only with actual guest CPU instruction path and observed, correctly decoded IVR write/read/return plus negative decode check. FAIL for wrong handler, width, byte lane, bus alias or wrong data. BLOCKED for absent 32-bit MAME address visibility, missing trace, test harness error or unavailable executable. This test alone does **not** prove VZ interrupt functionality or physical reset.
+
+## 4. Strict verification and next action
+
+- Inspect source diff for only Dana MMIO class/map and fixture/harness changes; preserve known D1.2 SHA/test assets. Regression should be targeted: **RAM-01** (8/16/32-bit bus data) and **RAM-08** (unmapped 0x400000), plus MMIO-01; do not automatically rerun all D0/D1.1/D1.2 work or rebuild stable.
+- The first build after an actual driver/CPU address-space change **requires one genuine DIAG compilation** using verified Clang 21, `PRECOMPILE=0`, `DEBUG=1`, `SUBTARGET=danadiag`, `make -j3`; old D1.2 binary cannot qualify new MMIO driver code. **No remote job/Commander is authorized by this static record.**
+- **D1.3.1-A = CLOSED/STATIC_PASS. D1.3.1-B = PENDING IMPLEMENTATION + REAL-T MMIO-01.** The parent D1.3.1 cannot be declared functional PASS until MMIO-01 has real native CPU evidence. Next action: implement the narrowly scoped 32-bit-aware native VZ MMIO IVR decoder and the exact MMIO-01 fixture on the active DIAG branch; prepare a single source-pinned SH for a later authorized T run. Avoid unrelated gates.
