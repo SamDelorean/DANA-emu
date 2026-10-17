@@ -106,4 +106,4 @@ ROM_END
 } // anonymous namespace
 
 COMP(2002, asmdana, 0, 0, alphasdana, alphasdana, alphasdana_state, empty_init,
-    "AlphaSmart, Inc.", "AlphaSmart Dana (D1.3 DIAG MMIO candidate)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+    "AlphaSmart, Inc.", "AlphaSmart Dana (D1.1 skeleton)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
