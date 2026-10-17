@@ -29,14 +29,18 @@
   },
   "r6_job": {
     "name": "000_dana_emu_d1_3_1_r6_diag_20261016.job.sh",
-    "sha256": "c5c94d5ee0d669de2dd4775d87ba434fb80d93130a7b82cc21b2cb14d2bc4bda",
-    "drive_hold_file_id": "1pgsZICXsyxuIVHNck3uidoW1gXPDmpo2",
+    "sha256": "77ef88cf4047f5cd400ac4ed710173f8fa05711272a9c6a378448aa01392d3e2",
+    "drive_hold_file_id": "103PFOfnlA4Ig7NMOd_uXsUD_tuj8PDF2",
     "drive_status": "HOLD_NOT_IN_INBOX",
     "build": "MANDATORY_NEW_DIAG_Clang21_SINGLE_BUILD_NO_REUSE",
     "preflight": "25 prior verifier methods + 11 new synthetic methods, LLVM M68k assembled fixture before compilation",
     "regression": "D1.2 native RAM tests because CPU width and map changed",
     "mmio": "MMIO-01 actual 32-bit canonical IVR write/read + negative page/neighbor decode",
-    "evidence": "Full guest bus trace, handler log, 4-MiB paired RAM dumps, checked SHA and assembler source"
+    "evidence": "Full guest bus trace, handler log, 4-MiB paired RAM dumps, checked SHA and assembler source",
+    "source_pin": "5aed6d591d91f4e431ffb98b726d762876cd4a62",
+    "branch_may_advance_with_metadata": true,
+    "pin_fetch_guard": "Pinned code SHA must be present and ancestor of fetched branch, then detached checkout exact SHA",
+    "size_bytes": 13823
   },
   "outstanding": [
     "No MAME compilation or real guest test this increment",
