@@ -1,0 +1,33 @@
+{
+  "assignment": "F1 / issue #8",
+  "status": "BLOCKED",
+  "implementation": "SOURCE_CANDIDATE_PREPARED",
+  "parent_commit": "9de5dfe6b1a06a417ae4384fa48a99c5113dfafe",
+  "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "emutos_commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+  "qualified_ram": "D1.2 independent 9/9 PASS preserved",
+  "functional_guest_execution": "UNRUN",
+  "observed_hardware_dependency": null,
+  "blockers": [
+    {
+      "domain": "TOOLCHAIN",
+      "reason": "m68k-atari-mint-gcc / m68k-elf-gcc with matching mshort runtime unavailable"
+    },
+    {
+      "domain": "INFRA",
+      "reason": "No compatible DIAG executable in Cloud; T not accessed"
+    }
+  ],
+  "guest_artifacts": "NOT_BUILT; no image/map hashes claimed",
+  "local_checks": {
+    "native_driver_header_compilation": "PASS (-std=c++20 -fsyntax-only -Werror)",
+    "mame_source_discovery": "PASS",
+    "new_synthetic_input_tests": 13,
+    "existing_ram_verifier_tests": 25,
+    "existing_mmio_verifier_tests": 11,
+    "python_and_lua_syntax": "PASS"
+  },
+  "remote_execution": "NOT_AUTHORIZED_NOT_ATTEMPTED",
+  "qualification_job": "HOLD only",
+  "next_action": "Review diff and provide compatible guest cross-toolchain, then separately authorize the single HOLD job."
+}
