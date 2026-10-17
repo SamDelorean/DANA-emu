@@ -19,7 +19,7 @@ import tarfile
 import tempfile
 import time
 
-SOURCE='2321e47c3f2d5f19781e286c231119d8a6b2cbc3'
+SOURCE='9ba89114baaf1e031247484f3d1d8f0209bff775'
 MAME='c4e48388ca620472643110db2941ce70aa5f3c07'
 GUEST='9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
 R7='5df95ba18e34580de8f33872c8fb343e67953108cd8c19133c966dbe5c4b5a70'
@@ -72,10 +72,22 @@ try:
     local_bin=Path.home()/'.local/bin'
     if (local_bin/'m68k-elf-gcc').is_file():
         tool_env['PATH']=str(local_bin)+os.pathsep+tool_env.get('PATH','')
+    # Prefer the independently qualified and preserved CrossMiNT E1 installation.
+    # Never overwrite the working BetaWise toolchain or rebuild E1 unnecessarily.
+    existing_record=BASE/'F1_CROSSMINT_VERIFIED.json'
+    if not requested_prefix and prefix=='m68k-atari-mint-' and existing_record.is_file():
+        try:
+            record=json.loads(existing_record.read_text())
+            cross_bin=Path(record['bin_dir']).resolve()
+            if cross_bin.is_relative_to(BASE.resolve()) and (cross_bin/(prefix+'gcc')).is_file():
+                tool_env['PATH']=str(cross_bin)+os.pathsep+tool_env.get('PATH','')
+                summary['crossmint_source']='REUSE_VERIFIED_E1'
+        except (OSError,ValueError,KeyError,TypeError):
+            summary['crossmint_source']='PRESERVED_E1_MANIFEST_INVALID'
     # BetaWise already uses m68k-elf-gcc. Check it before downloading MiNT:
     # its source recipe disables multilib, so existing installs may not offer
     # a matching -mshort libgcc. Do not infer an ABI PASS from applet builds.
-    if not requested_prefix and shutil.which('m68k-elf-gcc',path=tool_env.get('PATH')):
+    if not requested_prefix and not shutil.which(prefix+'gcc',path=tool_env.get('PATH')) and shutil.which('m68k-elf-gcc',path=tool_env.get('PATH')):
         probe=evidence/'betawise-elf-preflight.json'
         stage('betawise-elf-preflight',['python3','tools/f1_crossmint_preflight.py',
             '--prefix','m68k-elf-','--result',str(probe)],
@@ -103,10 +115,20 @@ try:
     stage('crossmint-abi-preflight', ['python3','tools/f1_crossmint_preflight.py',
         '--prefix',prefix,'--result',str(evidence/'crossmint-preflight.json')],
         cwd=code,env=tool_env,timeout=120)
-    guest_output=root/'guest'
-    stage('build-guest',['python3','tools/f1_guest.py','build',str(guest),str(guest_output),'--prefix',prefix],
-        cwd=code,env=tool_env,timeout=1800)
-    stage('validate-guest',['python3','tools/f1_guest.py','validate',str(guest_output)],cwd=code)
+    # E2 was already built on the canonical T and SHA-checked independently.
+    # Always rerun genuine input validation before reuse; rebuild only if absent.
+    guest_output=BASE/'f1_e1e2_baldoi9k'/'emutos-built'
+    if guest_output.is_dir():
+        stage('validate-reused-e2',['python3','tools/f1_guest.py','validate',str(guest_output)],
+              cwd=code,env=tool_env)
+        summary['guest_build']='REUSED_VERIFIED_E2'
+    else:
+        guest_output=root/'guest'
+        stage('build-guest',['python3','tools/f1_guest.py','build',str(guest),str(guest_output),'--prefix',prefix],
+            cwd=code,env=tool_env,timeout=1800)
+        stage('validate-guest',['python3','tools/f1_guest.py','validate',str(guest_output)],
+              cwd=code,env=tool_env)
+        summary['guest_build']='BUILT_FROM_PINNED_SOURCE'
     if subprocess.check_output(['git','-C',str(DONOR),'rev-parse','HEAD'],text=True).strip()!=MAME:
         raise RuntimeError('BLOCKED_DONOR_PIN')
     staging=root/'mame-stage'
@@ -156,7 +178,7 @@ finally:
     with tarfile.open(archive,'w:gz') as bundle:
         bundle.add(evidence,arcname='evidence')
         for name in ('emutos.img','emutos-dana.rom','emutos.map','emutos.dana','guest_manifest.json','build.log','build_provenance.json'):
-            path=root/'guest'/name
+            path=locals().get('guest_output',root/'guest')/name
             if path.is_file():bundle.add(path,arcname='guest/'+name)
     archive_hash=digest(archive)
     (root/'archive.sha256').write_text(archive_hash+'  '+archive.name+'\n')
