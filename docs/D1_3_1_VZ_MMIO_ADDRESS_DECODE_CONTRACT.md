@@ -5,6 +5,8 @@
 **Historical D1.3.1-A status: STATIC_AUDIT/PASS; D1.3.1-B initial contract defined (then implemented as above); runtime test PENDING.**
 **Scope:** define a native 68000 guest-visible VZ register address window and one observable IVR decode test on `dana-diag`. Do **not** claim MMIO functionality or close all of D1.3.1 merely because this document is complete. D1.2 is already CLOSED/PASS for synthetic post-bootstrap 4 MiB RAM and must stay closed. No Commander, compilation or source-code changes in this audit.
 
+**2026-10-17 LLVM21 ASSEMBLER CORRECTION AND R7 LAUNCH.** The pinned T llvm-mc-21 rejects `movea.l` and `stop` in the MMIO-01 fixture, although these are recognizable Motorola mnemonics; it accepts equivalent `move.l #imm,%a0` and `rts`. We use a **nonexecuted `rts` debugger-breakpoint endpoint**, consistent with the D1.2 endpoint-before-execution test method. The complete guest source assembled/disassembled on T with LLVM 21: **30 bytes**, hex `207cfffff30010bc00401010207cfffef3001010207cfffff30110104e75`, SHA256 `04b7a227f9db4e5eb067740ab88dd6e2212ac3f58950a79645742197dab84e33`; eight breakpoint offsets `0,6,10,12,18,20,26,28` unchanged. The verifier, assembler runner and 11 synthetic fixtures now expect length 30. **R7 DIAG job was submitted successfully to T**, Drive ID `11nYK5xil5_AHPD1itMkfdmgbeoXPSlPZ`, script SHA `33c29a6d752e3a3361224162f296474cbc4b4c32c8b058785915b6a1bb5b1943`, worker PID 214409, **no build/guest PASS yet**. 10/10 Commander block spent. Next D1.3.1-E Drive-only independent result audit; no second R7 launch.
+
 ## 1. Authoritative sources and exact findings
 
 1. **Motorola MC68VZ328UM/D, rev. 0 (02/2000), §§3.1, 5.2.1, 9.6.1:** [official user manual](https://www.nxp.com/docs/en/user-guide/MC68VZ328UM.pdf). The internal register window is **0xFFFFF000–0xFFFFFFFF (4 KiB)**. The manual explicitly permits **0xXXFFF000** where XX is don't-care when system-control **DMAP** is enabled; **SCR reset is 0x1C (DMAP=1)**. When DMAP is cleared, the documented register base is **0xFFFFF000 only**. Writes into undocumented portions of the 4 KiB register space have unpredictable physical effects; never pretend arbitrary reserved offsets contain RAM. The manual gives **IVR = 0xFFFFF300, 8 bits, reset 0x00**, and the upper five IVR bits select interrupt-vector group. EmuTOS-Dana writes **0x40** there.
@@ -28,10 +30,11 @@
 **Fixture source intent**, assembled using the already approved LLVM/M68k fixture method (do not hand-encode opcodes):
 
 ```asm
-MOVEA.L #$FFFFF300,A0
+MOVE.L  #$FFFFF300,A0
 MOVE.B  #$40,(A0)
 MOVE.B  (A0),D0
-STOP    #$2700
+; Full MMIO-01 also probes 0xFFFEF300 and 0xFFFFF301.
+; RTS is the breakpoint endpoint, not executed.
 ```
 
 - **Preparation:** isolated `dana-diag`; the existing synthetic D1.2 RAM/stack/vector bootstrap profile; native 68000 debug hook/tap and bounded trace; no EmuTOS image.
