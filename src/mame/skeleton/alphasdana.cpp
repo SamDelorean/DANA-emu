@@ -50,6 +50,10 @@ protected:
 
 private:
     void program_map(address_map &map) ATTR_COLD;
+    // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
+    u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
+    void pllfsr_w(offs_t, u16 data, u16 mem_mask);
+    TIMER_CALLBACK_MEMBER(clk32_tick);
     u16 icr_r() { return m_icr; }
     void icr_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_icr); m_icr &= 0xff80; }
     u16 imr_r(offs_t offset) { return m_imr >> (offset ? 0 : 16); }
@@ -64,6 +68,9 @@ private:
     required_device<dana_vz_cpu_device> m_maincpu;
     required_device<quickload_image_device> m_guest;
     output_finder<> m_guest_ready;
+    emu_timer *m_clk32_timer = nullptr;
+    u16 m_pllfsr = 0x0347;
+    bool m_clk32_high = false;
     u8 m_ivr = 0;
     bool m_guest_loaded = false;
     u16 m_icr = 0;
@@ -73,6 +80,9 @@ private:
 
 void alphasdana_state::machine_start()
 {
+    m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
+    save_item(NAME(m_pllfsr));
+    save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
     save_item(NAME(m_guest_loaded));
     save_item(NAME(m_icr));
@@ -84,6 +94,12 @@ void alphasdana_state::machine_start()
 void alphasdana_state::machine_reset()
 {
     // Defined register reset only; full VZ cold-reset decoding is not modeled.
+    // Motorola MC68VZ328UM 4.4.2: actual VZ reset, not MAME EZ/POSE 0x0123.
+    m_pllfsr = 0x0347;
+    m_clk32_high = false;
+    // As in the pinned MAME DragonBall reference, advance CLK32 via
+    // scheduler time rather than toggling it on register reads.
+    m_clk32_timer->adjust(attotime::from_hz(32768), 0, attotime::from_hz(32768));
     m_ivr = 0x00;
     m_icr = 0;
     m_imr = 0x00ffffff;
@@ -93,6 +109,25 @@ void alphasdana_state::machine_reset()
     // their independently qualified native reset path unchanged.
     if (m_guest->exists() && !m_guest_loaded)
         m_maincpu->suspend(SUSPEND_REASON_DISABLE, true);
+}
+
+TIMER_CALLBACK_MEMBER(alphasdana_state::clk32_tick)
+{
+    m_clk32_high = !m_clk32_high;
+}
+
+void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
+{
+    // Motorola MC68VZ328UM 4.4.2: CLK32 read-only; reserved bits stay 0.
+    // PC[7:0] and QC[11:8] permit 16-bit or lane-selected accesses before
+    // sticky PROT[14] is set; PROT can only be cleared by machine reset.
+    // One write may set the counters and PROT together. Subsequent writes
+    // cannot alter the counters, even when they attempt to clear PROT.
+    u16 const counter_mask = mem_mask & 0x0fff;
+    if (!(m_pllfsr & 0x4000))
+        m_pllfsr = (m_pllfsr & ~counter_mask) | (data & counter_mask);
+    if (data & mem_mask & 0x4000)
+        m_pllfsr |= 0x4000;
 }
 
 u8 alphasdana_state::ivr_r()
@@ -114,7 +149,8 @@ void alphasdana_state::ivr_w(u8 data)
 // VZ interrupt configuration/status prefix used by dana_init. Native MAME
 // register/word-lane pattern (mc68328.cpp), VZ mask/layout from the UM interrupt-controller definitions and
 // D0.2. No IRQ sources are implemented/asserted here: pending really is zero.
-// PLL/timer/GPIO/UART remain unmapped until their connected behavior exists.
+// PLLCR, PCTRL, Timer, GPIO and UART stay unmapped pending independent contracts.
+ // PLLFSR alone is now implemented with VZ-specific reset/PROT/CLK32 semantics.
 void alphasdana_state::imr_w(offs_t offset, u16 data, u16 mem_mask)
 {
     unsigned const shift = offset ? 0 : 16;
@@ -194,9 +230,9 @@ void alphasdana_state::program_map(address_map &map)
     // Preserve the independently qualified D1.2 synthetic post-bootstrap RAM.
     map(0x00000000, 0x003fffff).ram().share("ram");
 
-    // First selective VZ MMIO register; not a dummy 4 KiB RAM bank.
-    // SCR.DMAP's conditional low-address aliases remain intentionally
-    // unimplemented, and are NOT asserted as unconditionally absent.
+    // Individually decoded VZ registers only, never a blanket MMIO RAM page.
+    // SCR.DMAP conditional low-address aliases remain intentionally unmapped.
+    map(0xfffff202, 0xfffff203).rw(FUNC(alphasdana_state::pllfsr_r), FUNC(alphasdana_state::pllfsr_w));
     map(0xfffff300, 0xfffff300).rw(FUNC(alphasdana_state::ivr_r), FUNC(alphasdana_state::ivr_w));
     map(0xfffff302, 0xfffff303).rw(FUNC(alphasdana_state::icr_r), FUNC(alphasdana_state::icr_w));
     map(0xfffff304, 0xfffff307).rw(FUNC(alphasdana_state::imr_r), FUNC(alphasdana_state::imr_w));
