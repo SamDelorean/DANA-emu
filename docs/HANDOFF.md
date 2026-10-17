@@ -1,5 +1,8 @@
 # DANA-emu — Canonical handoff and exact continuation
 
+> **LATEST VERIFIED CURSOR — 2026-10-16:** D1.2-R3.5 DIAG-only SH prepared in Drive **hold**, SHA-verified, no Commander and no launch. Newly retrieved R2 evidence proves MAME DIAG built successfully and D1.1 smoke PASS, but RAM-01 exited `-11` (SIGSEGV) without observation, so D1.2 is BLOCKED at guest execution (not a verified RAM model defect). Next **D1.2-R3.6: STATIC_FIRST crash triage** before authorizing any T repeat. Authoritative details and file/hash: [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **DIRECT CONTINUATION (2026-10-16):** Start with [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md), the canonical anti-gate DIAG-only plan and new-chat bootstrap. Exact cursor **D1.2-R3.1**: static inventory of PR #7 runner/verifier/manifest/Lua and DIAG-only D1.1 regression. D1.2 PENDING; D1.1 historical PASS; R2 dual-build withdrawn. Do not launch R2 or use Commander without new authorization. After each verified increment update the cursor and evidence link.
 
 
