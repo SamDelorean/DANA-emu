@@ -114,7 +114,10 @@ emu.register_periodic(protect(function()
     local previous=origin; origin='host'
     local current=state(); stops[#stops+1]=current
     if next_stop==1 then
-        assert(reset_seen and current.CURPC==0x4000 and current.SP==0x8000 and current.SR==0x2700,
+        -- The native M68000 may fetch reset vectors before Lua's separate
+        -- reset notifier fires. Do not invent a notifier; the independent
+        -- verifier requires ordered CPU-origin vector reads and this state.
+        assert(current.CURPC==0x4000 and current.SP==0x8000 and current.SR==0x2700,
                'Initial CPU state/first instruction mismatch')
         assert(current.D0==0 and current.D1==0 and current.D2==0 and current.D3==0,'Dirty CPU registers')
         dump('initial')
