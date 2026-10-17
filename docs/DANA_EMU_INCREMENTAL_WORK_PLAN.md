@@ -1,5 +1,8 @@
 # DANA-emu — incremental development and qualification master plan
 
+> **LATEST EXECUTION CURSOR — 2026-10-16:** D1.2 **CLOSED/PASS** (real DIAG R5 RAM-01..RAM-09 9/9, independent RAM/CPU/vector audit). Next **D1.3.1 — pinned MC68VZ328 native MMIO address decoding, STATIC_FIRST**. Ignore prior dual-build/parallel stable gates; `dana-stable` deferred. Current execution plan and evidence: [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md). User authorizes Commander in explicit **10-call blocks**, not automatic permissions for unrelated tasks.
+
+
 > **AUTHORITATIVE INCREMENTAL ROADMAP (2026-10-16):** [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md) contains the active DIAG-only atomic sequence, anti-gate policies AG-01..AG-12, acceptance criteria, deferred stable phase and zero-ramp handoff. Older dual-build steps and gate ordering in this document are retained as history and are NOT active execution instructions. Exact next action **D1.2-R3.1 STATIC_FIRST**.
 
 
