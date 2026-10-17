@@ -45,8 +45,8 @@ def assemble(directory):
     if extract.returncode:
         raise RuntimeError('BLOCKED_FIXTURE_OBJCOPY: see assemble.log')
     code = (directory / 'fixture.bin').read_bytes()
-    if len(code) != 32:
-        raise RuntimeError(f'BLOCKED_FIXTURE_LAYOUT: expected 32 assembled bytes, got {len(code)}')
+    if len(code) != 30:
+        raise RuntimeError(f'BLOCKED_FIXTURE_LAYOUT: expected 30 assembled bytes, got {len(code)}')
     return code
 
 
