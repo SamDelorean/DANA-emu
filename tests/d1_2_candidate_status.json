@@ -9,9 +9,30 @@
   "local_verification": {
     "fixture_assembly_and_regeneration": "completed",
     "python_and_lua_syntax": "checked",
-    "verifier_unit_tests": 15,
+    "verifier_unit_tests": "PENDING_R3_4_EXECUTION",
     "unit_test_evidence": "synthetic_only",
-    "missing_binary_runner": "BLOCKED_as_expected"
+    "missing_binary_runner": "BLOCKED_as_expected",
+    "previous_synthetic_verifier_unit_tests": 15,
+    "r3_4_static_review": "completed; not a runtime PASS"
   },
-  "next_step": "Review candidate, then separately authorize independent sequential stable/diag T builds, bootstrap evidence and RAM-01 through RAM-10 plus D1.1 regressions."
+  "next_step": "D1.2-R3.5: statically validate and prepare one DIAG-only Clang 21 / make -j3 SH with verified hashes; run synthetic verifier unit tests before remote qualification. Do not launch without new Commander authorization.",
+  "development_variant": "diag",
+  "active_case_ids": [
+    "RAM-01",
+    "RAM-02",
+    "RAM-03",
+    "RAM-04",
+    "RAM-05",
+    "RAM-06",
+    "RAM-07",
+    "RAM-08",
+    "RAM-09"
+  ],
+  "deferred_cases": {
+    "RAM-10": {
+      "status": "DEFERRED_STABLE_PARITY",
+      "reason": "Run stable/diag parity only during separately approved stable activation",
+      "counts_for_pass": false
+    }
+  }
 }
