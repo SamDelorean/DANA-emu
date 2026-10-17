@@ -1,5 +1,8 @@
 # DANA-emu — Canonical handoff and exact continuation
 
+> **CORRECTED EVIDENCE / CURRENT CURSOR — 2026-10-16:** R2 `exit_code=-11` was **stable RAM-01 only**, not DIAG: archived package contains only `runtime/stable/RAM-01/run.json` and no DIAG guest run. DIAG binary build and D1.1 CLI smoke passed, but DIAG RAM-01..09 have NEVER executed. R3.6 static crash triage CLOSED; no new blocker for DIAG. Next **D1.2-R3.7** guarded single DIAG R3 SH (already SHA-verified in Drive HOLD), **only after new explicit Commander authorization**. Do not rebuild speculatively, relaunch R2, or treat stable-only SIGSEGV as a DIAG product failure. Exact checkpoint: [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **LATEST VERIFIED CURSOR — 2026-10-16:** D1.2-R3.5 DIAG-only SH prepared in Drive **hold**, SHA-verified, no Commander and no launch. Newly retrieved R2 evidence proves MAME DIAG built successfully and D1.1 smoke PASS, but RAM-01 exited `-11` (SIGSEGV) without observation, so D1.2 is BLOCKED at guest execution (not a verified RAM model defect). Next **D1.2-R3.6: STATIC_FIRST crash triage** before authorizing any T repeat. Authoritative details and file/hash: [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
