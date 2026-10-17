@@ -19,7 +19,7 @@ import tarfile
 import tempfile
 import time
 
-SOURCE='cf9916b3e1f7ec5ec548b5804a41dd1e844dc573'
+SOURCE='0a606dc746b57084da825fb0b6bd3cd7aa14c667'
 MAME='c4e48388ca620472643110db2941ce70aa5f3c07'
 GUEST='9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
 R7='5df95ba18e34580de8f33872c8fb343e67953108cd8c19133c966dbe5c4b5a70'
@@ -65,11 +65,28 @@ try:
     stage('unit-mmio',['python3','tests/d1_3_1_mmio01_test_verifier.py'],cwd=code)
     guest=root/'emutos-source';checkout('https://github.com/davidgiven/emutos.git',GUEST,guest)
     prefix=os.environ.get('DANA_F1_GUEST_PREFIX','m68k-atari-mint-')
+    tool_env=dict(os.environ)
+    if not shutil.which(prefix+'gcc'):
+        if prefix!='m68k-atari-mint-':
+            raise RuntimeError('BLOCKED_TOOLCHAIN_PREFIX: unavailable '+prefix+'gcc')
+        command=['python3','tools/f1_crossmint_acquire.py',
+                 '--out',str(root/'crossmint')]
+        # Optional offline archives are permitted, but never assumed to exist.
+        for envname,arg in [('DANA_F1_GCC_ARCHIVE','--gcc-archive'),
+                            ('DANA_F1_BINUTILS_ARCHIVE','--binutils-archive')]:
+            if os.environ.get(envname):command.extend([arg,os.environ[envname]])
+        stage('acquire-crossmint',command,cwd=code,timeout=900)
+        manifest=json.loads((root/'crossmint/toolchain_manifest.json').read_text())
+        if manifest.get('status')!='READY_FOR_ABI_PREFLIGHT':
+            raise RuntimeError('BLOCKED_CROSSMINT_ACQUISITION')
+        tool_env['PATH']=manifest['bin_dir']+os.pathsep+tool_env.get('PATH','')
+        summary['crossmint_archives']=manifest['archives']
     stage('crossmint-abi-preflight', ['python3','tools/f1_crossmint_preflight.py',
         '--prefix',prefix,'--result',str(evidence/'crossmint-preflight.json')],
-        cwd=code,timeout=120)
+        cwd=code,env=tool_env,timeout=120)
     guest_output=root/'guest'
-    stage('build-guest',['python3','tools/f1_guest.py','build',str(guest),str(guest_output),'--prefix',prefix],cwd=code,timeout=1800)
+    stage('build-guest',['python3','tools/f1_guest.py','build',str(guest),str(guest_output),'--prefix',prefix],
+        cwd=code,env=tool_env,timeout=1800)
     stage('validate-guest',['python3','tools/f1_guest.py','validate',str(guest_output)],cwd=code)
     if subprocess.check_output(['git','-C',str(DONOR),'rev-parse','HEAD'],text=True).strip()!=MAME:
         raise RuntimeError('BLOCKED_DONOR_PIN')
