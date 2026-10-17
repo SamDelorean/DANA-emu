@@ -19,7 +19,7 @@ import tarfile
 import tempfile
 import time
 
-SOURCE='0a606dc746b57084da825fb0b6bd3cd7aa14c667'
+SOURCE='2321e47c3f2d5f19781e286c231119d8a6b2cbc3'
 MAME='c4e48388ca620472643110db2941ce70aa5f3c07'
 GUEST='9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
 R7='5df95ba18e34580de8f33872c8fb343e67953108cd8c19133c966dbe5c4b5a70'
@@ -64,8 +64,22 @@ try:
     stage('unit-ram',['python3','tests/d1_2_test_verifier.py'],cwd=code)
     stage('unit-mmio',['python3','tests/d1_3_1_mmio01_test_verifier.py'],cwd=code)
     guest=root/'emutos-source';checkout('https://github.com/davidgiven/emutos.git',GUEST,guest)
-    prefix=os.environ.get('DANA_F1_GUEST_PREFIX','m68k-atari-mint-')
+    requested_prefix=os.environ.get('DANA_F1_GUEST_PREFIX')
+    prefix=requested_prefix or 'm68k-atari-mint-'
     tool_env=dict(os.environ)
+    # BetaWise already uses m68k-elf-gcc. Check it before downloading MiNT:
+    # its source recipe disables multilib, so existing installs may not offer
+    # a matching -mshort libgcc. Do not infer an ABI PASS from applet builds.
+    if not requested_prefix and shutil.which('m68k-elf-gcc'):
+        probe=evidence/'betawise-elf-preflight.json'
+        stage('betawise-elf-preflight',['python3','tools/f1_crossmint_preflight.py',
+            '--prefix','m68k-elf-','--result',str(probe)],
+            cwd=code,env=tool_env,timeout=120,accepted=(0,2))
+        betawise_result=json.loads(probe.read_text())
+        summary['betawise_elf_probe']=betawise_result;save()
+        if betawise_result['status']=='PASS':
+            prefix='m68k-elf-'
+            summary['guest_toolchain_choice']='REUSE_VERIFIED_BETAWISE_ELF'
     if not shutil.which(prefix+'gcc'):
         if prefix!='m68k-atari-mint-':
             raise RuntimeError('BLOCKED_TOOLCHAIN_PREFIX: unavailable '+prefix+'gcc')
