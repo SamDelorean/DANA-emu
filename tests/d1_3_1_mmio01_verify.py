@@ -114,7 +114,7 @@ def verify(root):
         final = (root / 'final.ram').read_bytes()
         check(len(initial) == len(final) == SIZE, 'Full RAM proof unavailable')
         expected = bytearray(SIZE)
-        expected[0x10000:0x10010] = b'\\xcc'*16
+        expected[0x10000:0x10010] = b'\xcc'*16
         import struct
         for address, value in ((0, 0x8000), (4, START), (12, 0x5000)):
             struct.pack_into('>I', expected, address, value)
@@ -140,6 +140,6 @@ if __name__ == '__main__':
     parser.add_argument('run_dir', type=Path)
     args = parser.parse_args()
     result = verify(args.run_dir)
-    (args.run_dir / 'verification.json').write_text(json.dumps(result, indent=2)+'\\n')
+    (args.run_dir / 'verification.json').write_text(json.dumps(result, indent=2)+'\n')
     print(result['status'], result.get('reason',''))
     raise SystemExit({'PASS':0, 'FAIL':1, 'BLOCKED':2}[result['status']])
