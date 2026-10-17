@@ -1,5 +1,8 @@
 # DANA-emu — Canonical continuity, universal rules, and no-drift operating contract
 
+> **CURRENT SOURCE-QUALIFIED STATUS — 2026-10-16:** D1.2 **CLOSED/PASS** on R5 real T with independent archive evidence; RAM-01..09 9/9, 25 synthetic unit tests, D1.1 DIAG smoke all PASS. DIAG development only, stable deferred, D1.3.1 MMIO STATIC_FIRST next. **Commander call authorizations are in blocks of 10 when explicitly granted**, count actual tool calls, unused allowance does not authorize unrelated increments. See [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md) for canonical evidence and cursor; supersedes outdated pending/dual-build material below.
+
+
 > **ZERO-RAMP HANDOFF / ANTI-GATE PLAN (2026-10-16):** The current executable roadmap, detailed incremental acceptance matrix, anti-gate rules and exact continuation cursor are in [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md). Read that file FIRST in a new conversation. Current cursor: **D1.2-R3.1 STATIC_FIRST**; DIAG only; no T/Commander authorization inherited. This link supersedes obsolete dual-build execution steps below without erasing historical evidence.
 
 
