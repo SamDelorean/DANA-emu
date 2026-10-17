@@ -1,5 +1,7 @@
 # DANA-emu F1 — EmuTOS-Dana guest build subplan
 
+**LATEST CANONICAL STATE (2026-10-17): E1 PASS; E2 PASS; E3 INITIAL GUEST EXECUTION PASS.** Native MAME DIAG was built and both EmuTOS runs demonstrated map-bound CPU instructions through `_dana_init` until real 16-bit read of **PLLFSR 0xFFFFF202, PC 0x0000829A**. [Independent E3 evidence](https://drive.google.com/file/d/1G_EKbuME2QHoVUYnDnbSNBpNNFJTRWgC/view). Only the first-guest/dependency scope is closed, **not full GUI boot**. Next D2.1 source implementing VZ PLLFSR is [prepared](https://github.com/SamDelorean/DANA-emu/blob/codex/dana-d1-2-ram-bus/docs/D2_1_PLLFSR_IMPLEMENTATION.md) and a new [single native MAME DIAG test SH is in Drive HOLD](https://drive.google.com/file/d/10IQM-ihHyXBE9p-M4h_bHe-ThC_u1QNs/view). D2.1 T **NOT EXECUTED**; fresh Commander authorization required. The prospective E3 and toolchain statuses below are historical and superseded.
+
 **Date:** 2026-10-17  
 **Parent:** [General Work Plan](GENERAL_WORK_PLAN.md), [F1 functional assignment #8](https://github.com/SamDelorean/DANA-emu/issues/8), active draft PR #7.  
 **Work mode:** DIAG-FIRST, reuse and STATIC_FIRST. This subplan is **one bounded part of the existing F1 functional delivery**, not a new emulator project or a chain of microincrements.
