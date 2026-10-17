@@ -153,7 +153,13 @@ def verify_suite(root):
     status='FAIL' if 'FAIL' in all_status else 'BLOCKED' if 'BLOCKED' in all_status else 'PASS'
     return {'status':status,
             'scope':'Observed DIAG fixture assertions only; independent T qualification required',
-            'variants':{variant:cases}}
+            'variants':{variant:cases},
+            # Deferred cases are never included in the status aggregation.
+            'deferred_cases':{
+                'RAM-10':{
+                    'status':'DEFERRED_STABLE_PARITY',
+                    'reason':'Stable/DIAG parity belongs to later stable activation',
+                    'counts_for_pass':False}}}
 
 if __name__=='__main__':
     import argparse
