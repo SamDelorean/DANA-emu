@@ -55,8 +55,11 @@ local function loaded()
     return ready:get()~=0
 end
 local function implemented(address,kind)
-    -- Exact selected native handlers; everything else remains a real dependency.
-    return address==0xfffff300 or (address>=0xfffff302 and address<=0xfffff307)
+    -- The VZ-specific PLLFSR word is now genuinely decoded in the driver.
+    -- Do not mistake this register for a missing peripheral. Other 0xF2xx
+    -- addresses (including PLLCR) remain real dependencies if accessed.
+    return (address>=0xfffff202 and address<=0xfffff203)
+        or address==0xfffff300 or (address>=0xfffff302 and address<=0xfffff307)
         or (address>=0xfffff30c and address<=0xfffff30f)
         or (kind=='read' and address>=0xfffff310 and address<=0xfffff313)
 end
