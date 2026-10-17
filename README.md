@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **Current checkpoint 2026-10-16:** Two user-authorized T DIAG jobs (R3/R4) completed with 17/17 synthetic verifier tests and D1.1 CLI smoke PASS; D1.2 real RAM suite still **BLOCKED in test harness**. R4 native reset vectors and `PC=$4000,SP=$8000,SR=$2700` were observed, but Lua reset notifier flag stayed false and triggered a false bootstrap assertion. Exact next **D1.2-R3.8** harness-only correction; no stable work or hardware changes. Commander **5/5 calls used**, new authorization required to rerun. [Canonical handoff](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **Current verified checkpoint — 2026-10-16:** R2 SIGSEGV `-11` happened in **dana-stable** RAM-01; the R2 runner stopped before any DIAG RAM fixture. Corrected R3.6 STATIC_FIRST triage closed. Next **D1.2-R3.7**: run the already prepared, held DIAG-only SH once after explicit Commander authorization; DIAG RAM remains untested. [Canonical plan](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
