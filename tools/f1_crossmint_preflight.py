@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline preflight for a real MiNT -mshort compiler and libgcc (no installs)."""
+"""Offline preflight for a MiNT or ELF -mshort compiler and libgcc (no installs)."""
 import argparse
 import json
 from pathlib import Path
@@ -13,7 +13,7 @@ def check(prefix):
     gcc = shutil.which(prefix + 'gcc')
     result = {'status': 'BLOCKED', 'compiler': gcc, 'prefix': prefix, 'checks': {}}
     if not gcc:
-        result['reason'] = 'MINT_GCC_NOT_INSTALLED'
+        result['reason'] = 'CROSS_GCC_NOT_INSTALLED'
         return result
     for program in (prefix + 'as', prefix + 'ld', prefix + 'objcopy'):
         if not shutil.which(program):
@@ -31,8 +31,10 @@ def check(prefix):
         result['checks']['version'] = run([gcc, '--version']).splitlines()[0]
         target = run([gcc, '-dumpmachine'])
         result['checks']['target'] = target
-        if target != 'm68k-atari-mint':
-            raise RuntimeError('WRONG_TARGET: ' + target)
+        expected = {'m68k-atari-mint-': 'm68k-atari-mint',
+                    'm68k-elf-': 'm68k-elf'}.get(prefix)
+        if not expected or target != expected:
+            raise RuntimeError('WRONG_TARGET: expected ' + str(expected) + ', got ' + target)
         multilib = run([gcc, '-print-multi-lib'])
         result['checks']['multilib'] = multilib
         if 'mshort' not in multilib:
@@ -41,7 +43,7 @@ def check(prefix):
         result['checks']['libgcc'] = libgcc
         if libgcc == 'libgcc.a' or not Path(libgcc).is_file():
             raise RuntimeError('MISSING_MSHORT_LIBGCC')
-        with tempfile.TemporaryDirectory(prefix='dana_f1_mint_probe_') as directory:
+        with tempfile.TemporaryDirectory(prefix='dana_f1_cross_probe_') as directory:
             source = Path(directory) / 'probe.c'
             object_file = Path(directory) / 'probe.o'
             binary = Path(directory) / 'probe.prg'
