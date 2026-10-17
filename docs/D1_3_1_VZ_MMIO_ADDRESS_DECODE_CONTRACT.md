@@ -1,6 +1,8 @@
 # D1.3.1 — MC68VZ328 MMIO address decode: static-first contract
 
-**Status 2026-10-16: D1.3.1-A STATIC_AUDIT/PASS; D1.3.1-B IMPLEMENTATION/REAL-T TEST PENDING.**
+**LATEST STATE 2026-10-16:** D1.3.1-B **source code and MMIO-01 harness IMPLEMENTED / NOT YET COMPILED OR REAL-T TESTED** on `codex/dana-d1-2-ram-bus` (product source commit `5aed6d591d91f4e431ffb98b726d762876cd4a62`). Native 32-bit M68000 derivation, selective IVR byte latch (0xFFFFF300, mask 0xF8), handler log markers and 11 new synthetic test methods are prepared. R6 DIAG-only Clang21 build/test SH in Drive HOLD ID `103PFOfnlA4Ig7NMOd_uXsUD_tuj8PDF2` SHA256 `77ef88cf4047f5cd400ac4ed710173f8fa05711272a9c6a378448aa01392d3e2`, bash syntax + Drive byte-readback PASS, NOT launched. **NEXT D1.3.1-C:** fresh authorization for one DIAG R6 native build and MMIO-01+RAM regression; independent evidence audit; no functional MMIO PASS yet. No Commander in B.
+
+**Historical D1.3.1-A status: STATIC_AUDIT/PASS; D1.3.1-B initial contract defined (then implemented as above); runtime test PENDING.**
 **Scope:** define a native 68000 guest-visible VZ register address window and one observable IVR decode test on `dana-diag`. Do **not** claim MMIO functionality or close all of D1.3.1 merely because this document is complete. D1.2 is already CLOSED/PASS for synthetic post-bootstrap 4 MiB RAM and must stay closed. No Commander, compilation or source-code changes in this audit.
 
 ## 1. Authoritative sources and exact findings
