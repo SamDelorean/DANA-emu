@@ -1,21 +1,21 @@
 {
   "increment": "D1.2",
   "status": "SOURCE_CANDIDATE_PREPARED",
-  "qualification": "AWAITING_INDEPENDENT_T_QUALIFICATION",
+  "qualification": "BLOCKED_HARNESS_REAL_T",
   "base_commit": "3408d5849a132da5647d839c51cf174e94dff94b",
   "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
-  "bootstrap_runtime_status": "UNVERIFIED",
+  "bootstrap_runtime_status": "BLOCKED_RESET_NOTIFIER_ASSERTION_NATIVE_CPU_RESET_FETCH_CONFIRMED",
   "guest_memory_tests_executed": false,
   "local_verification": {
     "fixture_assembly_and_regeneration": "completed",
     "python_and_lua_syntax": "checked",
-    "verifier_unit_tests": "PENDING_R3_4_EXECUTION",
+    "verifier_unit_tests": "17_OF_17_PASS_ON_REAL_T_R3_AND_R4_SYNTHETIC_ONLY",
     "unit_test_evidence": "synthetic_only",
     "missing_binary_runner": "BLOCKED_as_expected",
     "previous_synthetic_verifier_unit_tests": 15,
     "r3_4_static_review": "completed; not a runtime PASS"
   },
-  "next_step": "D1.2-R3.5: statically validate and prepare one DIAG-only Clang 21 / make -j3 SH with verified hashes; run synthetic verifier unit tests before remote qualification. Do not launch without new Commander authorization.",
+  "next_step": "D1.2-R3.8 STATIC_FIRST: update test-only Lua initial CPU/reset gate and Python verifier to treat ordered genuine M68000 reset-vector bus reads + CPU state as proof, not unobserved Lua reset notifier; add negative synthetic tests. Reuse prior verified DIAG binary, no product driver edit. Prepare new SH; obtain NEW explicit Commander authorization before remote launch.",
   "development_variant": "diag",
   "active_case_ids": [
     "RAM-01",
@@ -34,5 +34,26 @@
       "reason": "Run stable/diag parity only during separately approved stable activation",
       "counts_for_pass": false
     }
-  }
+  },
+  "real_t": {
+    "R3": {
+      "status": "BLOCKED_HARNESS",
+      "result_folder_id": "1aPzSmxoprvNyxSbASrtMxtuIKcDwGzHY",
+      "unit_test_pass_count": 17,
+      "diag_smoke": "PASS",
+      "diag_binary_sha256": "9af8b4216e14e0183352822c9abc5c27a0fc10c1d95f1ddebbc30249adde8c35",
+      "RAM_01": "BLOCKED_BOOTSTRAP_BPSSET_STRING_ARGS"
+    },
+    "R4": {
+      "status": "BLOCKED_HARNESS",
+      "source_commit": "c1436218aa0bb0d0dc4d7b819356c1603114b11d",
+      "result_folder_id": "1uyHw8ObsBgLvW67HPgSTWd2bWlNC0pLt",
+      "unit_test_pass_count": 17,
+      "diag_smoke": "PASS",
+      "RAM_01": "BLOCKED_MISSING_RESET_NOTIFICATION_DESPITE_OBSERVED_RESET_VECTORS_PC_0x4000_SP_0x8000_SR_0x2700"
+    }
+  },
+  "commander_calls_authorized": 5,
+  "commander_calls_used": 5,
+  "commander_calls_remaining": 0
 }
