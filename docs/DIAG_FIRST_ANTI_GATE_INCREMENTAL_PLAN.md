@@ -7,6 +7,8 @@ Read this document **first** in every new conversation, then [DIAG_FIRST_DEVELOP
 
 **CHECKPOINT 2026-10-16 — D1.2-R3.1 CLOSED/PASS (STATIC_ONLY).** Source-backed audit on PR #7 branch `codex/dana-d1-2-ram-bus`: `tests/d1_1_build_select_smoke.sh` dual prepare/verify; `tests/d1_2_run.py` positional stable+diag, distinct-binary guard, dual regression and per-variant loop; `tests/d1_2_verify.py` loops both variants and computes RAM-10 parity; `tests/d1_2_test_verifier.py` has stable-coded observations and parity assertions; `tests/d1_2_boot.lua` accepts generic `cfg.variant` and needs no hardware change; `tests/d1_2_fixture_manifest.json` fixtures remain unchanged. Exact edit sequence: R3.2 DIAG-only D1.1 CLI/provenance smoke; R3.3 DIAG-only runner/verifier RAM-01..09; R3.4 defer RAM-10 and update unit tests; R3.5 prepare one DIAG build SH. No product code change justified by this audit. No Commander, build, Codex, or runtime PASS. **NEXT: D1.2-R3.2.**
 
+**CHECKPOINT 2026-10-16 — D1.2-R3.2 IMPLEMENTED / STATIC_ONLY.** Added `tests/d1_1_diag_smoke.sh` on `codex/dana-d1-2-ram-bus`, commit `67f381f2fa51057bd8bfdd57d27a534e0bde184f`. This is an isolated derivative of the D1.1 historical smoke: `prepare REFERENCE NEW_STAGE_ROOT` stages DIAG only; `verify DIAG_BINARY NEW_EVIDENCE_ROOT` checks one executable, pinned source/driver/list hashes, unique Dana registration, preserved AS2K/AS3K registration, MAME listfull/listxml/validate, CPU and no-ROM metadata. Historical `tests/d1_1_build_select_smoke.sh` is unchanged. Static source checks PASS; **no execution or real binary PASS yet**. R3.3 must update `tests/d1_2_run.py` to invoke this new DIAG smoke. No Commander calls. **NEXT: D1.2-R3.3.**
+
 ## A. State of record — resume without rediscovery
 
 - Repository: `SamDelorean/DANA-emu`; development PR [#7](https://github.com/SamDelorean/DANA-emu/pull/7), branch `codex/dana-d1-2-ram-bus`, candidate commit `9a549d1d44b4114ace714b14f6338614bac8afc1`. Do not merge without real diagnostic evidence and user approval.
@@ -168,4 +170,4 @@ When the user says **"Continuemos DANA-emu"**, **"siguiente"**, or **"recupera e
 4. Verify evidence and update the current cursor in this file or a linked authoritative checkpoint before ending. Always leave a precise NEXT ACTION and keep the historical record.
 5. User communication in Spanish; repository technical documentation in English.
 
-**CURRENT CURSOR (2026-10-16): `D1.2-R3.2` — adapt D1.1 diagnostic-only CLI/provenance smoke. R3.1 CLOSED/PASS STATIC_ONLY; no product runtime acceptance yet. No Commander authorized.**
+**CURRENT CURSOR (2026-10-16): `D1.2-R3.3` — adapt D1.2 runner/verifier to one real DIAG binary and RAM-01..RAM-09. R3.2 implementation committed; static-only, runtime regression PENDING. No Commander authorized.**
