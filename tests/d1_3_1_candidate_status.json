@@ -1,0 +1,88 @@
+{
+  "increment": "D1.3.1-D",
+  "status": "R7_LAUNCHED_GUEST_RESULT_PENDING",
+  "qualification": "LLVM21_ASSEMBLER_REAL_T_PASS_BUT_NO_MAME_RUNTIME_EVIDENCE",
+  "development_variant": "diag",
+  "product_commit": "5aed6d591d91f4e431ffb98b726d762876cd4a62",
+  "mame_donor_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "scope": "Native M68000 32-bit address-space carrier and selective VZ IVR read/write, 8-bit at 0xfffff300; actual CPU MMIO-01, negative decode; D1.2 RAM unchanged",
+  "source_files": [
+    "src/mame/skeleton/alphasdana.cpp",
+    "tests/d1_3_1_mmio01.s",
+    "tests/d1_3_1_mmio01_boot.lua",
+    "tests/d1_3_1_mmio01_run.py",
+    "tests/d1_3_1_mmio01_verify.py",
+    "tests/d1_3_1_mmio01_test_verifier.py"
+  ],
+  "static_checks": {
+    "mame_device_type_global_scope": "PASS_SOURCE_INSPECTION",
+    "driver_keeps_4_mib_ram": "PASS_SOURCE_INSPECTION",
+    "device_mapper_ivr_address": "PASS_SOURCE_INSPECTION",
+    "unit_test_methods_new": 11,
+    "python_syntax": "NOT_RUN",
+    "llvm_m68k_assembler": "PASS_NATIVE_T_PRETEST",
+    "native_mame_compile": "R7_NOT_YET_CONFIRMED",
+    "d1_2_regression": "NOT_RUN",
+    "mmio_01_guest": "PENDING_R7",
+    "sh_bash_n": "PASS",
+    "drive_sha256_and_byte_readback": "PASS",
+    "m68k_instruction_syntax": "MAME_T_LLVM21_ASSEMBLED_AND_OBJDUMP_VERIFIED",
+    "guest_fixture_bytes": 30,
+    "guest_fixture_sha256": "04b7a227f9db4e5eb067740ab88dd6e2212ac3f58950a79645742197dab84e33",
+    "guest_instruction_offsets": [
+      0,
+      6,
+      10,
+      12,
+      18,
+      20,
+      26,
+      28
+    ]
+  },
+  "r6_job": {
+    "name": "000_dana_emu_d1_3_1_r6_diag_20261016.job.sh",
+    "sha256": "77ef88cf4047f5cd400ac4ed710173f8fa05711272a9c6a378448aa01392d3e2",
+    "drive_hold_file_id": "103PFOfnlA4Ig7NMOd_uXsUD_tuj8PDF2",
+    "drive_status": "HOLD_NOT_IN_INBOX",
+    "build": "MANDATORY_NEW_DIAG_Clang21_SINGLE_BUILD_NO_REUSE",
+    "preflight": "25 prior verifier methods + 11 new synthetic methods, LLVM M68k assembled fixture before compilation",
+    "regression": "D1.2 native RAM tests because CPU width and map changed",
+    "mmio": "MMIO-01 actual 32-bit canonical IVR write/read + negative page/neighbor decode",
+    "evidence": "Full guest bus trace, handler log, 4-MiB paired RAM dumps, checked SHA and assembler source",
+    "source_pin": "5aed6d591d91f4e431ffb98b726d762876cd4a62",
+    "branch_may_advance_with_metadata": true,
+    "pin_fetch_guard": "Pinned code SHA must be present and ancestor of fetched branch, then detached checkout exact SHA",
+    "size_bytes": 13823
+  },
+  "outstanding": [
+    "No MAME compilation or real guest test this increment",
+    "32-bit CPU core physical bus access must be proven by MMIO-01, cannot infer from source configuration",
+    "No EmuTOS, physical VZ cold-reset/DMAP alias, IRQ, keyboard, screen, SD, stable"
+  ],
+  "commander_calls_this_increment": 2,
+  "next_step": "D1.3.1-E: check R7 results in Drive only; independently verify LLVM test execution, fresh DIAG Clang21 build, D1.2 CPU-width RAM regression and actual 32-bit MMIO-01 guest CPU/handler proof. Never relaunch R7; new Commander authorization required if remote diagnostics are necessary.",
+  "r6_result": {
+    "status": "BLOCKED",
+    "reason": "MMIO01_LLVM_M68K_ASSEMBLY_FAILED",
+    "unit_tests": "36_OF_36_PASS",
+    "compiled_product": false,
+    "drive_run_folder_id": "1IqcKwvULKFvZ5DhO3PJCeHZ7r7Wc5uJX",
+    "runtime_result_file_id": "1EHjRt0Y8LA-2RN9GXiCkcpBYK7P1MCTL"
+  },
+  "r7_job": {
+    "name": "000_dana_emu_d1_3_1_r7_diag_20261017.job.sh",
+    "drive_file_id": "11nYK5xil5_AHPD1itMkfdmgbeoXPSlPZ",
+    "sha256": "33c29a6d752e3a3361224162f296474cbc4b4c32c8b058785915b6a1bb5b1943",
+    "size_bytes": 13900,
+    "product_sha": "73139d89d8cb28204747546fc1263c64cfe21496",
+    "script_syntax": "PASS",
+    "drive_readback": "PASS",
+    "commander_acceptance": "worker_pid_214409",
+    "build": "NOT_YET_VERIFIED",
+    "tests": "NOT_YET_VERIFIED"
+  },
+  "commander_calls_authorized_block_total": 10,
+  "commander_calls_authorized_block_used": 10,
+  "commander_calls_remaining": 0
+}

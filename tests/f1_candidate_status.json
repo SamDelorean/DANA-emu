@@ -1,0 +1,72 @@
+{
+  "assignment": "F1 / issue #8",
+  "status": "BLOCKED",
+  "implementation": "SOURCE_CANDIDATE_PREPARED",
+  "parent_commit": "9de5dfe6b1a06a417ae4384fa48a99c5113dfafe",
+  "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "emutos_commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+  "qualified_ram": "D1.2 independent 9/9 PASS preserved",
+  "functional_guest_execution": "UNRUN",
+  "observed_hardware_dependency": null,
+  "blockers": [
+    {
+      "domain": "TOOLCHAIN",
+      "reason": "m68k-atari-mint-gcc / m68k-elf-gcc with matching mshort runtime unavailable"
+    },
+    {
+      "domain": "INFRA",
+      "reason": "No compatible DIAG executable in Cloud; T not accessed"
+    }
+  ],
+  "guest_artifacts": "NOT_BUILT; no image/map hashes claimed",
+  "local_checks": {
+    "native_driver_header_compilation": "PASS (-std=c++20 -fsyntax-only -Werror)",
+    "mame_source_discovery": "PASS",
+    "new_synthetic_input_tests": 14,
+    "existing_ram_verifier_tests": 25,
+    "existing_mmio_verifier_tests": 11,
+    "python_and_lua_syntax": "PASS"
+  },
+  "remote_execution": "NOT_AUTHORIZED_NOT_ATTEMPTED",
+  "qualification_job": {
+    "state": "GIT_HOLD_ONLY_NO_REMOTE_T_OR_COMMANDER",
+    "path": "tests/hold/000_dana_f1_emutos.job.sh",
+    "sha256": "5e172b0184eee306f276e113ed97e73c1fd4fe2d65ab44145d02c0371075b355",
+    "implementation_commit": "2321e47c3f2d5f19781e286c231119d8a6b2cbc3",
+    "checks": [
+      "BetaWise m68k-elf compiler probed FIRST if present on T PATH or $HOME/.local/bin",
+      "Require target m68k-elf and actual -mshort multilib / libgcc link test before reuse",
+      "Fallback to isolated CrossMiNT automatically if installed BetaWise toolchain fails ABI",
+      "Preflight locally syntax-checked and missing-compiler case checked; complete SH not executed remotely"
+    ],
+    "executed": false
+  },
+  "next_action": "On next explicitly approved T intervention use the SAME F1 SH: check installed BetaWise m68k-elf first, validate -mshort and libgcc; fallback CrossMiNT only if incompatible; then build EmuTOS and DIAG without splitting into microtasks.",
+  "toolchain_recovery": {
+    "source": "Thorsten Otto CrossMiNT prebuilt Linux x86_64 archives",
+    "archive_names": [
+      "gcc-4.6.4-mint-bin-linux64.tar.xz",
+      "binutils-2.30-mint-bin-linux64.tar.xz"
+    ],
+    "index": "https://tho-otto.de/crossmint.php",
+    "preflight": "tools/f1_crossmint_preflight.py",
+    "acquire": "tools/f1_crossmint_acquire.py",
+    "archive_validation": "SHA256 + bounded archive member path/symlink checks + no systemwide installation",
+    "local_checks": "Helper py_compile and synthetic positive/negative extraction fixtures PASS, not actual MiNT compiler PASS",
+    "status": "BLOCKED_ARCHIVE_NETWORK_NO_NATIVE_COMPILER_VERIFIED",
+    "next": "Obtain genuine archives in an authorized networked environment, prove -m68000 -mshort + libgcc, then build pinned EmuTOS target."
+  },
+  "emutos_build_subplan": "docs/F1_EMUTOS_BUILD_SUBPLAN.md (main)",
+  "betawise_compiler_reuse": {
+    "repository": "SamDelorean/betawise",
+    "source": "m68k-elf/Makefile",
+    "target": "m68k-elf",
+    "gcc_version_declared": "16.1.0",
+    "toolchain_install_prefix": "${HOME}/.local",
+    "source_build_configuration": "--with-cpu=68000 --disable-multilib",
+    "program_flags": "-m68000 -mpcrel -ffixed-a5 -fshort-enums (NOT -mshort)",
+    "emutos_elf_mode": "ELF=1 uses m68k-elf-gcc with -m68000 -mshort and -lgcc",
+    "compatibility": "UNVERIFIED_ACTUAL_INSTALLED_COMPILER; recipe's --disable-multilib is a likely blocker",
+    "action": "Verify real installed compiler before any CrossMiNT download inside same F1 job; never claim PASS from SmartApplet builds"
+  }
+}
