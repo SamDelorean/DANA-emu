@@ -85,7 +85,7 @@ try:
         if betawise_result['status']=='PASS':
             prefix='m68k-elf-'
             summary['guest_toolchain_choice']='REUSE_VERIFIED_BETAWISE_ELF'
-    if not shutil.which(prefix+'gcc'):
+    if not shutil.which(prefix+'gcc',path=tool_env.get('PATH')):
         if prefix!='m68k-atari-mint-':
             raise RuntimeError('BLOCKED_TOOLCHAIN_PREFIX: unavailable '+prefix+'gcc')
         command=['python3','tools/f1_crossmint_acquire.py',
