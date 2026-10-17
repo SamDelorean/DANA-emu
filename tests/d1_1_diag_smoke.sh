@@ -122,7 +122,7 @@ for variant, binary in [('diag', diag)]:
             assert machine.findtext('description') == 'AlphaSmart Dana (D1.1 skeleton)', 'Unexpected description'
             assert not machine.findall('rom'), 'Skeleton must not require guest ROM'
             cpus = [chip for chip in machine.findall('chip') if chip.get('type') == 'cpu']
-            assert len(cpus) == 1 and cpus[0].get('clock') == '1000000' and cpus[0].get('name') == 'Motorola MC68000', 'Unexpected placeholder CPU configuration'
+            assert len(cpus) == 1 and cpus[0].get('clock') == '1000000' and cpus[0].get('name') == 'Dana VZ 32-bit-address M68000 (DIAG)', 'Unexpected Dana VZ CPU configuration'
             assert machine.find('driver').get('status') == 'preliminary', 'Expected nonworking skeleton'
             result['status'] = 'PASS'
         except subprocess.TimeoutExpired:
