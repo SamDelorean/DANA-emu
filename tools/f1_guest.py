@@ -44,8 +44,13 @@ def startup(syms,image):
     syms['_realmain']=realmain
     return syms
 
-def package(directory, source_sha=PIN, compiler=None):
+def package(directory, source_sha=None, compiler=None):
     directory=Path(directory)
+    if source_sha is None:
+        provenance=json.loads((directory/'build_provenance.json').read_text())
+        if provenance.get('exit_code')!=0 or 'dana' not in provenance.get('command',[]):
+            raise ValueError('Successful original dana build provenance required')
+        source_sha=provenance.get('source_commit');compiler=provenance.get('compiler')
     if source_sha!=PIN:raise ValueError('Wrong EmuTOS source revision')
     paths={name:directory/name for name in ('emutos.img','emutos-dana.rom','emutos.map')}
     syms=symbols(paths['emutos.map'].read_text())
@@ -125,7 +130,7 @@ def build(source,output,prefix):
             'compiler':version,'multilib':multilib,'exit_code':result.returncode},indent=2)+'\n')
     if result.returncode:raise RuntimeError('BLOCKED_GUEST_BUILD: see build.log')
     for name in ('emutos.img','emutos-dana.rom','emutos.map'):shutil.copy2(stage/name,output/name)
-    return package(output,compiler=version)
+    return package(output)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);sub=parser.add_subparsers(dest='mode',required=True)

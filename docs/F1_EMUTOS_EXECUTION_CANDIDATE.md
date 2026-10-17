@@ -81,7 +81,8 @@ No reference checkout is cleaned or built in place. Native MiNT is preferred;
 ELF=1 is used only with the actual m68k-elf toolchain. Linux m68k GCC with no
 mshort runtime is rejected, not relabeled as a qualified guest compiler.
 
-`f1_guest.py package DIRECTORY` validates actual build outputs and creates the
+`f1_guest.py package DIRECTORY` requires a successful recorded original build
+provenance (it does not infer a source SHA from filenames), validates build outputs and creates the
 manifest/container; `validate DIRECTORY` rechecks sizes, SHA-256, linker symbols,
 startup branches, native envelope and image bytes. `_realmain` is a local label
 that need not appear in GNU maps: its exact target is decoded from the built
@@ -148,7 +149,7 @@ or executing this local HOLD script remains a separate authorized action.
   passed, including actual image callback, address-map delegate and output APIs.
 - Pinned makedep sourcesproject successfully discovered the reduced driver and
   image-device dependencies in an isolated read-only source view.
-- 13 new input/verifier tests passed; 25 qualified RAM verifier tests and 11
+- 14 new input/verifier tests passed; 25 qualified RAM verifier tests and 11
   MMIO verifier tests passed unchanged. These use synthetic evidence and prove
   test behavior, not real guest execution. Python/Lua/shell checks are recorded
   in the local report; no source donor was modified.

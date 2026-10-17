@@ -22,7 +22,7 @@
   "local_checks": {
     "native_driver_header_compilation": "PASS (-std=c++20 -fsyntax-only -Werror)",
     "mame_source_discovery": "PASS",
-    "new_synthetic_input_tests": 13,
+    "new_synthetic_input_tests": 14,
     "existing_ram_verifier_tests": 25,
     "existing_mmio_verifier_tests": 11,
     "python_and_lua_syntax": "PASS"
