@@ -50,6 +50,15 @@ Use `tools/f1_guest.py validate` to check the linked map (including `__text`, `_
 
 All four hashes were independently recomputed from the [Drive evidence package](https://drive.google.com/file/d/1METSVshkjiuAJgpH5ilXRW5B2giTUkCf/view), archive SHA-256 `b53600abcbafa7345d1d3bceffc1dc6f13bbd8b0788e7e59e2b2aa2746b6e4c6`. MAME **not built or executed** in E1/E2. E2 outputs remain on canonical T at `/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/emutos-built`, plus Drive and a downloadable artifact bundle.
 
+## Private ROM mirrors — 2026-10-17 VERIFIED
+
+The four E2 outputs and `SHA256SUMS.txt` were installed at **both** user-private canonical locations:
+
+- **Google Drive:** [`ALPHASMART/private/roms/dana`](https://drive.google.com/drive/folders/1NoJL_HjtezdeayKlWYEYXQ9uYd12zvEH) — four actual bytes streams re-downloaded and independently checked against the exact E2 SHA-256 hashes listed above.
+- **Canonical T:** `/home/spc/Projects/alphasmart/private/roms/dana` — one verified, bounded `dcjob` copy job archived PASS/exit 0; own job output confirms all four newly copied files, SHA256 **postcopy PASS**, no previous ROM overwritten. [Evidence package](https://drive.google.com/file/d/1e_yrgk5HZLiwh36jzmxez5Jv28gaD_fT/view), SHA256 `2db6055b77fb7c44a54c64e627973d2fa3c378fc8d4dd27ef72b1747a318719a`.
+
+Use these mirrors for E3 and validate their hashes; no new guest build is needed. Do not publish ROM copies to GitHub.
+
 ## E3 — Qualify F1 in the real DIAG emulator, still one campaign
 
 The same source-controlled `tests/hold/000_dana_f1_emutos.job.sh` now **reuses the real verified E1 CrossMiNT and E2 binaries** (revalidating artifact identity before use) and compiles the changed production MAME DIAG driver using pinned MAME `c4e48388ca620472643110db2941ce70aa5f3c07`, Clang 21 and `make -j3`.
