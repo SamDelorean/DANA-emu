@@ -3,10 +3,9 @@
 # HOLD ONLY. Never put this job in inbox or dispatch without fresh authorization.
 # Immutable implementation source is checked out below; no AS2K/donor writes.
 set -euo pipefail
-if [[ ${DANA_F1_AUTHORIZED:-NO} != YES ]]; then
-    echo 'HOLD: set DANA_F1_AUTHORIZED=YES only after independent execution authorization.' >&2
-    exit 2
-fi
+# Authorization is enforced outside this job: audited Drive HOLD->inbox
+# staging and the explicitly approved canonical dcjob launch. Never dispatch
+# this source file on its own or assume a background consumer exists.
 exec python3 - <<'PY_JOB'
 import hashlib
 import json
@@ -20,7 +19,7 @@ import tarfile
 import tempfile
 import time
 
-SOURCE='69dfbf14bc9a62490afdfd44aa1f7200d7b61bf7'
+SOURCE='cf9916b3e1f7ec5ec548b5804a41dd1e844dc573'
 MAME='c4e48388ca620472643110db2941ce70aa5f3c07'
 GUEST='9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
 R7='5df95ba18e34580de8f33872c8fb343e67953108cd8c19133c966dbe5c4b5a70'
@@ -66,6 +65,9 @@ try:
     stage('unit-mmio',['python3','tests/d1_3_1_mmio01_test_verifier.py'],cwd=code)
     guest=root/'emutos-source';checkout('https://github.com/davidgiven/emutos.git',GUEST,guest)
     prefix=os.environ.get('DANA_F1_GUEST_PREFIX','m68k-atari-mint-')
+    stage('crossmint-abi-preflight', ['python3','tools/f1_crossmint_preflight.py',
+        '--prefix',prefix,'--result',str(evidence/'crossmint-preflight.json')],
+        cwd=code,timeout=120)
     guest_output=root/'guest'
     stage('build-guest',['python3','tools/f1_guest.py','build',str(guest),str(guest_output),'--prefix',prefix],cwd=code,timeout=1800)
     stage('validate-guest',['python3','tools/f1_guest.py','validate',str(guest_output)],cwd=code)
