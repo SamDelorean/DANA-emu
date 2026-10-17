@@ -10,8 +10,8 @@ import tarfile
 import urllib.request
 
 URLS = {
-    'gcc': 'https://tho-otto.m68k.eu/download/mint/gcc-4.6.4-mint-bin-linux64.tar.xz',
-    'binutils': 'https://tho-otto.m68k.eu/download/mint/binutils-2.30-mint-bin-linux64.tar.xz',
+    'gcc': 'https://tho-otto.m68k.eu/download/mint/gcc-4.6.4-mint-20230719-bin-linux64.tar.xz',
+    'binutils': 'https://tho-otto.m68k.eu/download/mint/binutils-2.30-mint-20180323-bin-linux64.tar.xz',
 }
 MAX_ARCHIVE = 150 * 1024 * 1024
 MAX_EXPANDED = 800 * 1024 * 1024
