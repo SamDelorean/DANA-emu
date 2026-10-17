@@ -67,10 +67,15 @@ try:
     requested_prefix=os.environ.get('DANA_F1_GUEST_PREFIX')
     prefix=requested_prefix or 'm68k-atari-mint-'
     tool_env=dict(os.environ)
+    # BetaWise installs its cross compiler to $HOME/.local/bin by default.
+    # Include that existing user-owned prefix only for this isolated job.
+    local_bin=Path.home()/'.local/bin'
+    if (local_bin/'m68k-elf-gcc').is_file():
+        tool_env['PATH']=str(local_bin)+os.pathsep+tool_env.get('PATH','')
     # BetaWise already uses m68k-elf-gcc. Check it before downloading MiNT:
     # its source recipe disables multilib, so existing installs may not offer
     # a matching -mshort libgcc. Do not infer an ABI PASS from applet builds.
-    if not requested_prefix and shutil.which('m68k-elf-gcc'):
+    if not requested_prefix and shutil.which('m68k-elf-gcc',path=tool_env.get('PATH')):
         probe=evidence/'betawise-elf-preflight.json'
         stage('betawise-elf-preflight',['python3','tools/f1_crossmint_preflight.py',
             '--prefix','m68k-elf-','--result',str(probe)],
