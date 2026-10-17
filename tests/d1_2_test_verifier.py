@@ -27,7 +27,7 @@ class VerifierTests(unittest.TestCase):
             events.append({'seq':len(events),'kind':'read','address':address,'origin':'cpu','pc':0,'data':0,'mask':65535})
         for address in (0x10000,0x10002,0x10004,0x10006,0x1000a,0x1000c):
             events.append({'seq':len(events),'kind':'write','address':address,'origin':'cpu','pc':0x4006,'data':0,'mask':65535})
-        self.observation={'schema':'dana-d1-2-observation-v1','case':'RAM-01','variant':'stable','run':1,
+        self.observation={'schema':'dana-d1-2-observation-v1','case':'RAM-01','variant':'diag','run':1,
             'fixture_sha256':self.case['sha256'],'binary_sha256':'test-only-mock','source_sha':'test-only-mock',
             'reason':'ENDPOINT_OBSERVED','bootstrap_prepared':True,'reset_seen':True,
             'events':events,'stops':stops,'final':stops[-1],'virtual_seconds':0.001}
@@ -42,14 +42,14 @@ class VerifierTests(unittest.TestCase):
         (self.root/'observation.json').write_text(json.dumps(self.observation))
 
     def check(self):
-        self.write();return check_run(self.root,'RAM-01','stable',1)
+        self.write();return check_run(self.root,'RAM-01','diag',1)
 
     def test_control_fixture_only(self):
         self.assertEqual(self.check()['status'],'PASS')
 
     def test_missing_observation(self):
         (self.root/'observation.json').unlink()
-        self.assertEqual(check_run(self.root,'RAM-01','stable',1)['status'],'BLOCKED')
+        self.assertEqual(check_run(self.root,'RAM-01','diag',1)['status'],'BLOCKED')
 
     def test_unproved_bootstrap(self):
         self.observation['bootstrap_prepared']=False
@@ -101,7 +101,7 @@ class VerifierTests(unittest.TestCase):
         self.observation['events']=events
         (self.root/'initial.ram').write_bytes(before);(self.root/'final.ram').write_bytes(after)
         self.write()
-        return check_run(self.root,name,'stable',1)
+        return check_run(self.root,name,'diag',1)
 
     def test_exception_control_fixtures_only(self):
         for name in ('RAM-06','RAM-07'):
@@ -113,21 +113,45 @@ class VerifierTests(unittest.TestCase):
         for event in self.observation['events']:
             if event.get('address')==12:event['origin']='fixture'
         self.write()
-        self.assertEqual(check_run(self.root,'RAM-06','stable',1)['status'],'FAIL')
+        self.assertEqual(check_run(self.root,'RAM-06','diag',1)['status'],'FAIL')
 
     def test_wrong_exception_frame(self):
         self.exception_fixture()
         data=bytearray((self.root/'final.ram').read_bytes());data[0x7ff7]=2
         (self.root/'final.ram').write_bytes(data)
-        self.assertEqual(check_run(self.root,'RAM-06','stable',1)['status'],'FAIL')
+        self.assertEqual(check_run(self.root,'RAM-06','diag',1)['status'],'FAIL')
 
-    def test_variant_parity_mismatch(self):
+    def test_complete_diag_suite_and_deferred_stable_parity(self):
+        seen=[]
         def mocked(directory,name,variant,repeat):
-            return {'status':'PASS','normalized':{'D0':1 if variant=='diag' else 0}}
+            seen.append((name,variant,repeat))
+            self.assertEqual(variant,'diag')
+            self.assertEqual(Path(directory).parts[-2],'diag')
+            return {'status':'PASS','normalized':{'D0':1}}
+        with patch('d1_2_verify.check_run',side_effect=mocked):
+            result=verify_suite(self.root)
+        self.assertEqual(result['status'],'PASS')
+        self.assertEqual(set(result['variants']),{'diag'})
+        self.assertEqual(len(seen),9)
+        self.assertEqual(set(result['variants']['diag']),{f'RAM-{n:02}' for n in range(1,10)})
+        deferred=result['deferred_cases']['RAM-10']
+        self.assertEqual(deferred['status'],'DEFERRED_STABLE_PARITY')
+        self.assertFalse(deferred['counts_for_pass'])
+        self.assertNotIn('RAM-10',result['variants']['diag'])
+
+    def test_diag_failure_not_masked_by_deferred_parity(self):
+        def mocked(directory,name,variant,repeat):
+            return {'status':'FAIL' if name=='RAM-03' else 'PASS',
+                    'normalized':{'D0':1}}
         with patch('d1_2_verify.check_run',side_effect=mocked):
             result=verify_suite(self.root)
         self.assertEqual(result['status'],'FAIL')
-        self.assertTrue(all(v['RAM-10']['status']=='FAIL' for v in result['variants'].values()))
+        self.assertEqual(result['variants']['diag']['RAM-03']['status'],'FAIL')
+        self.assertEqual(result['deferred_cases']['RAM-10']['status'],'DEFERRED_STABLE_PARITY')
+
+    def test_wrong_variant_observation_is_rejected(self):
+        self.observation['variant']='stable'
+        self.assertEqual(self.check()['status'],'FAIL')
 
     def test_clean_repeat_mismatch(self):
         def mocked(directory,name,variant,repeat):
@@ -135,12 +159,14 @@ class VerifierTests(unittest.TestCase):
         with patch('d1_2_verify.check_run',side_effect=mocked):
             result=verify_suite(self.root)
         self.assertEqual(result['status'],'FAIL')
-        self.assertTrue(all(v['RAM-09']['status']=='FAIL' for v in result['variants'].values()))
+        self.assertEqual(result['variants']['diag']['RAM-09']['status'],'FAIL')
 
     def test_incomplete_suite(self):
         result=verify_suite(self.root)
         self.assertEqual(result['status'],'BLOCKED')
-        self.assertTrue(all(len(cases)==10 for cases in result['variants'].values()))
+        self.assertEqual(set(result['variants']),{'diag'})
+        self.assertEqual(len(result['variants']['diag']),9)
+        self.assertEqual(result['deferred_cases']['RAM-10']['status'],'DEFERRED_STABLE_PARITY')
 
 if __name__=='__main__':
     unittest.main()
