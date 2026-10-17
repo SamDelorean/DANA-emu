@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **Latest 2026-10-16:** D1.2-R3.5 prepared DIAG-only SH in Drive hold, readback verified; **NOT launched**. R2's real D1.1 DIAG smoke PASSED but RAM-01 MAME process exited `-11` (SIGSEGV) without observation. Next exact increment **D1.2-R3.6 source-backed SIGSEGV triage**; do not repeat a 40-minute build or the same RAM-01 invocation without addressing the blocker. [Canonical checkpoint](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **Current execution plan (2026-10-16):** [DIAG-FIRST anti-gate incremental plan and zero-ramp handoff](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md). Develop and qualify **dana-diag only**. Resume at **D1.2-R3.1**; stable deferred. Read the linked plan first; earlier dual-build directions are historical.
 
 
