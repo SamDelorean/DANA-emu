@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **Current verified checkpoint — 2026-10-16:** R2 SIGSEGV `-11` happened in **dana-stable** RAM-01; the R2 runner stopped before any DIAG RAM fixture. Corrected R3.6 STATIC_FIRST triage closed. Next **D1.2-R3.7**: run the already prepared, held DIAG-only SH once after explicit Commander authorization; DIAG RAM remains untested. [Canonical plan](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **Latest 2026-10-16:** D1.2-R3.5 prepared DIAG-only SH in Drive hold, readback verified; **NOT launched**. R2's real D1.1 DIAG smoke PASSED but RAM-01 MAME process exited `-11` (SIGSEGV) without observation. Next exact increment **D1.2-R3.6 source-backed SIGSEGV triage**; do not repeat a 40-minute build or the same RAM-01 invocation without addressing the blocker. [Canonical checkpoint](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
