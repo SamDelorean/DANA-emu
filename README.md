@@ -1,5 +1,8 @@
 # DANA-emu
 
+> **Latest checkpoint — 2026-10-16:** R3.8 corrected the **DIAG test harness**, not the MAME driver, to accept real ordered M68000 CPU reset vector evidence without demanding an absent Lua reset notification. R5 DIAG-only SH has passed syntax and SHA/readback verification and is safely held in Drive. **25 new Python tests and actual RAM-01..09 still pending.** Next **D1.2-R3.9** single run **only after renewed Commander authorization**, previous 5/5 calls exhausted. [Canonical plan](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **Current checkpoint 2026-10-16:** Two user-authorized T DIAG jobs (R3/R4) completed with 17/17 synthetic verifier tests and D1.1 CLI smoke PASS; D1.2 real RAM suite still **BLOCKED in test harness**. R4 native reset vectors and `PC=$4000,SP=$8000,SR=$2700` were observed, but Lua reset notifier flag stayed false and triggered a false bootstrap assertion. Exact next **D1.2-R3.8** harness-only correction; no stable work or hardware changes. Commander **5/5 calls used**, new authorization required to rerun. [Canonical handoff](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
