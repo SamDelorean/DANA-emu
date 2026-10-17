@@ -4,8 +4,6 @@
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
 
-namespace {
-
 // Minimal VZ-aware M68000 address-width carrier. The stock M68000 exposes
 // only 24 address bits; the pinned MAME MC68EZ328 shows the exact native
 // configuration technique for the VZ's high 0xFFFFFxxx MMIO addresses.
@@ -28,6 +26,8 @@ public:
 };
 
 DEFINE_DEVICE_TYPE(DANA_VZ_CPU, dana_vz_cpu_device, "dana_vz_cpu", "Dana VZ 32-bit-address M68000 (DIAG)")
+
+namespace {
 
 class alphasdana_state : public driver_device
 {
