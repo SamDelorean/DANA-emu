@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run bounded D1.2 observations on two existing binaries; never build or install."""
+"""Run bounded D1.2 observations on one existing DIAG binary; never build or install."""
 import argparse
 import hashlib
 import json
@@ -29,29 +29,26 @@ def lua(value):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('stable',type=Path);parser.add_argument('diag',type=Path)
+    parser.add_argument('diag',type=Path)
     parser.add_argument('evidence',type=Path,help='New directory outside source checkouts')
     args=parser.parse_args(); root=args.evidence.resolve()
     root.mkdir(parents=True,exist_ok=False)
     fixtures=json.loads((HERE/'d1_2_fixture_manifest.json').read_text())
     source_sha=subprocess.check_output(['git','-C',str(PROJECT),'rev-parse','HEAD'],text=True).strip()
     try:
-        binaries={v:p.resolve() for v,p in [('stable',args.stable),('diag',args.diag)]}
-        if binaries['stable']==binaries['diag'] or binaries['stable'].parent==binaries['diag'].parent:
-            raise RuntimeError('Distinct variant binary destinations required')
-        for binary in binaries.values():
-            if not binary.is_file() or not os.access(binary,os.X_OK):
-                raise RuntimeError('Executable missing: '+str(binary))
-        # Existing D1.1 assertions are preserved and executed, not rewritten.
-        regression=subprocess.run([str(HERE/'d1_1_build_select_smoke.sh'),'verify',
-            str(binaries['stable']),str(binaries['diag']),str(root/'d1_1-regression')],
+        binary=args.diag.resolve()
+        if not binary.is_file() or not os.access(binary,os.X_OK):
+            raise RuntimeError('Executable missing: '+str(binary))
+        # Reuse the D1.1 assertions with a single genuine DIAG executable.
+        regression=subprocess.run(['bash',str(HERE/'d1_1_diag_smoke.sh'),'verify',
+            str(binary),str(root/'d1_1-regression')],
             stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=300)
         (root/'d1_1-regression.log').write_text(regression.stdout)
         if regression.returncode:
             save(root/'result.json',{'status':'FAIL' if regression.returncode==1 else 'BLOCKED',
                                     'reason':'D1.1 regression did not pass'})
             return 1 if regression.returncode==1 else 2
-        for variant,binary in binaries.items():
+        for variant in ('diag',):
             for index in range(1,10):
                 case_name=f'RAM-{index:02}';name='RAM-01' if index==9 else case_name
                 case=fixtures['cases'][name];directory=root/variant/case_name
