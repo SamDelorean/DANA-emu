@@ -1,17 +1,27 @@
 {
   "assignment": "F1 / issue #8",
-  "status": "E1_E2_PASS_E3_GUEST_EXECUTION_PENDING",
+  "status": "E1_E2_PASS_E3_INITIAL_GUEST_EXECUTION_PASS_D2_1_PLLFSR_SOURCE_CANDIDATE",
   "implementation": "SOURCE_CANDIDATE_PREPARED",
   "parent_commit": "9de5dfe6b1a06a417ae4384fa48a99c5113dfafe",
   "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
   "emutos_commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
   "qualified_ram": "D1.2 independent 9/9 PASS preserved",
-  "functional_guest_execution": "UNRUN",
-  "observed_hardware_dependency": null,
+  "functional_guest_execution": "PASS_INITIAL_EXECUTION_WITH_REAL_NEXT_HARDWARE_BLOCK",
+  "observed_hardware_dependency": {
+    "module": "VZ Clock Generation Module / PLLFSR",
+    "address": "0xFFFFF202",
+    "width_bits": 16,
+    "pc": "0x0000829A",
+    "operation": "CPU_ORIGIN_WORD_READ",
+    "reproduced_in_two_runs": true,
+    "register_reset_motorola": "0x0347",
+    "E3_status": "PASS_GUEST_EXECUTION_BLOCKED_HARDWARE",
+    "next": "D2.1 PLLFSR isolated native DIAG implementation"
+  },
   "blockers": [
     {
-      "domain": "F1_E3_DIAG",
-      "reason": "No updated DANA DIAG native build or real EmuTOS guest execution yet. E1/E2 genuine PASS does not imply MAME hardware PASS."
+      "domain": "D2_1_PLLFSR_NATIVE",
+      "reason": "Only source driver/Lua observer edits and isolated C++ unit harness staged. Changed DIAG driver not yet compiled or executed on T. Preserve all E3 and D1.2 real PASS."
     }
   ],
   "guest_artifacts": {
@@ -51,7 +61,7 @@
     "existing_mmio_verifier_tests": 11,
     "python_and_lua_syntax": "PASS"
   },
-  "remote_execution": "E1/E2 actual T PASS in prior scope; E3 unrun. No E3 Commander calls.",
+  "remote_execution": "F1/E3 real T R3 PASS, compiled native MAME DIAG and executed authentic guest twice. 3/3 previous Commander calls consumed. D2.1 NOT EXECUTED.",
   "qualification_job": {
     "state": "SUPERSEDED_FOR_E3_BY_E3_ONLY_JOB",
     "path": "tests/hold/000_dana_f1_emutos.job.sh",
@@ -64,7 +74,7 @@
     ],
     "executed": false
   },
-  "next_action": "Run ONLY the E3 DIAG-only SH after fresh explicit scoped Commander authorization; no guest images/ROM rebuild. Verify source/hash in HOLD, shared inbox exclusive, then one canonical dcjob launch and read results from Drive.",
+  "next_action": "Qualify D2.1: execute focused compiled handler unittest, rebuild changed native DIAG once with LLVM21 against pinned donor and no EmuTOS recompilation; run smoke RAM/MMIO + two real guest repeat traces and corrupt-image negative. Only after fresh scoped Commander budget via canonical T dcjob.",
   "toolchain_recovery": {
     "status": "PASS_REAL_MINT_MSHORT_LINK",
     "compiler": "m68k-atari-mint-gcc (MiNT 20230719) 4.6.4",
@@ -98,22 +108,42 @@
     "source_reused": true
   },
   "e3_execution": {
-    "status": "SOURCE_AND_JOB_VERIFIED_DRIVE_HOLD_ONLY",
-    "path": "tests/hold/001_dana_f1_e3_diag_guest_only_20261017.job.sh",
-    "source_commit": "be42c0cc2381cf16147d2ddf50e9f9acef2a971e",
-    "pinned_implementation_commit": "144365bf0028cde47e8c419132af82652b550042",
-    "sha256": "dc3208a95fdd929f1b09618fb161f92ed242258e47123f5fae939ff843f8ed86",
-    "drive_hold_id": "1439IQg75z0YLXNfAe-AqABVqQw202NIn",
-    "tests": [
-      "bash -n PASS",
-      "embedded Python AST PASS",
-      "E3-only source scope PASS",
-      "actual four E2 hashes independently rechecked against local original PASS",
-      "GitHub/Drive source readback exact-match PASS",
-      "Drive upload/readback SHA-256 PASS"
+    "status": "PASS_INITIAL_GUEST_EXECUTION_REPRODUCIBLE_HARDWARE_BLOCK",
+    "runner": "003_dana_f1_e3_diag_llvm_version_multiline_20261017.job.sh",
+    "supervisor_status": "PASS",
+    "exit_code": 0,
+    "duration_seconds": 2641,
+    "archive": "https://drive.google.com/file/d/1G_EKbuME2QHoVUYnDnbSNBpNNFJTRWgC/view",
+    "archive_sha256": "71bea4c670a58f180f13613b39f0dadc88c7b3d2ff8b5915582d493a0cd8c6ee",
+    "binary_sha256": "4e52c6f69cc9b45447872b4d6fc68c8d30309ed502f9aa8a402cdcb9ed9a58bf",
+    "guest_two_runs": "PASS_REPRODUCIBLE_INITIAL_NATIVE_EXECUTION",
+    "guest_initial_milestones": [
+      "_os_header",
+      "_main",
+      "_realmain",
+      "meminit",
+      "_biosmain",
+      "_dana_init"
     ],
-    "remote_execution": "NOT_PERFORMED",
-    "intent": "Compile ONLY changed native DIAG; verify smoke, RAM-01/RAM-08, MMIO-01, two authentic guest runs and native corrupt-image rejection.",
-    "superseded_legacy_job": "tests/hold/000_dana_f1_emutos.job.sh; do not launch for E3 as it allows guest recompilation"
+    "negative_corrupt_image": "PASS",
+    "RAM_01_RAM_08": "PASS",
+    "MMIO_01": "PASS",
+    "evidence_sha256_count": 91
+  },
+  "d2_1_pllfsr": {
+    "status": "SOURCE_IMPLEMENTED_STATIC_PREPARED_NOT_NATIVE_QUALIFIED",
+    "affected": [
+      "src/mame/skeleton/alphasdana.cpp",
+      "tests/f1_emutos_boot.lua",
+      "tests/d2_1_pllfsr_contract_test.py",
+      "docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md",
+      "docs/D2_1_PLLFSR_IMPLEMENTATION.md"
+    ],
+    "source_manual": "MC68VZ328UM/D Section 4.4.2 Table 4-4",
+    "spec": "16-bit map at 0xFFFFF202..203; reset 0x0347; virtual CLK32 from 32768 Hz scheduler; PROT sticky; QC/PC write lanes and reserved/CLK32 masks",
+    "synthetic_cpp_unit": "PREPARED_SOURCE_TEST_NOT_EXECUTED_IN_THIS_COMMIT",
+    "full_mame_guest": "UNRUN",
+    "no_new_rom_builds": true,
+    "no_commander_calls_this_increment": true
   }
 }
