@@ -31,8 +31,8 @@
   "qualification_job": {
     "state": "LOCAL_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "path": "tests/hold/000_dana_f1_emutos.job.sh",
-    "sha256": "a8163798a6e05dde8fd59e50fce85d7dad2f448daa7b4c53738728d65fb11daa",
-    "implementation_commit": "be8355103d137e4602b3090da6395d66e2166071",
+    "sha256": "fba276c2fcc3a47f300faedd19e0b6d80ddf7f7a0b28cd34bb6de7c5238f0f29",
+    "implementation_commit": "69dfbf14bc9a62490afdfd44aa1f7200d7b61bf7",
     "checks": [
       "bash -n",
       "embedded Python compile"
