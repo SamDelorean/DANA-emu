@@ -20,16 +20,18 @@ class VerifierTests(unittest.TestCase):
                'D0':0,'D1':0,'D2':0,'D3':0,'A0':0}
         stops=[dict(state,CURPC=pc,PC=pc+2) for pc in path]
         stops[-1].update(D0=0xa5,D1=0xbeef,D2=0x12345678,D3=0x89abcdef,A0=0x10000)
+        # R4's real M68000 trace had no Lua reset notifier, but did have
+        # native CPU-origin SSP/PC reads 0,2,4,6 with these exact values.
         events=[{'seq':0,'kind':'prestart','origin':'fixture','virtual_seconds':0},
-                {'seq':1,'kind':'prepared','origin':'fixture'},
-                {'seq':2,'kind':'reset_notification','origin':'fixture'}]
-        for address in (0,2,4,6):
-            events.append({'seq':len(events),'kind':'read','address':address,'origin':'cpu','pc':0,'data':0,'mask':65535})
+                {'seq':1,'kind':'prepared','origin':'fixture'}]
+        for address,data in ((0,0),(2,0x8000),(4,0),(6,0x4000)):
+            events.append({'seq':len(events),'kind':'read','address':address,
+                           'origin':'cpu','pc':0,'data':data,'mask':65535})
         for address in (0x10000,0x10002,0x10004,0x10006,0x1000a,0x1000c):
             events.append({'seq':len(events),'kind':'write','address':address,'origin':'cpu','pc':0x4006,'data':0,'mask':65535})
         self.observation={'schema':'dana-d1-2-observation-v1','case':'RAM-01','variant':'diag','run':1,
             'fixture_sha256':self.case['sha256'],'binary_sha256':'test-only-mock','source_sha':'test-only-mock',
-            'reason':'ENDPOINT_OBSERVED','bootstrap_prepared':True,'reset_seen':True,
+            'reason':'ENDPOINT_OBSERVED','bootstrap_prepared':True,'reset_seen':False,
             'events':events,'stops':stops,'final':stops[-1],'virtual_seconds':0.001}
         before=initial_ram(self.case);after=bytearray(before)
         after[0x10000:0x10010]=bytes.fromhex('cc a5 be ef 12 34 56 78 cc cc 89 ab cd ef cc cc')
@@ -62,6 +64,54 @@ class VerifierTests(unittest.TestCase):
         self.observation['events'][2]['seq']=8
         self.assertEqual(self.check()['status'],'FAIL')
 
+    def test_no_lua_notifier_but_real_cpu_vectors_pass(self):
+        self.assertFalse(self.observation['reset_seen'])
+        self.assertEqual(self.check()['status'],'PASS')
+        self.assertEqual(self.check()['reset_evidence']['addresses'],[0,2,4,6])
+
+    def test_optional_real_reset_notification_is_consistent(self):
+        events=self.observation['events']
+        events.insert(2,{'kind':'reset_notification','origin':'fixture',
+                         'virtual_seconds':0})
+        for n,event in enumerate(events):event['seq']=n
+        self.observation['reset_seen']=True
+        self.assertEqual(self.check()['status'],'PASS')
+        self.assertTrue(self.check()['reset_evidence']['reset_notification_observed'])
+
+    def test_fake_notifier_flag_is_rejected(self):
+        self.observation['reset_seen']=True
+        self.assertEqual(self.check()['status'],'FAIL')
+
+    def test_missing_cpu_reset_vector_fetch_is_rejected(self):
+        events=self.observation['events']
+        events[:]=[e for e in events if not (e.get('address')==4 and e.get('kind')=='read')]
+        for n,event in enumerate(events):event['seq']=n
+        self.assertEqual(self.check()['status'],'FAIL')
+
+    def test_wrong_cpu_reset_vector_data_is_rejected(self):
+        for event in self.observation['events']:
+            if event.get('address')==2 and event['kind']=='read':
+                event['data']=0x7000
+        self.assertEqual(self.check()['status'],'FAIL')
+
+    def test_wrong_cpu_reset_vector_order_is_rejected(self):
+        events=self.observation['events']
+        events[2],events[3]=events[3],events[2]
+        for n,event in enumerate(events):event['seq']=n
+        self.assertEqual(self.check()['status'],'FAIL')
+
+    def test_host_fabricated_vector_read_is_rejected(self):
+        for event in self.observation['events']:
+            if event.get('address')==4 and event['kind']=='read':
+                event['origin']='host'
+        self.assertEqual(self.check()['status'],'FAIL')
+
+    def test_cpu_reset_read_before_preparation_is_blocked(self):
+        events=self.observation['events']
+        events[1],events[2]=events[2],events[1]
+        for n,event in enumerate(events):event['seq']=n
+        self.assertEqual(self.check()['status'],'BLOCKED')
+
     def test_fixture_hash(self):
         self.observation['fixture_sha256']='bad'
         self.assertEqual(self.check()['status'],'FAIL')
@@ -93,7 +143,9 @@ class VerifierTests(unittest.TestCase):
         second=dict(first,CURPC=0x4006,PC=0x4008,A0=0x10000)
         final=dict(second,CURPC=0x5000,PC=0x5002,SP=0x7ff2)
         self.observation.update(case=name,fixture_sha256=case['sha256'],stops=[first,second,final],final=final)
-        events=self.observation['events'][:7]
+        events=[dict(e) for e in self.observation['events']
+                if e['kind'] in ('prestart','prepared')
+                or (e['kind']=='read' and e.get('address') in (0,2,4,6))]
         for address in (12,14):
             events.append({'seq':len(events),'kind':'read','address':address,'origin':'cpu','pc':0x4006,'data':0,'mask':65535})
         for address in range(0x7ff2,0x8000,2):
