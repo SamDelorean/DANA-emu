@@ -1,5 +1,7 @@
 # DANA-emu
 
+**[General Work Plan — permanent project direction, source reuse, Codex workflow, and operating rules](docs/GENERAL_WORK_PLAN.md)**. The current technical checkpoint remains in the [DIAG-FIRST execution ledger](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
 > **2026-10-17:** D1.3.1-D fixed LLVM 21 M68k MMIO-01 fixture syntax and verified the exact 30-byte assembly/disassembly on T; R6's 36/36 synthetic tests passed but no build ran. New R7 DIAG-only job, SHA verified, has been accepted by T (PID 214409); **new driver compilation and actual MMIO CPU result remain pending**. Next D1.3.1-E verify Drive result independently. Commander grant **10/10 used**. [Canonical continuity](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
