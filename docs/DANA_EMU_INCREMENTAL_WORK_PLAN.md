@@ -1,5 +1,8 @@
 # DANA-emu — incremental development and qualification master plan
 
+> **2026-10-16 D1.3.1 static source audit:** documentation **PASS only**; [native VZ MMIO decode contract](D1_3_1_VZ_MMIO_ADDRESS_DECODE_CONTRACT.md) confirms the MAME standalone 24-bit vs canonical 32-bit VZ address issue, the manufacturer conditional DMAP alias and first guest IVR `0xFFFFF300` 8-bit fixture. **NEXT D1.3.1-B:** implement narrow 32-bit-aware IVR decoding and MMIO-01 guest real-bus proof, retaining D1.2 closed RAM and DIAG-only policy. Functional D1.3.1 remains PENDING; no Commander used by static audit. [Authoritative plan](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
+
+
 > **LATEST EXECUTION CURSOR — 2026-10-16:** D1.2 **CLOSED/PASS** (real DIAG R5 RAM-01..RAM-09 9/9, independent RAM/CPU/vector audit). Next **D1.3.1 — pinned MC68VZ328 native MMIO address decoding, STATIC_FIRST**. Ignore prior dual-build/parallel stable gates; `dana-stable` deferred. Current execution plan and evidence: [DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md). User authorizes Commander in explicit **10-call blocks**, not automatic permissions for unrelated tasks.
 
 
