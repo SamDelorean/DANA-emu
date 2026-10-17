@@ -31,23 +31,29 @@
   "qualification_job": {
     "state": "GIT_HOLD_ONLY_NOT_DRIVE_UPLOADED_NOT_LAUNCHED",
     "path": "tests/hold/000_dana_f1_emutos.job.sh",
-    "sha256": "20afdeb6d869fe9267ffcf9c65991e4ca7f142a6198ff6d7f3af04245b7122f0",
-    "implementation_commit": "cf9916b3e1f7ec5ec548b5804a41dd1e844dc573",
+    "sha256": "047dcf4171efe59119eaa1c62c8b1aac83f7ea1a8d6be1ad8fc6f853a3c60ec0",
+    "implementation_commit": "0a606dc746b57084da825fb0b6bd3cd7aa14c667",
     "checks": [
-      "readback exact source/script pins",
-      "new offline mshort compiler + libgcc link probe syntax and negative missing-compiler case tested locally",
-      "full updated SH not executed or independently syntax-tested on T"
+      "Single SH includes CrossMiNT downloader, ABI/libgcc preflight, guest build and DIAG qualification",
+      "HOLD readback hash recorded; complete updated SH syntax not yet run in execution environment",
+      "No T Commander, no Drive inbox or launch"
     ],
     "executed": false
   },
-  "next_action": "Acquire/verify genuine CrossMiNT compiler and binutils in an isolated environment, then execute the single F1 job only after renewed Commander/T authorization; D1.2 remains PASS.",
+  "next_action": "Complete E1 real MiNT compiler installation/preflight and E2 original EmuTOS build; run the one F1 SH on T only after fresh explicit Commander approval and full job prevalidation.",
   "toolchain_recovery": {
-    "source": "Official CrossMiNT Linux x86_64 prebuilt MiNT GCC 4.6.4 plus MiNT binutils",
-    "compiler_archive": "gcc-4.6.4-mint-bin-linux64.tar.xz",
-    "binutils_archive": "binutils-2.45-mint-bin-linux64.tar.xz",
-    "reference": "https://tho-otto.de/crossmint.php",
-    "status": "OFFICIAL_PACKAGES_IDENTIFIED_NOT_DOWNLOADED_OR_INSTALLED",
-    "toolchain_probe": "tools/f1_crossmint_preflight.py",
-    "next": "Independently obtain and verify a relocatable/installed MiNT compiler with -m68000 -mshort libgcc. No job dispatch before real approval."
-  }
+    "source": "Thorsten Otto CrossMiNT prebuilt Linux x86_64 archives",
+    "archive_names": [
+      "gcc-4.6.4-mint-bin-linux64.tar.xz",
+      "binutils-2.30-mint-bin-linux64.tar.xz"
+    ],
+    "index": "https://tho-otto.de/crossmint.php",
+    "preflight": "tools/f1_crossmint_preflight.py",
+    "acquire": "tools/f1_crossmint_acquire.py",
+    "archive_validation": "SHA256 + bounded archive member path/symlink checks + no systemwide installation",
+    "local_checks": "Helper py_compile and synthetic positive/negative extraction fixtures PASS, not actual MiNT compiler PASS",
+    "status": "BLOCKED_ARCHIVE_NETWORK_NO_NATIVE_COMPILER_VERIFIED",
+    "next": "Obtain genuine archives in an authorized networked environment, prove -m68000 -mshort + libgcc, then build pinned EmuTOS target."
+  },
+  "emutos_build_subplan": "docs/F1_EMUTOS_BUILD_SUBPLAN.md (main)"
 }
