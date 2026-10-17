@@ -21,6 +21,12 @@ The original unmodified EmuTOS files and validated private mirrors are immutable
 - `tests/f1_emutos_boot.lua`: recognize *only* the newly decoded PLLFSR address pair in the CPU-origin MMIO observer; unimplemented nearby addresses still trigger a real next-hardware-dependency stop.
 - `docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md`: correct the POSE-only 0x0123 historical value to Motorola's 0x0347 VZ reset.
 
+## Binding test-emulator restriction (user directive 2026-10-17)
+
+**Only Dana DIAG (`dana-diag`) is authorized to execute emulator tests. All other emulators are prohibited.** See the canonical [exclusive DIAG policy](https://github.com/SamDelorean/DANA-emu/blob/main/docs/DANA_DIAG_EXCLUSIVE_TEST_POLICY.md). The donor MAME is *source only*; `danadiagd` is merely the output name of the **same DIAG subtarget**, copied to the staged executable `.../diag/bin/dana-diag`; `asmdana` is its internal machine selector. Smoke, RAM, MMIO and authentic EmuTOS runners receive the **same staged Dana DIAG executable**; no stable, reference or other emulator may run. If executable identity is ambiguous, stop as BLOCKED.
+
+**T dispatch preflight (same date):** Shared Drive `inbox` was occupied by unrelated `energy_r13a_r10_wake_trace_20261017.job.sh`. D2.1 remains in HOLD. No Commander calls consumed. Never execute, move or overwrite that unrelated job. User authorized at most **3** D2.1 Commander calls when the queue is exclusive.
+
 ## Verification and gates
 
 1. `python3 -m unittest tests/d2_1_pllfsr_contract_test.py` from repo root: checks exact source map/observer masks and compiles the **actual production register read/write and timer handler methods** into a tiny bounded C++ harness. Tests actual arithmetic for reset, CLK32 phase, full-word writes, byte lanes, reserved bits, sticky PROT and reset-unlock. This is **isolated C++ handler semantics only, not a real MAME peripheral PASS**.
