@@ -1,0 +1,48 @@
+{
+  "increment": "D1.3.1-B",
+  "status": "IMPLEMENTED_STATIC_UNBUILT",
+  "qualification": "REAL_T_PENDING",
+  "development_variant": "diag",
+  "product_commit": "5aed6d591d91f4e431ffb98b726d762876cd4a62",
+  "mame_donor_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "scope": "Native M68000 32-bit address-space carrier and selective VZ IVR read/write, 8-bit at 0xfffff300; actual CPU MMIO-01, negative decode; D1.2 RAM unchanged",
+  "source_files": [
+    "src/mame/skeleton/alphasdana.cpp",
+    "tests/d1_3_1_mmio01.s",
+    "tests/d1_3_1_mmio01_boot.lua",
+    "tests/d1_3_1_mmio01_run.py",
+    "tests/d1_3_1_mmio01_verify.py",
+    "tests/d1_3_1_mmio01_test_verifier.py"
+  ],
+  "static_checks": {
+    "mame_device_type_global_scope": "PASS_SOURCE_INSPECTION",
+    "driver_keeps_4_mib_ram": "PASS_SOURCE_INSPECTION",
+    "device_mapper_ivr_address": "PASS_SOURCE_INSPECTION",
+    "unit_test_methods_new": 11,
+    "python_syntax": "NOT_RUN",
+    "llvm_m68k_assembler": "NOT_RUN",
+    "native_mame_compile": "NOT_RUN",
+    "d1_2_regression": "NOT_RUN",
+    "mmio_01_guest": "NOT_RUN",
+    "sh_bash_n": "PASS",
+    "drive_sha256_and_byte_readback": "PASS"
+  },
+  "r6_job": {
+    "name": "000_dana_emu_d1_3_1_r6_diag_20261016.job.sh",
+    "sha256": "c5c94d5ee0d669de2dd4775d87ba434fb80d93130a7b82cc21b2cb14d2bc4bda",
+    "drive_hold_file_id": "1pgsZICXsyxuIVHNck3uidoW1gXPDmpo2",
+    "drive_status": "HOLD_NOT_IN_INBOX",
+    "build": "MANDATORY_NEW_DIAG_Clang21_SINGLE_BUILD_NO_REUSE",
+    "preflight": "25 prior verifier methods + 11 new synthetic methods, LLVM M68k assembled fixture before compilation",
+    "regression": "D1.2 native RAM tests because CPU width and map changed",
+    "mmio": "MMIO-01 actual 32-bit canonical IVR write/read + negative page/neighbor decode",
+    "evidence": "Full guest bus trace, handler log, 4-MiB paired RAM dumps, checked SHA and assembler source"
+  },
+  "outstanding": [
+    "No MAME compilation or real guest test this increment",
+    "32-bit CPU core physical bus access must be proven by MMIO-01, cannot infer from source configuration",
+    "No EmuTOS, physical VZ cold-reset/DMAP alias, IRQ, keyboard, screen, SD, stable"
+  ],
+  "commander_calls_this_increment": 0,
+  "next_step": "D1.3.1-C: after a freshly scoped approval, verify exact held R6 script and empty inbox, move exactly R6 into inbox, invoke one canonical T dcjob launch and independently audit Drive evidence. Do not claim D1.3.1 PASS until native MMIO-01 succeeds; classify compile vs assembler vs CPU/address errors separately."
+}
