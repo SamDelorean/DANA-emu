@@ -66,6 +66,8 @@ void alphasdana_state::machine_reset()
 
 u8 alphasdana_state::ivr_r()
 {
+    // Actual handler dispatch, independently countable in MAME -log output.
+    logerror("DANA_VZ_IVR_READ state=%02x\n", m_ivr);
     return m_ivr;
 }
 
@@ -74,6 +76,7 @@ void alphasdana_state::ivr_w(u8 data)
     // VZ interrupt vector group occupies IVR[7:3]. Lower bits are ignored.
     // The exact mask agrees with pinned MAME mc68328_base_device::ivr_w.
     m_ivr = data & 0xf8;
+    logerror("DANA_VZ_IVR_WRITE data=%02x state=%02x\n", data, m_ivr);
 }
 
 void alphasdana_state::program_map(address_map &map)
