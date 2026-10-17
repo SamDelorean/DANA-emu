@@ -72,7 +72,7 @@ def main():
                    binary_sha256=digest(binary), source_sha=source_sha,
                    breakpoints=PCS, endpoint=PCS[-1], output=str(root))
         conf = root / 'config.lua'
-        conf.write_text('return '+lua(cfg)+'\\n')
+        conf.write_text('return '+lua(cfg)+'\n')
         env = dict(os.environ, DANA_MMIO01_CONFIG=str(conf))
         cmd = [str(binary), 'asmdana', '-noreadconfig', '-debug', '-debugger', 'none',
                '-pluginspath', str(plugin), '-plugins', '-video', 'none', '-sound', 'none',
