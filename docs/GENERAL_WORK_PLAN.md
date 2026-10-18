@@ -13,6 +13,19 @@
 
 This overrides older plan references to stable/diag parity. See [mandatory test policy](DANA_DIAG_EXCLUSIVE_TEST_POLICY.md). **D2.1 PLLFSR run authorized with a maximum of three Commander calls**; not authority to run alternative emulators.
 
+## Mandatory retrieval-first Codex research — user directive 2026-10-17
+
+**Codex MUST proactively read the known project and reference repositories at their pinned revisions before implementing code. The assistant MUST place as much relevant, already verified source context as practical directly inside every copyable Codex prompt.** These are complementary obligations, not alternatives.
+
+- Start with this repo's `research/sources.lock.json` (canonical catalog of known repositories, commit SHAs, paths and licenses), `docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md`, `docs/HANDOFF.md`, `docs/DANA_DIAG_EXCLUSIVE_TEST_POLICY.md`, plus the current branch source and latest exact Drive evidence. Read source first; do not repeat the source-recovery research or overwrite a qualified stage.
+- Every Codex prompt must name **specific relevant repos, immutable commit, file paths / pinned URLs, and exactly what to extract or compare**. Prioritize Motorola MC68VZ328UM/D + addendum for register truth, original EmuTOS-Dana for actual hardware accesses, POSE/Retro68 for known device behavior, pinned MAME for permissible APIs/patterns, and dbztool for post-bootstrap context. Include verified current register address/width/PC/data/mask, previous PASS and remaining uncertainty directly in the prompt.
+- Codex must actually **fetch/read available source files at those pins**, not substitute general knowledge, fabricate conclusions or merely acknowledge the links. Return a **source-to-claim evidence table** with source/path/commit and differing values or uncertainties; specify any inaccessible file honestly and use only explicitly included verified extracts or accessible alternatives. Never invent missing manuals, resets, peripheral behavior or execution results.
+- Read secondary-source code for behavior, but respect GPL and per-file license boundaries; **do not paste GPL-licensed POSE/Retro68/EmuTOS code into MAME** unless verified license-compatible. Implement independently from specifications and behavioral understanding.
+- Keep source discovery bounded to the hardware increment; no broad irrelevant repo sweeps, no compiling other emulators, no relaunch of already completed T/ROM stages. For DANA-emu, **runtime tests ONLY `dana-diag`**.
+- Deliver the exact user-visible Codex prompt on every proposed delegation (see next section). Issue/PR attachments and pointers supplement, never replace the prompt.
+
+**Research index:** [`research/sources.lock.json`](../research/sources.lock.json). When a pin changes, document the reason, the new identity and the comparison instead of silently following a mutable branch.
+
 ## Mandatory Codex handoff — user directive 2026-10-17
 
 **Whenever the assistant proposes, prepares, assigns, or invokes work for Codex, the user must receive the EXACT, complete, actionable Codex prompt in the chat, ready to copy and paste.** This is a persistent user-level workflow rule, not limited to this project or issue.
