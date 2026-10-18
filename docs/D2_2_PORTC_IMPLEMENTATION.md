@@ -1,5 +1,22 @@
 # Port C continuation candidate — issue #9
 
+## Manufacturer verification after network authorization — 2026-10-17
+
+**RESOLVED: the two official Motorola/NXP PDF documents are accessible and were independently read.** The earlier `CONNECT 403` limitation documented below describes Codex's **former sandbox**, not the current validity of the reference material. Preserve that provenance but **supersede every earlier `BLOCKED_SPEC` claim concerning the PCPDEN/PCSEL register-reset and writable-mask contract**.
+
+Primary authority: [MC68VZ328UM/D, Rev.0](https://www.nxp.com/docs/en/user-guide/MC68VZ328UM.pdf), §§10.4.3.4–10.4.3.5, Tables **10-15 and 10-16**, PDF pages **183–184** (0-based 182–183), and programmer memory map in chapter 3. Checked against [MC68VZ328UMAD/D, Rev.7](https://www.nxp.com/docs/en/user-guide/MC68VZ328UMAD.pdf): its GPIO/LCD mnemonic erratum changes `LFLM` to `LFRM`, but it does **not replace the PCPDEN/PCSEL reset values or byte widths**.
+
+| Register | Manufacturer address | Width | Physical hardware reset | Allowed byte bits | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| **PCPDEN** | `0xFFFFF412` | 8 bits | **`0xFF`** | **7–0 rw** | `0` disables, `1` enables each Port C pull-down resistor. |
+| **PCSEL** | `0xFFFFF413` | 8 bits | **`0xFF`** | **7–0 rw** | `0` connects dedicated peripheral function; `1` selects GPIO signal. |
+
+The source code **intentionally does not emulate a cold boot**. Its `portc_reset()` value `0x00` is the **synthetic R-direct post-bootstrap software profile**, justified by pinned dbztool `danainit.sh` configuring both registers to zero before the RAM guest. **Do not silently replace it with `0xFF` on the currently qualified R-direct path**, which would change the fixture's bootstrap contract. A future separately scoped cold-reset implementation must start at physical `0xFF`, then execute the required software transitions.
+
+**Scope now verified:** exact addresses, byte width, writable 8-bit masks, reset values, and documented bit meanings. **Not claimed:** physical pin voltages, analog resistor network, actual connected LCD frame signal, or full GPIO data/direction multiplexing. Keep those models separate from the register latch contract. The verified bit semantics support the already written minimal independent `u8` handlers; no production code rewrite or ROM rebuild is needed solely for this specification issue.
+
+**Boundary of subsequent testing:** native `dana-diag` build and CPU-origin guest continuation remain **UNRUN**. A real PASS still requires the future T job's own tests and independent Drive evidence; resolving the manual access does not manufacture a runtime PASS.
+
 **Status: source and isolated checks complete; native DIAG UNRUN; manufacturer contract BLOCKED_SPEC.**
 
 Continue `codex/dana-d1-2-ram-bus`, draft [PR #7](https://github.com/SamDelorean/DANA-emu/pull/7), from `4494a7e702244e744d21908a4661550a86f560de`. The branch was advanced with a fast-forward, preserving CPU-name correction `9de5dfe`, the independently qualified RAM/bus, interrupt prefix, loader and PLLFSR. Canonical instructions were read from `main@ba40acd7b50a2322398cf0e0493228d4f3b255d0` where absent from this feature branch. [Issue #9](https://github.com/SamDelorean/DANA-emu/issues/9) supplies the current work contract. E1/E2/E3/D2.1 remain closed under the latest canonical HANDOFF; no old guest or toolchain build was repeated.
