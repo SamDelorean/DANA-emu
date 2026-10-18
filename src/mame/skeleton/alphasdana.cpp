@@ -63,6 +63,12 @@ private:
     void isr_w(offs_t offset, u16 data, u16 mem_mask);
     u8 ivr_r();
     void ivr_w(u8 data);
+    // R-direct GPIO configuration, not a claim about electrical cold reset.
+    void portc_reset() { m_pcpden = 0; m_pcsel = 0; }
+    u8 pcpden_r() { return m_pcpden; }
+    void pcpden_w(u8 data) { m_pcpden = data; }
+    u8 pcsel_r() { return m_pcsel; }
+    void pcsel_w(u8 data) { m_pcsel = data; }
 
     DECLARE_QUICKLOAD_LOAD_MEMBER(guest_load);
     required_device<dana_vz_cpu_device> m_maincpu;
@@ -76,6 +82,8 @@ private:
     u16 m_icr = 0;
     u32 m_imr = 0x00ffffff;
     u32 m_pending = 0;
+    u8 m_pcpden = 0;
+    u8 m_pcsel = 0;
 };
 
 void alphasdana_state::machine_start()
@@ -88,6 +96,8 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_icr));
     save_item(NAME(m_imr));
     save_item(NAME(m_pending));
+    save_item(NAME(m_pcpden));
+    save_item(NAME(m_pcsel));
     m_guest_ready = 0;
 }
 
@@ -104,6 +114,10 @@ void alphasdana_state::machine_reset()
     m_icr = 0;
     m_imr = 0x00ffffff;
     m_pending = 0;
+    // dbztool@d327023 danainit.sh configures PCPDEN=PCSEL=0 before RAM
+    // entry. This machine implements that synthetic post-bootstrap profile.
+    // POSE's 0xff initial values are NOT manufacturer reset evidence.
+    portc_reset();
     // Quickload is timer-driven. Suppress *all* CPU fetches until validation
     // and the complete RAM/bootstrap seed have succeeded. No-image tests keep
     // their independently qualified native reset path unchanged.
@@ -149,8 +163,8 @@ void alphasdana_state::ivr_w(u8 data)
 // VZ interrupt configuration/status prefix used by dana_init. Native MAME
 // register/word-lane pattern (mc68328.cpp), VZ mask/layout from the UM interrupt-controller definitions and
 // D0.2. No IRQ sources are implemented/asserted here: pending really is zero.
-// PLLCR, PCTRL, Timer, GPIO and UART stay unmapped pending independent contracts.
- // PLLFSR alone is now implemented with VZ-specific reset/PROT/CLK32 semantics.
+// PLLCR, PCTRL, Timer and UART stay unmapped pending independent contracts.
+// PLLFSR and the two Port C configuration bytes are independently decoded.
 void alphasdana_state::imr_w(offs_t offset, u16 data, u16 mem_mask)
 {
     unsigned const shift = offset ? 0 : 16;
@@ -238,6 +252,13 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff304, 0xfffff307).rw(FUNC(alphasdana_state::imr_r), FUNC(alphasdana_state::imr_w));
     map(0xfffff30c, 0xfffff30f).rw(FUNC(alphasdana_state::isr_r), FUNC(alphasdana_state::isr_w));
     map(0xfffff310, 0xfffff313).r(FUNC(alphasdana_state::ipr_r));
+    // VZ Port C: eight pulldown enables and eight GPIO/function selects.
+    // Native u8 handlers preserve the M68000 high/even and low/odd lanes,
+    // including a word spanning both registers. No PCDIR/PCDATA, external
+    // input values or LCD responses are synthesized by these latches.
+    // See docs/D2_2_PORTC_IMPLEMENTATION.md for the primary-source limitation.
+    map(0xfffff412, 0xfffff412).rw(FUNC(alphasdana_state::pcpden_r), FUNC(alphasdana_state::pcpden_w));
+    map(0xfffff413, 0xfffff413).rw(FUNC(alphasdana_state::pcsel_r), FUNC(alphasdana_state::pcsel_w));
 }
 
 void alphasdana_state::alphasdana(machine_config &config)

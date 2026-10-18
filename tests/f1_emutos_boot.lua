@@ -54,7 +54,7 @@ end
 local function loaded()
     return ready:get()~=0
 end
-local function implemented(address,kind)
+local function implemented_byte(address,kind)
     -- The VZ-specific PLLFSR word is now genuinely decoded in the driver.
     -- Do not mistake this register for a missing peripheral. Other 0xF2xx
     -- addresses (including PLLCR) remain real dependencies if accessed.
@@ -62,9 +62,26 @@ local function implemented(address,kind)
         or address==0xfffff300 or (address>=0xfffff302 and address<=0xfffff307)
         or (address>=0xfffff30c and address<=0xfffff30f)
         or (kind=='read' and address>=0xfffff310 and address<=0xfffff313)
+        or address==0xfffff412 or address==0xfffff413
+end
+local function bus_bytes(address,mask)
+    -- MAME's 16-bit tap address is word-aligned, even for byte accesses.
+    -- In this big-endian space 00FF at F412 selects F413, NOT PCPDEN.
+    assert(address%2==0 and mask and mask~=0 and (mask & ~0xffff)==0,
+           'Unsupported native bus shape')
+    local selected={}
+    if (mask & 0xff00)~=0 then selected[#selected+1]=address end
+    if (mask & 0x00ff)~=0 then selected[#selected+1]=address+1 end
+    return selected
+end
+local function first_unsupported(selected,kind)
+    for _,address in ipairs(selected) do
+        if address>=0x400000 and not implemented_byte(address,kind) then return address end
+    end
 end
 emu.register_prestart(safe(function()
     cpu=manager.machine.devices[':maincpu'];space=cpu.spaces['program']
+    assert(space.data_width==16,'Expected native 16-bit M68000 bus')
     ready=manager.machine.devices[':']:output('dana_guest_loaded')
     assert(cpu.debug and manager.machine.debugger,'Native debugger required')
     manager.machine.debugger.visible_cpu=cpu
@@ -76,9 +93,14 @@ emu.register_prestart(safe(function()
             if done or host then return end
             if not loaded() then return end -- Native loader writes are not CPU evidence.
             if address<0x800 or address>=0x400000 then
-                record({kind=kind,address=address,data=data,mask=mask})
-                if address>=0x400000 and not implemented(address,kind) then
-                    finish(address>=0xfffff000 and 'BLOCKED_HARDWARE' or 'FAIL_GUEST_ADDRESS',{address=address,kind=kind,data=data,mask=mask,state=state()})
+                local selected=bus_bytes(address,mask)
+                local width=#selected*8
+                record({kind=kind,address=address,data=data,mask=mask,byte_addresses=selected,width_bits=width})
+                local missing=first_unsupported(selected,kind)
+                if missing then
+                    finish(missing>=0xfffff000 and 'BLOCKED_HARDWARE' or 'FAIL_GUEST_ADDRESS',
+                        {address=address,effective_address=missing,byte_addresses=selected,
+                         width_bits=width,kind=kind,data=data,mask=mask,state=state()})
                 end
             end
             -- No replacement data, no PC/register/memory mutation.
