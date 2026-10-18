@@ -55,13 +55,15 @@
   "remote_execution": "NONE_THIS_DELIVERY; no emulator, T, Commander, build, Drive dispatch or merge",
   "qualification_job": {
     "path": "tests/hold/009_dana_f1_e4_emutos_post_portc_reuse_diag.job.sh",
-    "state": "SOURCE_FREEZE_PENDING_LOCAL_GIT_HOLD",
+    "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization_variable": "DANA_F1_E4_AUTHORIZED=YES",
     "reference_variable": "DANA_F1_E4_BINARY=/absolute/existing/diag/bin/dana-diag",
     "rebuild_fallback": false,
     "native_processes": 2,
     "repeat_completed_campaigns": false,
-    "transport": "Private canonical outbox only; separate receipt; failure blocks job success"
+    "transport": "Private canonical outbox only; separate receipt; failure blocks job success",
+    "source_commit": "e38dcbe56dfaba6191de93ebd6d7f85105fb471f",
+    "sha256": "fc75e2f1cb22f4e0c71d4b54cfc08e601163dcb90e394011d28ca84bf02508e7"
   },
   "next_action": "Independent source review, then fresh explicit authorization for sole 009 with the existing qualified DIAG and immutable E1/E2 files; no other campaign replay.",
   "toolchain_recovery": {
@@ -275,5 +277,6 @@
     "job_constants": "MATCH_PINNED_GUEST_AND_DIAG",
     "syntax": "Python, full Lua, embedded job AST PASS",
     "native_execution": "NONE"
-  }
+  },
+  "implementation_source_commit": "e38dcbe56dfaba6191de93ebd6d7f85105fb471f"
 }

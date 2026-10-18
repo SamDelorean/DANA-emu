@@ -143,7 +143,8 @@ they are not an emulator or native guest proof. The production input gate
 explicitly rejects the suite's synthetic artifacts.
 
 The new `009_dana_f1_e4_emutos_post_portc_reuse_diag.job.sh` is **Git HOLD only**.
-Its immutable harness source pin and final SHA256 are in candidate status.
+Its immutable harness source pin is `e38dcbe56dfaba6191de93ebd6d7f85105fb471f`; SHA256 is
+`fc75e2f1cb22f4e0c71d4b54cfc08e601163dcb90e394011d28ca84bf02508e7`. Both are in candidate status.
 It requires fresh `DANA_F1_E4_AUTHORIZED=YES` and
 `DANA_F1_E4_BINARY=/absolute/existing/diag/bin/dana-diag`. Both no-authorization
 and old R2.1 authorization tests return HOLD/exit 2 before any Python/T action.
