@@ -107,6 +107,8 @@
     "authorization_variable": "DANA_D2_2_R2_AUTHORIZED=YES",
     "reference_variable": "DANA_D2_2_R2_BINARY=/absolute/existing/diag/bin/dana-diag",
     "expected_binary_sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
-    "rebuild_fallback": false
+    "rebuild_fallback": false,
+    "source_commit": "a972f4dfa54bea1e67a212acf79df58c5bff279b",
+    "sha256": "f1ed5e67ab1c839d57c3f074260ed692ba72c5b39040c038dc9774f6cda00e48"
   }
 }
