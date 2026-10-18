@@ -109,7 +109,8 @@ Python or any machine access. Full log: local scratch `d2_2_r21/offline_tests.lo
 ## Next qualification: Git HOLD only
 
 New job: `tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh`. The final
-source pin and job SHA are recorded in `tests/d2_2_candidate_status.json`.
+source pin is `a880969424968c0cf01907e7d0978b22e9f0728a`; job SHA256 is
+`b08851cfb42883bd877ad210c82b094d83d7ef151dfd23a65de40ad25230f372`. Both are recorded in `tests/d2_2_candidate_status.json`.
 Its independent authorization/reference interface is:
 
 ```text

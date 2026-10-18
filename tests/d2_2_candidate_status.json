@@ -124,16 +124,32 @@
   },
   "qualification_job": {
     "path": "tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh",
-    "state": "SOURCE_FREEZE_PENDING_LOCAL_GIT_HOLD",
+    "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization_variable": "DANA_D2_2_R21_AUTHORIZED=YES",
     "reference_variable": "DANA_D2_2_R21_BINARY=/absolute/existing/diag/bin/dana-diag",
     "expected_binary_sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
-    "rebuild_fallback": false
+    "rebuild_fallback": false,
+    "source_commit": "a880969424968c0cf01907e7d0978b22e9f0728a",
+    "sha256": "b08851cfb42883bd877ad210c82b094d83d7ef151dfd23a65de40ad25230f372"
   },
   "capture_contract": {
     "Lua_completion": "Seven native CPU events; no exact transient PC prerequisite",
     "observer_verdict": "CAPTURED_ONLY_NOT_NATIVE_PASS",
     "independent_terminal_rule": "Closed trace prefix with STOP and bounded observed zero-ORI tail; corroborated pipelined PC/CURPC, SR/SP, full RAM and event counts",
     "historical_R2_promoted_to_PASS": false
+  },
+  "implementation_source_commit": "a880969424968c0cf01907e7d0978b22e9f0728a",
+  "static_validation": {
+    "full_suite_command": "PYTHONPATH=tests python3 -m unittest d2_2_gpio_contract_test d2_2_test_verifiers d2_2_r1_test_reset d2_2_r2_test_reset_cpu -v",
+    "output": "Ran 93 tests in 11.733s; OK; exit 0",
+    "hold_guard": "HOLD exit 2; no launch",
+    "syntax": "Python compile, full Lua parse, embedded job Python AST and bash -n PASS",
+    "diff": "Unchanged production/build trees, A implementation/Lua, fixture generator/assembly and historical 007; git diff --check PASS"
+  },
+  "harness_source_sha256": {
+    "tests/d2_2_r2_gpio.py": "96e8d89f5a3c9db191d53cb34596dada43a9c2b9a5df93d8a8d692b4a3338414",
+    "tests/d2_2_reset_r2_boot.lua": "9bf8641698592feeb6f714d438df73d7bf39c122677580528f30d9b9b4e94a7c",
+    "tests/d2_2_r2_test_reset_cpu.py": "7b3fd31239d2090ca774a5c855bc3f4c310e2e771338a2bc5a510105e762b848",
+    "tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh": "b08851cfb42883bd877ad210c82b094d83d7ef151dfd23a65de40ad25230f372"
   }
 }
