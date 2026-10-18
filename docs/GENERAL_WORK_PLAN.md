@@ -13,6 +13,19 @@
 
 This overrides older plan references to stable/diag parity. See [mandatory test policy](DANA_DIAG_EXCLUSIVE_TEST_POLICY.md). **D2.1 PLLFSR run authorized with a maximum of three Commander calls**; not authority to run alternative emulators.
 
+## Mandatory Codex handoff — user directive 2026-10-17
+
+**Whenever the assistant proposes, prepares, assigns, or invokes work for Codex, the user must receive the EXACT, complete, actionable Codex prompt in the chat, ready to copy and paste.** This is a persistent user-level workflow rule, not limited to this project or issue.
+
+1. Begin from the real current state: repository, target branch/PR/issue, last qualified evidence, hard constraints, the specific next incremental goal, and no rework of completed stages.
+2. Deliver the **entire literal prompt** in a single clearly delineated copyable block, **not merely a task summary or GitHub issue link**. Specify source/provenance, implementation boundaries, tests, acceptance and deliverables, and what the agent must not do.
+3. An issue, PR, or handoff document supplements the prompt but **never replaces giving the prompt to the user**. Give the prompt in the same assistant response as the proposed Codex handoff, **before any Codex execution**, when such execution is available.
+4. If Codex invocation is not actually available through connected tools, mark the task **PROMPT_READY / CODEX_NOT_INVOKED**; do not imply issue creation or documentation means Codex has run. The user may copy the prompt into Codex. Never promise future asynchronous completion.
+5. Preserve the user's **Dana DIAG only** runtime rule, Commander budgets, Drive-first immutable/private ROM policy, STATIC_FIRST source and evidence checks, and existing release/test gates. No fake product-level PASS from synthetic checks.
+6. After genuine Codex work appears, compare the implementation to this exact prompt, review the diff and only then run the authorized native DIAG campaign. Avoid creating an excessive series of microtickets.
+
+For the currently prepared post-D2.1 work item, use [Codex-ready issue #9](https://github.com/SamDelorean/DANA-emu/issues/9) as the supporting technical contract. The exact prompt must still be printed to the user.
+
 ## 1. Mission and definition of success
 
 Build a **working, reduced AlphaSmart Dana hardware emulator**, using **existing MAME infrastructure and previously identified MC68VZ328/Dana implementations rather than developing an emulator from scratch**.
