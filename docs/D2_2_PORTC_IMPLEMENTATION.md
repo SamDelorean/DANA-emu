@@ -1,5 +1,9 @@
 # Port C continuation candidate — issue #9
 
+## Current D2.2-R1 harness checkpoint — 2026-10-17 local
+
+The original native D2.2 campaign compiled and passed the preserved regressions, but Port C reset qualification ended **BLOCKED / VIRTUAL_TIMEOUT** after successful native lane/readback and save restoration. [D2.2-R1](D2_2_R1_RESET_HARNESS.md) corrects only the harness: two independent DIAG processes, one-shot initialization/taps, and an explicit reset request/native-transition/vector/post-state evidence chain. **40 focused offline checks PASS; native R1 PENDING.** The existing handlers, original fixture, R-direct zero profile, manufacturer FF contract and qualified binary remain unchanged. The new `006` binary-reuse job stays in local HOLD. Earlier UNRUN/spec-blocked paragraphs below are historical and superseded by the manufacturer verification and current checkpoint.
+
 ## Manufacturer verification after network authorization — 2026-10-17
 
 **RESOLVED: the two official Motorola/NXP PDF documents are accessible and were independently read.** The earlier `CONNECT 403` limitation documented below describes Codex's **former sandbox**, not the current validity of the reference material. Preserve that provenance but **supersede every earlier `BLOCKED_SPEC` claim concerning the PCPDEN/PCSEL register-reset and writable-mask contract**.

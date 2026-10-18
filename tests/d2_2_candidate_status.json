@@ -1,10 +1,10 @@
 {
-  "status": "SOURCE_READY_SPEC_VERIFIED_NATIVE_UNRUN",
-  "scope": "Issue 9 Port C R-direct continuation candidate",
+  "status": "BLOCKED",
+  "scope": "D2.2 native reset harness correction R1; production unchanged",
   "source_base": "4494a7e702244e744d21908a4661550a86f560de",
-  "native_runtime": "UNRUN",
-  "local_tests_passed": 69,
-  "native_header_syntax": "PASS",
+  "native_runtime": "R1_PENDING_SEPARATE_AUTHORIZATION; original D2.2 BLOCKED_HARNESS_RESET_OBSERVATION",
+  "local_tests_passed": 40,
+  "native_header_syntax": "NOT_REPEATED_UNCHANGED_PRODUCTION",
   "registers": {
     "PCPDEN": {
       "address": "0xFFFFF412",
@@ -51,9 +51,13 @@
     "native loader",
     "immutable E1/E2 guest images"
   ],
-  "qualification_job": {
+  "T_calls": 0,
+  "Commander_calls": 0,
+  "guest_rebuilds": 0,
+  "next_action": "Independent review, private Drive HOLD verification and new separate D2.2-R1 authorization. Reuse exact qualified DIAG SHA; run only independent save_restore/reset fixture processes; no new emulator or ROM build.",
+  "previous_qualification_job": {
     "path": "tests/hold/005_dana_portc_native_diag.job.sh",
-    "state": "DRIVE_HOLD_VERIFIED_BYTE_EQUAL",
+    "state": "HISTORICAL_NATIVE_RUN_REVIEWED; superseded for reset harness by R1",
     "emulator": "STAGED_DANA_DIAG_ONLY",
     "authorization_variable": "DANA_D2_2_AUTHORIZED=YES",
     "source_commit": "b0258eb126994e5fbb61866ec3070aae7c538fc8",
@@ -63,8 +67,21 @@
     "pinned_source": "749517b2f48c9788e5555071561e738017ac5f7c",
     "confirmed": "HOLD_ONLY; NO_INBOX; NO_T_EXECUTION"
   },
-  "T_calls": 0,
-  "Commander_calls": 0,
-  "guest_rebuilds": 0,
-  "next_action": "Pending separate T runtime authorization. Preserve sole Drive HOLD file; before dispatch verify pipeline inbox sole job and policy guard DANA_D2_2_AUTHORIZED=YES passed to job through canonical launcher; run only Dana DIAG once and audit output via Drive."
+  "previous_native_evidence": {
+    "archive_sha256": "414cf94089dd0571cd91dcbd275de247227f15aedc702d5f202038803d9a941b",
+    "binary_sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
+    "source_commit": "749517b2f48c9788e5555071561e738017ac5f7c",
+    "classification": "BLOCKED_HARNESS_RESET_OBSERVATION; not product FAIL"
+  },
+  "qualification_job": {
+    "path": "tests/hold/006_dana_portc_reset_r1_reuse_diag.job.sh",
+    "state": "LOCAL_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+    "emulator": "STAGED_DANA_DIAG_ONLY",
+    "authorization_variable": "DANA_D2_2_R1_AUTHORIZED=YES",
+    "reference_variable": "DANA_D2_2_R1_BINARY=/absolute/existing/diag/bin/dana-diag",
+    "rebuild_fallback": false
+  },
+  "native_R1": "PENDING",
+  "T_calls_this_revision": 0,
+  "Commander_calls_this_revision": 0
 }

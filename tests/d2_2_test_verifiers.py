@@ -8,7 +8,7 @@ import struct
 import tempfile
 import unittest
 
-from d2_2_gpio_run import fixture, verify, diag_path
+from d2_2_gpio_run import fixture, verify_execution as verify, diag_path
 from d2_2_qualify import assess
 
 
@@ -66,6 +66,7 @@ class NativeVerifier(unittest.TestCase):
         (self.root/'initial.ram').write_bytes(ram)
         ram[0x10000:0x1000a]=bytes.fromhex('55aa1234fe34fe81fe81')
         (self.root/'final.ram').write_bytes(ram)
+        (self.root/'restored.ram').write_bytes(ram)
         (self.root/'cpu.trace').write_text(f'4000: synthetic\n{endpoint-6:x}: synthetic\n')
         events=[dict(origin='cpu',kind='read',address=a,data=d,mask=0xffff)
                 for a,d in ((0,0),(2,0x8000),(4,0),(6,0x4000))]
@@ -74,13 +75,24 @@ class NativeVerifier(unittest.TestCase):
                 (0xfff412,0xff00,0),(0xfff412,0xff,0),(0xfffff410,0xff00,0),
                 (0xfffff410,0xff,0),(0xfffff414,0xff00,0)):
             events.append(dict(origin='cpu',kind='write',address=address,mask=mask,data=data))
-        for kind,value in (('profile_initial',0),('fixture_complete',0xfe81),
-                           ('state_restored',0xfe81),('profile_reset',0)):
+        events.insert(4,dict(origin='host_observation',kind='profile_initial',value=0,pc=0x4000,sp=0x8000,sr=0x2700))
+        for value in (0x55aa,0x1234,0xfe34,0xfe81,0xfe81):
+            events.append(dict(origin='cpu',kind='read',address=0xfffff412,mask=0xffff,data=value))
+        for kind,value in (('fixture_complete',0xfe81),('state_saved',0xfe81),
+                           ('state_mutated',0xcdef),('state_restored',0xfe81)):
             events.append(dict(origin='host_observation',kind=kind,value=value,
                                pc=endpoint,sp=0x8000,sr=0x2700))
-        self.obs=dict(status='PASS',reason='SYNTHETIC UNIT RECORD',events=events,
-                      fixture_sha256=hashlib.sha256(payload).hexdigest(),binary_sha256='unit-only')
-        (self.root/'run.json').write_text(json.dumps(dict(exit_code=0,binary_sha256='unit-only')))
+        for i,e in enumerate(events):
+            e.update(seq=i,epoch=0,request_id=0)
+            if e['kind']=='state_saved':e['bytes']=4195000
+            if e['kind']=='state_mutated':e['origin']='host_request'
+            if e['kind']=='state_restored':e['load_ok']=True
+        self.record=dict(exit_code=0,binary_sha256='2'*64,source_commit='1'*40,
+            fixture_sha256=hashlib.sha256(payload).hexdigest(),execution='save_restore',
+            execution_id='a'*32,variant='diag',pid=42,
+            command=['/qualified/diag/bin/dana-diag','asmdana'])
+        self.obs=dict(self.record,status='PASS',reason='SYNTHETIC UNIT RECORD',events=events)
+        (self.root/'run.json').write_text(json.dumps(self.record))
         self.write()
 
     def write(self):
@@ -96,10 +108,11 @@ class NativeVerifier(unittest.TestCase):
 
     def test_missing_native_lane_or_alias_control_rejected(self):
         self.obs['events']=[e for e in self.obs['events'] if e.get('address')!=0xfff412]
+        for i,e in enumerate(self.obs['events']):e['seq']=i
         self.write();self.assertEqual(verify(self.root)['status'],'FAIL')
 
     def test_host_activity_cannot_replace_native_cpu_write(self):
-        self.obs['events'][4]['origin']='host'
+        next(e for e in self.obs['events'] if e.get('kind')=='write')['origin']='host'
         self.write();self.assertEqual(verify(self.root)['status'],'FAIL')
 
     def test_wrong_native_save_restore_rejected(self):
