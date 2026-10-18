@@ -1,5 +1,15 @@
 # D2.2-R2.1 — CPU-origin Port C reset capture completion
 
+> **Native checkpoint superseding the old pending status below — 2026-10-18:**
+> canonical main commit `c5f76ccc45fdc4f3198b75806395a67b648b9c94` independently
+> qualified R2.1 A/B PASS, PIDs 310239/310254, existing qualified DIAG reused.
+> Archive `portc_reset_r21_9bqe2gzh.tar.gz`, 44,411 bytes, SHA256
+> `b365c0672574383e586f8fac886182811f11281a7e345d65d043ebbd072e8268`,
+> 32/32 manifest members verified by the supervisor. Historical R2 remains
+> BLOCKED. No native campaign was repeated by the F1-E4 source delivery.
+> Authentic guest continuation is now separately PREPARED / NATIVE_PENDING:
+> [F1-E4 report](F1_EMUTOS_EXECUTION_CANDIDATE.md).
+
 **2026-10-18: R2.1_STATIC_PASS / NATIVE_PENDING.** Reviewed HEAD
 `5065259a651face37a6cd7b363f4080bb0b741ca` matched the clean feature branch
 and remote before editing. Canonical `main` at

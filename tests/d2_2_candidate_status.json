@@ -1,8 +1,8 @@
 {
-  "status": "R2.1_STATIC_PASS",
+  "status": "D2_2_R21_NATIVE_PASS_SCOPED",
   "scope": "D2.2-R2.1 CPU-origin Port C reset capture completion",
   "source_base": "4494a7e702244e744d21908a4661550a86f560de",
-  "native_runtime": "NATIVE_PENDING",
+  "native_runtime": "R21_NATIVE_PASS_SCOPED_E4_NATIVE_PENDING",
   "local_tests_passed": 93,
   "native_header_syntax": "NOT_REPEATED_UNCHANGED_PRODUCTION",
   "registers": {
@@ -54,7 +54,7 @@
   "T_calls": 0,
   "Commander_calls": 0,
   "guest_rebuilds": 0,
-  "next_action": "Independent R2.1 source review, then fresh explicit authorization for native A/B using only the qualified existing dana-diag. No automatic dispatch or EmuTOS continuation.",
+  "next_action": "Port C R2.1 closed; F1-E4 source preparation and separate native guest authorization. Do not replay R2.1 or infer authentic guest continuation from the fixture PASS.",
   "previous_qualification_job": {
     "path": "tests/hold/005_dana_portc_native_diag.job.sh",
     "state": "HISTORICAL_NATIVE_RUN_REVIEWED; superseded for reset harness by R1",
@@ -101,7 +101,7 @@
     "B_sha256": "8cb8a9a943301f36a1bec27c9b0e1b7fc874e1642705926c1c156358096e0512",
     "branch_displacement": "0x009A; original proposed 0098 targets 40A0"
   },
-  "native_R21": "NATIVE_PENDING",
+  "native_R21": "PASS_SCOPED_SUPERVISOR_REVIEW",
   "previous_R2_qualification_job": {
     "path": "tests/hold/007_dana_portc_reset_r2_reuse_diag.job.sh",
     "state": "HISTORICAL_NATIVE_R2_RUN; A PASS B BLOCKED; supplied/canonical review",
@@ -124,7 +124,7 @@
   },
   "qualification_job": {
     "path": "tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh",
-    "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+    "state": "HISTORICAL_NATIVE_R21_RUN_A_B_PASS_SUPERVISOR_REVIEW",
     "authorization_variable": "DANA_D2_2_R21_AUTHORIZED=YES",
     "reference_variable": "DANA_D2_2_R21_BINARY=/absolute/existing/diag/bin/dana-diag",
     "expected_binary_sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
@@ -151,5 +151,15 @@
     "tests/d2_2_reset_r2_boot.lua": "9bf8641698592feeb6f714d438df73d7bf39c122677580528f30d9b9b4e94a7c",
     "tests/d2_2_r2_test_reset_cpu.py": "7b3fd31239d2090ca774a5c855bc3f4c310e2e771338a2bc5a510105e762b848",
     "tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh": "b08851cfb42883bd877ad210c82b094d83d7ef151dfd23a65de40ad25230f372"
+  },
+  "native_R21_evidence": {
+    "main_checkpoint": "c5f76ccc45fdc4f3198b75806395a67b648b9c94",
+    "archive": "portc_reset_r21_9bqe2gzh.tar.gz",
+    "bytes": 44411,
+    "sha256": "b365c0672574383e586f8fac886182811f11281a7e345d65d043ebbd072e8268",
+    "members_verified_by_supervisor": 32,
+    "A_pid": 310239,
+    "B_pid": 310254,
+    "review_origin": "Supplied complete F1-E4 contract and canonical main HANDOFF; no new private archive audit in Codex"
   }
 }

@@ -1,27 +1,17 @@
 {
-  "assignment": "F1 / issue #8",
-  "status": "E1_E2_PASS_E3_INITIAL_GUEST_EXECUTION_PASS_D2_1_PLLFSR_SOURCE_CANDIDATE",
-  "implementation": "SOURCE_CANDIDATE_PREPARED",
+  "assignment": "F1-E4 / issue #11",
+  "status": "F1_E4_STATIC_PASS",
+  "implementation": "PREPARED",
   "parent_commit": "9de5dfe6b1a06a417ae4384fa48a99c5113dfafe",
   "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
   "emutos_commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
   "qualified_ram": "D1.2 independent 9/9 PASS preserved",
-  "functional_guest_execution": "PASS_INITIAL_EXECUTION_WITH_REAL_NEXT_HARDWARE_BLOCK",
-  "observed_hardware_dependency": {
-    "module": "VZ Clock Generation Module / PLLFSR",
-    "address": "0xFFFFF202",
-    "width_bits": 16,
-    "pc": "0x0000829A",
-    "operation": "CPU_ORIGIN_WORD_READ",
-    "reproduced_in_two_runs": true,
-    "register_reset_motorola": "0x0347",
-    "E3_status": "PASS_GUEST_EXECUTION_BLOCKED_HARDWARE",
-    "next": "D2.1 PLLFSR isolated native DIAG implementation"
-  },
+  "functional_guest_execution": "E3_INITIAL_NATIVE_PASS_PRESERVED; E4_POST_PORTC_NATIVE_PENDING",
+  "observed_hardware_dependency": null,
   "blockers": [
     {
-      "domain": "D2_1_PLLFSR_NATIVE",
-      "reason": "Only source driver/Lua observer edits and isolated C++ unit harness staged. Changed DIAG driver not yet compiled or executed on T. Preserve all E3 and D1.2 real PASS."
+      "domain": "NATIVE_QUALIFICATION",
+      "reason": "No emulator/T execution authorized in this source task. Exact next dependency UNKNOWN until the separately authorized two-run E4 campaign."
     }
   ],
   "guest_artifacts": {
@@ -54,27 +44,26 @@
     "source_evidence": "/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/emutos-built"
   },
   "local_checks": {
-    "native_driver_header_compilation": "PASS (-std=c++20 -fsyntax-only -Werror)",
-    "mame_source_discovery": "PASS",
-    "new_synthetic_input_tests": 14,
-    "existing_ram_verifier_tests": 25,
-    "existing_mmio_verifier_tests": 11,
-    "python_and_lua_syntax": "PASS"
+    "offline_command": "PYTHONPATH=tests python3 -m unittest f1_test_guest f1_e4_test -v",
+    "offline_tests": 44,
+    "result": "Ran 44 tests in 1.068s; OK; exit 0",
+    "scope": "Synthetic evidence and real Lua callbacks only; not native guest evidence",
+    "syntax": "Python compile, full Lua parse, bash -n, embedded job Python AST, git diff --check PASS",
+    "hold_guards": "No authorization and old R2.1 authorization both HOLD/exit 2; no job Python executed",
+    "guard_details": "Missing authorization and old DANA_D2_2_R21_AUTHORIZED both exit 2 before job Python; absolute/qualified executable guard tested before Popen"
   },
-  "remote_execution": "F1/E3 real T R3 PASS, compiled native MAME DIAG and executed authentic guest twice. 3/3 previous Commander calls consumed. D2.1 NOT EXECUTED.",
+  "remote_execution": "NONE_THIS_DELIVERY; no emulator, T, Commander, build, Drive dispatch or merge",
   "qualification_job": {
-    "state": "SUPERSEDED_FOR_E3_BY_E3_ONLY_JOB",
-    "path": "tests/hold/000_dana_f1_emutos.job.sh",
-    "sha256": "PENDING_INDEPENDENT_SHA256_OF_UPDATED_F1_SH",
-    "implementation_commit": "9ba89114baaf1e031247484f3d1d8f0209bff775",
-    "checks": [
-      "Original F1 SH updated statically to reuse E1 verified compiler from F1_CROSSMINT_VERIFIED.json and E2 existing real artifacts after full validation",
-      "E3 SH modified but not independently executed or syntactically requalified on canonical T",
-      "No Commander calls allocated to E3 by E1/E2 run"
-    ],
-    "executed": false
+    "path": "tests/hold/009_dana_f1_e4_emutos_post_portc_reuse_diag.job.sh",
+    "state": "SOURCE_FREEZE_PENDING_LOCAL_GIT_HOLD",
+    "authorization_variable": "DANA_F1_E4_AUTHORIZED=YES",
+    "reference_variable": "DANA_F1_E4_BINARY=/absolute/existing/diag/bin/dana-diag",
+    "rebuild_fallback": false,
+    "native_processes": 2,
+    "repeat_completed_campaigns": false,
+    "transport": "Private canonical outbox only; separate receipt; failure blocks job success"
   },
-  "next_action": "Qualify D2.1: execute focused compiled handler unittest, rebuild changed native DIAG once with LLVM21 against pinned donor and no EmuTOS recompilation; run smoke RAM/MMIO + two real guest repeat traces and corrupt-image negative. Only after fresh scoped Commander budget via canonical T dcjob.",
+  "next_action": "Independent source review, then fresh explicit authorization for sole 009 with the existing qualified DIAG and immutable E1/E2 files; no other campaign replay.",
   "toolchain_recovery": {
     "status": "PASS_REAL_MINT_MSHORT_LINK",
     "compiler": "m68k-atari-mint-gcc (MiNT 20230719) 4.6.4",
@@ -131,7 +120,7 @@
     "evidence_sha256_count": 91
   },
   "d2_1_pllfsr": {
-    "status": "SOURCE_IMPLEMENTED_STATIC_PREPARED_NOT_NATIVE_QUALIFIED",
+    "status": "NATIVE_PASS_SUPERSEDES_HISTORICAL_SOURCE_CANDIDATE",
     "affected": [
       "src/mame/skeleton/alphasdana.cpp",
       "tests/f1_emutos_boot.lua",
@@ -142,8 +131,149 @@
     "source_manual": "MC68VZ328UM/D Section 4.4.2 Table 4-4",
     "spec": "16-bit map at 0xFFFFF202..203; reset 0x0347; virtual CLK32 from 32768 Hz scheduler; PROT sticky; QC/PC write lanes and reserved/CLK32 masks",
     "synthetic_cpp_unit": "PREPARED_SOURCE_TEST_NOT_EXECUTED_IN_THIS_COMMIT",
-    "full_mame_guest": "UNRUN",
+    "full_mame_guest": "Prior D2.1 real guest PLLFSR access qualified; post-Port-C E4 pending",
     "no_new_rom_builds": true,
     "no_commander_calls_this_increment": true
+  },
+  "historical_F1_checkpoint": {
+    "status": "E1_E2_PASS_E3_INITIAL_GUEST_EXECUTION_PASS_D2_1_PLLFSR_SOURCE_CANDIDATE",
+    "implementation": "SOURCE_CANDIDATE_PREPARED",
+    "functional_guest_execution": "PASS_INITIAL_EXECUTION_WITH_REAL_NEXT_HARDWARE_BLOCK",
+    "observed_hardware_dependency": {
+      "module": "VZ Clock Generation Module / PLLFSR",
+      "address": "0xFFFFF202",
+      "width_bits": 16,
+      "pc": "0x0000829A",
+      "operation": "CPU_ORIGIN_WORD_READ",
+      "reproduced_in_two_runs": true,
+      "register_reset_motorola": "0x0347",
+      "E3_status": "PASS_GUEST_EXECUTION_BLOCKED_HARDWARE",
+      "next": "D2.1 PLLFSR isolated native DIAG implementation"
+    },
+    "blockers": [
+      {
+        "domain": "D2_1_PLLFSR_NATIVE",
+        "reason": "Only source driver/Lua observer edits and isolated C++ unit harness staged. Changed DIAG driver not yet compiled or executed on T. Preserve all E3 and D1.2 real PASS."
+      }
+    ],
+    "local_checks": {
+      "native_driver_header_compilation": "PASS (-std=c++20 -fsyntax-only -Werror)",
+      "mame_source_discovery": "PASS",
+      "new_synthetic_input_tests": 14,
+      "existing_ram_verifier_tests": 25,
+      "existing_mmio_verifier_tests": 11,
+      "python_and_lua_syntax": "PASS"
+    },
+    "remote_execution": "F1/E3 real T R3 PASS, compiled native MAME DIAG and executed authentic guest twice. 3/3 previous Commander calls consumed. D2.1 NOT EXECUTED.",
+    "qualification_job": {
+      "state": "SUPERSEDED_FOR_E3_BY_E3_ONLY_JOB",
+      "path": "tests/hold/000_dana_f1_emutos.job.sh",
+      "sha256": "PENDING_INDEPENDENT_SHA256_OF_UPDATED_F1_SH",
+      "implementation_commit": "9ba89114baaf1e031247484f3d1d8f0209bff775",
+      "checks": [
+        "Original F1 SH updated statically to reuse E1 verified compiler from F1_CROSSMINT_VERIFIED.json and E2 existing real artifacts after full validation",
+        "E3 SH modified but not independently executed or syntactically requalified on canonical T",
+        "No Commander calls allocated to E3 by E1/E2 run"
+      ],
+      "executed": false
+    },
+    "next_action": "Qualify D2.1: execute focused compiled handler unittest, rebuild changed native DIAG once with LLVM21 against pinned donor and no EmuTOS recompilation; run smoke RAM/MMIO + two real guest repeat traces and corrupt-image negative. Only after fresh scoped Commander budget via canonical T dcjob.",
+    "d2_1_pllfsr": {
+      "status": "SOURCE_IMPLEMENTED_STATIC_PREPARED_NOT_NATIVE_QUALIFIED",
+      "affected": [
+        "src/mame/skeleton/alphasdana.cpp",
+        "tests/f1_emutos_boot.lua",
+        "tests/d2_1_pllfsr_contract_test.py",
+        "docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md",
+        "docs/D2_1_PLLFSR_IMPLEMENTATION.md"
+      ],
+      "source_manual": "MC68VZ328UM/D Section 4.4.2 Table 4-4",
+      "spec": "16-bit map at 0xFFFFF202..203; reset 0x0347; virtual CLK32 from 32768 Hz scheduler; PROT sticky; QC/PC write lanes and reserved/CLK32 masks",
+      "synthetic_cpp_unit": "PREPARED_SOURCE_TEST_NOT_EXECUTED_IN_THIS_COMMIT",
+      "full_mame_guest": "UNRUN",
+      "no_new_rom_builds": true,
+      "no_commander_calls_this_increment": true
+    }
+  },
+  "native_runtime": "NATIVE_PENDING",
+  "reviewed_base": "4fb362a01b2531701376c22b041d348a5e6608cd",
+  "canonical_main_read": "16bc5cf4d2e5dd09034b209f925191c9009d7d1c",
+  "qualified_baseline": {
+    "binary_sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
+    "compiled_source": "749517b2f48c9788e5555071561e738017ac5f7c",
+    "driver_sha256": "6bff19e0ae1e6c7a1f99a86fcfa2fbe235ac096c6624a10f6600fbd8851ddcf0",
+    "D2_1_PLLFSR": "NATIVE_PASS_PRESERVED",
+    "R21": "NATIVE_PASS_SCOPED_SUPERVISOR_REVIEW",
+    "R21_main_checkpoint": "c5f76ccc45fdc4f3198b75806395a67b648b9c94",
+    "R21_archive_sha256": "b365c0672574383e586f8fac886182811f11281a7e345d65d043ebbd072e8268",
+    "R21_manifest_members": 32,
+    "R21_PIDs": [
+      310239,
+      310254
+    ],
+    "prior_guest_stop": {
+      "aligned_address": "0xFFFFF412",
+      "mask": "0x00FF",
+      "effective_address": "0xFFFFF413",
+      "pc": "0x00008392",
+      "register": "PCSEL"
+    },
+    "PFSEL": "STATIC_PREDICTION_ONLY_NOT_A_NEW_NATIVE_RESULT"
+  },
+  "pinned_source_hashes": [
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/dana.c",
+      "sha256": "5c70f2ea282e3cf7d86db04048d8dd00505ec19f2498bccb2da53d447a97b47a"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/dana.h",
+      "sha256": "04460984a35474793ea02131e581715b70091262858309bd6c1b43266a51630f"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/dana2.S",
+      "sha256": "45e44d942562feb6a8ad745dcb3df2147872632046a6059ec63c3168afff7ef2"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/screen.c",
+      "sha256": "3ce5c5bb91742f63b027b90a0d5c42e4c32654d4b2399da0bdeb0ca8b74f3d3d"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "util/danaboot.S",
+      "sha256": "cca2ae58aff5d94d56edf72bc66950aaba6751dfcb87918ab2fd495c7c50acce"
+    },
+    {
+      "repository": "davidgiven/dbztool",
+      "commit": "d32702383c2ea3523ea58599c52345435c74e900",
+      "path": "danainit.sh",
+      "sha256": "db8fecc97f60d90cb49d29b2e285dd202867c0d45dee7b7bba873d36ff49abdb"
+    }
+  ],
+  "full_boot": false,
+  "static_checks": {
+    "status": "PASS",
+    "harness_sha256": {
+      "tests/f1_emutos_run.py": "b35287528421789e81ddfb3d6cdae91b34448a947e7c556a85b2ee5c2bf2c821",
+      "tests/f1_emutos_boot.lua": "8d75c69d51327c3ea500f987c95f3ffb2952e2a2c09b8c32bcf0106b89095a71",
+      "tools/f1_guest.py": "8fe6fa97d5bf3046cb187d445abdbca2da87bb3a5a80cc37f4da85250f292c49",
+      "tests/f1_e4_test.py": "329e04b105987c4f47e058f4f9d24ef94b878237c5409018f26dd624047ac817"
+    },
+    "matching_production_trees": {
+      "src": "aca5e5a170ece3f0deda6424be16857c6d739bce",
+      "overlays": "5c24452a49789699dd505e03fa031e093e8bb983",
+      "tests/d1_1_diag_smoke.sh": "761202db7708217c9fe30e3b5cdc062dda6888c6"
+    },
+    "job_constants": "MATCH_PINNED_GUEST_AND_DIAG",
+    "syntax": "Python, full Lua, embedded job AST PASS",
+    "native_execution": "NONE"
   }
 }

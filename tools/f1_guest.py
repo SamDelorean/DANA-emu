@@ -13,6 +13,12 @@ import sys
 PIN='9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
 HEADER=struct.Struct('>8s8I20sI')
 REQUIRED=('__text','_os_header','_main','_stktop','__low_stram_end','__bss','__ebss')
+QUALIFIED_ARTIFACTS={
+    'emutos.img':(223748,'ba590da2661bc582c19bb24d65db04667daf37a17d7aa51fb462b945933ba0a3'),
+    'emutos-dana.rom':(223792,'efb055e5ac02526db069aec23c4b71b092fc48317aa4305e93a4a2f4e369243c'),
+    'emutos.map':(124540,'17cc980e675e2e1b50e713b9029f6fc3e51d3e55392deb99d53552d4b3af3e68'),
+    'emutos.dana':(223812,'c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d'),
+}
 
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -102,6 +108,24 @@ def validate(directory):
             and 0x800<=syms['_stktop']<=syms['__low_stram_end']<=0x2140
             and 0x2140+len(image)<=syms['__bss']<=syms['__ebss']<=0x400000):
         raise ValueError('Invalid RAM package layout')
+    return manifest
+
+def validate_qualified(directory):
+    """Read-only E4 input gate. Never package, repair or rebuild an input."""
+    directory=Path(directory)
+    for name,(size,digest) in QUALIFIED_ARTIFACTS.items():
+        p=directory/name
+        if not p.is_file() or p.is_symlink() or p.stat().st_size!=size or sha(p)!=digest:
+            raise ValueError('Qualified E1/E2 artifact mismatch: '+name)
+    manifest=validate(directory)
+    if set(manifest['artifacts'])!=set(QUALIFIED_ARTIFACTS)-{'emutos.dana'}:
+        raise ValueError('Incomplete original artifact manifest')
+    provenance=json.loads((directory/'build_provenance.json').read_text())
+    if (provenance.get('source_commit')!=PIN or provenance.get('exit_code')!=0
+            or not isinstance(provenance.get('command'),list)
+            or 'dana' not in provenance['command'] or not provenance.get('compiler')
+            or manifest.get('target')!='dana' or manifest.get('compiler')!=provenance['compiler']):
+        raise ValueError('Original successful Dana build provenance required')
     return manifest
 
 def build(source,output,prefix):

@@ -4,6 +4,8 @@ local cfg=dofile(assert(os.getenv('DANA_F1_CONFIG')))
 local cpu,space,ready,done,first=false,false,false,false,false
 local events,taps,subscriptions={}, {}, {}
 local bytes,host=0,false
+local pending,pending_dependency,initialized=nil,nil,false
+local e4=cfg.revision=='F1-E4'
 local function encode(x)
     if type(x)=='string' then return string.format('%q',x):gsub('\\\n','\\n') end
     if type(x)=='number' or type(x)=='boolean' then return tostring(x) end
@@ -24,9 +26,15 @@ end
 local function finish(reason,dependency)
     if done then return end;done=true;host=true
     if cpu and cpu.debug then manager.machine.debugger:command('trace off') end
-    local result={schema='dana-f1-observation-v1',reason=reason,dependency=dependency,
+    local trace=io.open(cfg.output..'/guest.trace','rb')
+    local trace_bytes=trace and trace:seek('end') or 0;if trace then trace:close() end
+    local result={schema=e4 and 'dana-f1-e4-observation-v1' or 'dana-f1-observation-v1',
+        status='CAPTURED',reason=reason,dependency=dependency,
         first_instruction=first,events=events,final=cpu and state() or {},
-        virtual_seconds=emu.time(),package_sha256=cfg.package_sha256,binary_sha256=cfg.binary_sha256}
+        virtual_seconds=emu.time(),package_sha256=cfg.package_sha256,binary_sha256=cfg.binary_sha256,
+        revision=cfg.revision,source_commit=cfg.source_commit,execution_id=cfg.execution_id,
+        image_sha256=cfg.image_sha256,variant='diag',trace_bytes=trace_bytes,
+        event_count=#events,trace_mode='native_loop_compression_no_sampling',full_boot=false}
     local f=assert(io.open(cfg.output..'/observation.json','w'));f:write(encode(result),'\n');f:close()
     if space then
         local stack=cpu.state.SP.value
@@ -38,12 +46,13 @@ local function finish(reason,dependency)
     end
     manager.machine:exit()
 end
-local function record(e)
+local function record(e,origin)
     if done then return end
-    e.seq=#events;e.origin='cpu';e.virtual_seconds=emu.time();e.state=state()
+    e.seq=#events;e.origin=origin or 'debugger_observation';e.virtual_seconds=emu.time();e.state=state()
     local n=#encode(e)
-    if #events>=20000 or bytes+n>4*1024*1024 then finish('BLOCKED_TRACE_BUDGET');return end
+    if #events>=20000 or bytes+n>4*1024*1024 then pending='BLOCKED_TRACE_BUDGET';return end
     events[#events+1]=e;bytes=bytes+n
+    return e
 end
 local function safe(f)
     return function(...)
@@ -67,7 +76,7 @@ end
 local function bus_bytes(address,mask)
     -- MAME's 16-bit tap address is word-aligned, even for byte accesses.
     -- In this big-endian space 00FF at F412 selects F413, NOT PCPDEN.
-    assert(address%2==0 and mask and mask~=0 and (mask & ~0xffff)==0,
+    assert(address%2==0 and (mask==0xff or mask==0xff00 or mask==0xffff),
            'Unsupported native bus shape')
     local selected={}
     if (mask & 0xff00)~=0 then selected[#selected+1]=address end
@@ -80,6 +89,8 @@ local function first_unsupported(selected,kind)
     end
 end
 emu.register_prestart(safe(function()
+    if initialized then pending='BLOCKED_UNEXPECTED_MACHINE_RESET';return end
+    initialized=true
     cpu=manager.machine.devices[':maincpu'];space=cpu.spaces['program']
     assert(space.data_width==16,'Expected native 16-bit M68000 bus')
     ready=manager.machine.devices[':']:output('dana_guest_loaded')
@@ -90,19 +101,26 @@ emu.register_prestart(safe(function()
     cpu.debug:bpclear();cpu.debug:bpset(cfg.symbols._os_header,'','')
     for _,kind in ipairs({'read','write'}) do
         taps[#taps+1]=space['install_'..kind..'_tap'](space,0,0xffffffff,'f1_'..kind,function(address,data,mask)
-            if done or host then return end
-            if not loaded() then return end -- Native loader writes are not CPU evidence.
-            if address<0x800 or address>=0x400000 then
-                local selected=bus_bytes(address,mask)
-                local width=#selected*8
-                record({kind=kind,address=address,data=data,mask=mask,byte_addresses=selected,width_bits=width})
-                local missing=first_unsupported(selected,kind)
-                if missing then
-                    finish(missing>=0xfffff000 and 'BLOCKED_HARDWARE' or 'FAIL_GUEST_ADDRESS',
-                        {address=address,effective_address=missing,byte_addresses=selected,
-                         width_bits=width,kind=kind,data=data,mask=mask,state=state()})
+            -- No finish/exit/debugger operation, even on error or budget paths.
+            if done or host or (pending and pending~='BLOCKED_HARDWARE' and pending~='BLOCKED_GUEST_ADDRESS') then return end
+            local ok,err=pcall(function()
+                if manager.machine:side_effects_disabled() or not loaded() then return end
+                if address<0x800 or address>=0x400000 then
+                    local selected=bus_bytes(address,mask)
+                    local width=#selected*8
+                    local e=record({kind=kind,address=address,data=data,mask=mask,byte_addresses=selected,
+                        width_bits=width,tap_id='f1_'..kind,side_effects_disabled=false,
+                        after_dependency=pending_dependency~=nil},'cpu')
+                    local missing=first_unsupported(selected,kind)
+                    if missing and not pending_dependency and e then
+                        pending=missing>=0xfffff000 and 'BLOCKED_HARDWARE' or 'BLOCKED_GUEST_ADDRESS'
+                        pending_dependency={address=address,effective_address=missing,byte_addresses=selected,
+                             width_bits=width,kind=kind,data=data,mask=mask,state=e.state,event_seq=e.seq,
+                             origin='cpu',tap_id=e.tap_id}
+                    end
                 end
-            end
+            end)
+            if not ok then pending='BLOCKED_TAP: '..tostring(err) end
             -- No replacement data, no PC/register/memory mutation.
         end)
     end
@@ -115,18 +133,16 @@ subscriptions[#subscriptions+1]=emu.add_machine_reset_notifier(safe(function()
 end))
 emu.register_periodic(safe(function()
     if done or not cpu then return end
-    -- Stop native instruction recording at a bounded prefix; continue genuine
-    -- execution and retain milestone/MMIO snapshots (explicit trace sampling).
-    if not cfg.trace_stopped then
+    -- Retain the complete native trace through capture, including any deferred
+    -- tail. Never silently sample away the instruction causing a dependency.
+    do
         local f=io.open(cfg.output..'/guest.trace','rb')
         if f then
             local size=f:seek('end');f:close()
-            if size>512*1024 then
-                manager.machine.debugger:command('trace off');cfg.trace_stopped=true
-                record({kind='instruction_trace_sampling_end',byte_threshold=512*1024})
-            end
+            if size>4*1024*1024 then finish('BLOCKED_TRACE_BUDGET');return end
         end
     end
+    if pending then finish(pending,pending_dependency);return end
     if emu.time()>5 then finish('BLOCKED_VIRTUAL_BUDGET');return end
     if manager.machine.debugger.execution_state~='stop' then return end
     host=true
