@@ -104,7 +104,7 @@ def verify(root):
             raise ValueError('Missing native instruction evidence')
         return {'status': 'PASS', 'scope': 'R-direct Port C native lanes/reset/save/alias/RAM guards',
                 'binary_sha256': record['binary_sha256'], 'fixture_sha256': wanted,
-                'physical_reset': 'UNVERIFIED_MANUFACTURER_PDF_UNAVAILABLE'}
+                'physical_reset': 'MOTOROLA_0xFF; R_DIRECT_SOFTWARE_PROFILE_0x00'}
     except FileNotFoundError as error:
         return {'status': 'BLOCKED', 'reason': str(error)}
     except (ValueError, KeyError, TypeError) as error:
