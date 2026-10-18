@@ -1,7 +1,7 @@
 -- SPDX-License-Identifier: BSD-3-Clause
--- R2 B only. The guest owns marker/Port C/result operations. No post-reset breakpoint.
+-- R2.1 B only. The guest owns marker/Port C/result operations. No post-reset breakpoint.
 local cfg=dofile(assert(os.getenv('DANA_PORTC_CONFIG')))
-assert(cfg.execution=='reset' and cfg.revision=='R2')
+assert(cfg.execution=='reset' and cfg.revision=='R2.1')
 local cpu,space,initialized,done=nil,nil,false,false
 local phase,epoch,request_id='initial',0,0
 local host,pending,ready=false,nil,false
@@ -51,8 +51,8 @@ local function finish(status,reason)
     if done then return end;done=true;host=true
     manager.machine.debugger:command('trace off')
     local f=assert(io.open(cfg.output..'/observation.json','w'))
-    f:write(json({schema='dana-portc-reset-cpu-r2',status=status,reason=reason,events=events,phase=phase,
-        revision='R2',execution='reset',variant='diag',execution_id=cfg.execution_id,
+    f:write(json({schema='dana-portc-reset-cpu-r21',status=status,reason=reason,events=events,phase=phase,
+        revision='R2.1',execution='reset',variant='diag',execution_id=cfg.execution_id,
         source_commit=cfg.source_commit,binary_sha256=cfg.binary_sha256,fixture_sha256=cfg.fixture_sha256}),'\n')
     f:close();manager.machine:exit()
 end
@@ -113,11 +113,20 @@ emu.register_periodic(safe(function()
     if pending then finish('BLOCKED',pending);return end
     if emu.time()>1 then finish('BLOCKED','VIRTUAL_TIMEOUT');return end
     if phase=='reset_transition' then
-        -- STOP, not a breakpoint: native CURPC/PC must reach the observation STOP.
-        if ready and post_ready() and cpu.state.PC.value==cfg.stop_pc+4 then
+        -- Capture on native bus evidence, independent of transient debugger PC.
+        -- Close/flush the trace here, outside the tap. The independent verifier
+        -- must corroborate STOP and terminal state in this exact trace prefix.
+        if ready and post_ready() then
             host=true
+            manager.machine.debugger:command('trace off')
+            local trace=assert(io.open(cfg.output..'/cpu.trace','rb'))
+            local trace_bytes=assert(trace:seek('end'));trace:close()
+            local cpu_events=0
+            for _,e in ipairs(events) do if e.origin=='cpu' then cpu_events=cpu_events+1 end end
             event({kind='cpu_reset_complete',origin='host_observation',pc=cpu.state.CURPC.value,
                 next_pc=cpu.state.PC.value,ir=cpu.state.IR.value,sp=cpu.state.SP.value,sr=cpu.state.SR.value,
+                capture_callback='periodic',event_count=#events,cpu_event_count=cpu_events,
+                post_cpu_event_count=#post_cpu,trace_bytes=trace_bytes,
                 marker=space:read_u16(0x20000),result=space:read_u16(0x20002)})
             dump('reset.ram');phase='cpu_observation_complete'
             finish('CAPTURED','CPU_POST_RESET_OBSERVATION_CAPTURED')

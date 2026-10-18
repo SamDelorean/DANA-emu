@@ -1,9 +1,9 @@
 {
-  "status": "R2_STATIC_PASS",
-  "scope": "D2.2-R2 CPU-origin Port C reset verification",
+  "status": "R2.1_STATIC_PASS",
+  "scope": "D2.2-R2.1 CPU-origin Port C reset capture completion",
   "source_base": "4494a7e702244e744d21908a4661550a86f560de",
   "native_runtime": "NATIVE_PENDING",
-  "local_tests_passed": 76,
+  "local_tests_passed": 93,
   "native_header_syntax": "NOT_REPEATED_UNCHANGED_PRODUCTION",
   "registers": {
     "PCPDEN": {
@@ -54,7 +54,7 @@
   "T_calls": 0,
   "Commander_calls": 0,
   "guest_rebuilds": 0,
-  "next_action": "Independent review and separate R2 authorization before native A/B on the existing SHA-qualified DIAG. No automatic dispatch; authentic EmuTOS continuation remains separate.",
+  "next_action": "Independent R2.1 source review, then fresh explicit authorization for native A/B using only the qualified existing dana-diag. No automatic dispatch or EmuTOS continuation.",
   "previous_qualification_job": {
     "path": "tests/hold/005_dana_portc_native_diag.job.sh",
     "state": "HISTORICAL_NATIVE_RUN_REVIEWED; superseded for reset harness by R1",
@@ -76,9 +76,9 @@
   "native_R1": "A_PASS_B_BLOCKED_VIRTUAL_TIMEOUT_INDEPENDENT_REVIEW",
   "T_calls_this_revision": 0,
   "Commander_calls_this_revision": 0,
-  "counts_scope": "THIS_CODEX_R2_DELIVERY_ONLY",
-  "revision_base": "d3742bc37f42e4ed68c0ef89ee64134f0d797cd9",
-  "native_R2": "NATIVE_PENDING",
+  "counts_scope": "THIS_CODEX_R21_DELIVERY_ONLY",
+  "revision_base": "5065259a651face37a6cd7b363f4080bb0b741ca",
+  "native_R2": "A_PASS_B_BLOCKED_VIRTUAL_TIMEOUT_SUPERVISOR_REVIEW",
   "previous_R1_qualification_job": {
     "path": "tests/hold/006_dana_portc_reset_r1_reuse_diag.job.sh",
     "state": "HISTORICAL_MANUAL_R1_RUN; A PASS B BLOCKED",
@@ -101,14 +101,39 @@
     "B_sha256": "8cb8a9a943301f36a1bec27c9b0e1b7fc874e1642705926c1c156358096e0512",
     "branch_displacement": "0x009A; original proposed 0098 targets 40A0"
   },
-  "qualification_job": {
+  "native_R21": "NATIVE_PENDING",
+  "previous_R2_qualification_job": {
     "path": "tests/hold/007_dana_portc_reset_r2_reuse_diag.job.sh",
-    "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+    "state": "HISTORICAL_NATIVE_R2_RUN; A PASS B BLOCKED; supplied/canonical review",
     "authorization_variable": "DANA_D2_2_R2_AUTHORIZED=YES",
     "reference_variable": "DANA_D2_2_R2_BINARY=/absolute/existing/diag/bin/dana-diag",
     "expected_binary_sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
     "rebuild_fallback": false,
     "source_commit": "a972f4dfa54bea1e67a212acf79df58c5bff279b",
     "sha256": "f1ed5e67ab1c839d57c3f074260ed692ba72c5b39040c038dc9774f6cda00e48"
+  },
+  "previous_R2_evidence": {
+    "archive": "portc_reset_r2_2dl7aw59.tar.gz",
+    "archive_sha256": "7acacf0e542d72e9a21c34db8eab1cfd696452c8abc8c37531b2fde4a310fe52",
+    "harness_source": "a972f4dfa54bea1e67a212acf79df58c5bff279b",
+    "A_pid": 309035,
+    "B_pid": 309045,
+    "manifest_members_verified_by_supervisor": 31,
+    "classification": "BLOCKED_VIRTUAL_TIMEOUT_MISSING_FINAL_CAPTURE",
+    "review_origin": "Complete supplied specification and canonical main e05d28e9c34d8bd7100a949791c0581754250631; no new private archive audit"
+  },
+  "qualification_job": {
+    "path": "tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh",
+    "state": "SOURCE_FREEZE_PENDING_LOCAL_GIT_HOLD",
+    "authorization_variable": "DANA_D2_2_R21_AUTHORIZED=YES",
+    "reference_variable": "DANA_D2_2_R21_BINARY=/absolute/existing/diag/bin/dana-diag",
+    "expected_binary_sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
+    "rebuild_fallback": false
+  },
+  "capture_contract": {
+    "Lua_completion": "Seven native CPU events; no exact transient PC prerequisite",
+    "observer_verdict": "CAPTURED_ONLY_NOT_NATIVE_PASS",
+    "independent_terminal_rule": "Closed trace prefix with STOP and bounded observed zero-ORI tail; corroborated pipelined PC/CURPC, SR/SP, full RAM and event counts",
+    "historical_R2_promoted_to_PASS": false
   }
 }

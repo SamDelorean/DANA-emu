@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R2 offline checks only. Synthetic CPU records and callback mocks are NOT native evidence."""
+"""R2.1 offline checks only. Synthetic records/callback mocks are NOT native evidence."""
 import copy
 import hashlib
 import inspect
@@ -55,7 +55,7 @@ class CPUResetVerifier(unittest.TestCase):
         ar['binary_sha256']=ao['binary_sha256']=r2.BINARY_SHA
         (self.root/'save_restore/run.json').write_text(json.dumps(ar))
         (self.root/'save_restore/observation.json').write_text(json.dumps(ao))
-        self.run=dict(ar,execution='reset',revision='R2',fixture_sha256=r2.B_SHA,pid=43,execution_id='b'*32)
+        self.run=dict(ar,execution='reset',revision='R2.1',fixture_sha256=r2.B_SHA,pid=43,execution_id='b'*32)
         payload,_=r2.reset_fixture();ram=bytearray(0x400000)
         ram[:8]=struct.pack('>II',0x8000,0x4000);ram[0x4000:0x4000+len(payload)]=payload
         ram[0x10010:0x10012]=bytes.fromhex('cafe');ram[r2.RESULT:r2.RESULT+2]=bytes.fromhex('a55a')
@@ -83,15 +83,24 @@ class CPUResetVerifier(unittest.TestCase):
         add('read','cpu',1,1,address=0xfffff412,data=0,mask=65535,pc=r2.POST)
         add('write','cpu',1,1,address=r2.RESULT,data=0,mask=65535,pc=r2.STORE)
         add('cpu_reset_complete',epoch=1,request_id=1,marker=1,result=0,pc=r2.STOP,
-            next_pc=r2.STOP+4,sp=0x8000,sr=0x2700)
+            next_pc=r2.STOP+4,sp=0x8000,sr=0x2700,ir=0x4e72,
+            capture_callback='periodic',post_cpu_event_count=7)
         self.obs=dict(self.run,status='CAPTURED',reason='SYNTHETIC UNIT RECORD',events=self.events)
         (self.b/'cpu.trace').write_text('4000: synthetic\n4006: synthetic\n400a: synthetic\n4012: synthetic\n4098: synthetic\n'
-                                      '4000: synthetic\n4006: synthetic\n40a2: synthetic\n40a8: synthetic\n40ae: synthetic\n')
+                                      '4000: synthetic\n4006: synthetic\n40a2: synthetic\n40a8: synthetic\n40ae: stop #$2700\n')
         self.flush()
 
     def flush(self):
         for i,e in enumerate(self.events):e['seq']=i
+        self.bind_capture()
         self.write()
+
+    def bind_capture(self):
+        complete=next((e for e in self.events if e['kind']=='cpu_reset_complete'),None)
+        if complete:
+            complete['trace_bytes']=(self.b/'cpu.trace').stat().st_size
+            complete['event_count']=complete['seq']
+            complete['cpu_event_count']=sum(e['origin']=='cpu' for e in self.events)
 
     def write(self):
         (self.b/'run.json').write_text(json.dumps(self.run))
@@ -194,7 +203,90 @@ class CPUResetVerifier(unittest.TestCase):
         self.after('read',0xfffff412)['request_id']=0;self.blocked()
 
     def test_missing_native_trace_stop(self):
-        p=self.b/'cpu.trace';p.write_text(p.read_text().replace('40ae: synthetic\n',''));self.blocked()
+        p=self.b/'cpu.trace';p.write_text(p.read_text().replace('40ae: stop #$2700\n',''));self.blocked()
+
+    def test_seven_events_with_different_sampled_pc(self):
+        for curpc,pc in ((r2.STOP,r2.STOP+2),(r2.STOP,r2.STOP+4),(r2.STOP+2,r2.STOP+6)):
+            with self.subTest(curpc=curpc,pc=pc):
+                self.events[-1].update(pc=curpc,next_pc=pc)
+                self.flush();self.assertEqual(r2.verify(self.root)['status'],'PASS')
+
+    def test_observed_two_entry_zero_ori_tail(self):
+        p=self.b/'cpu.trace';p.write_text(p.read_text()+'40b2: ori.b #$0, D0\n40b2: ori.b #$0, D0\n')
+        self.events[-1].update(pc=0x40b2,next_pc=0x40b6,sr=0x2704,ir=0)
+        self.flush();self.assertEqual(r2.verify(self.root)['status'],'PASS')
+
+    def test_capture_before_stop_despite_seven_cpu_events(self):
+        self.events[-1].update(pc=r2.STORE,next_pc=r2.STOP,sr=0x2704)
+        self.blocked()
+
+    def test_false_terminal_completion(self):
+        for update in ({'pc':0x5000},{'next_pc':r2.STOP+1},{'sp':0x8002},
+                       {'sr':0x2000},{'sr':0x2704},{'ir':None},{'pc':r2.POST}):
+            with self.subTest(update=update):
+                before=self.events[-1].copy();self.events[-1].update(update)
+                self.blocked();self.events[-1].update(before)
+
+    def test_trace_must_be_closed_at_capture(self):
+        p=self.b/'cpu.trace';p.write_text(p.read_text()+'40b2: ori.b #$0, D0\n')
+        self.write();self.assertEqual(r2.verify_reset(self.b)['reason'],'UNBOUND_PERIODIC_CAPTURE_OR_TRACE')
+
+    def test_capture_metadata_cannot_be_missing_or_forged(self):
+        for key in ('capture_callback','event_count','cpu_event_count','post_cpu_event_count','trace_bytes'):
+            with self.subTest(key=key):
+                old=self.events[-1].pop(key);self.write()
+                self.assertEqual(r2.verify_reset(self.b)['status'],'BLOCKED')
+                self.events[-1][key]=old
+
+    def test_wrong_stop_opcode_or_status(self):
+        p=self.b/'cpu.trace';original=p.read_text()
+        for replacement in ('nop','stop #$2000'):
+            p.write_text(original.replace('stop #$2700',replacement));self.blocked()
+
+    def test_unexpected_post_stop_instruction(self):
+        p=self.b/'cpu.trace';p.write_text(p.read_text()+'40b2: move.w D0, (A0)\n');self.blocked()
+
+    def test_unbounded_or_unexpected_tail(self):
+        p=self.b/'cpu.trace';original=p.read_text()
+        for suffix in ('40b2: ori.b #$0,D0\n'*3,'40b6: ori.b #$0,D0\n'):
+            p.write_text(original+suffix);self.blocked()
+
+    def test_historical_r2_without_reset_ram_stays_blocked(self):
+        (self.b/'reset.ram').unlink()
+        self.run['revision']=self.obs['revision']='R2'
+        self.obs.update(status='BLOCKED',reason='VIRTUAL_TIMEOUT')
+        self.events[:]=[e for e in self.events if e['kind']!='cpu_reset_complete']
+        self.blocked()
+
+    def test_missing_reset_ram_even_with_complete_event(self):
+        (self.b/'reset.ram').unlink();self.blocked()
+
+    def test_nonzero_without_terminal_chain_is_blocked(self):
+        self.after('read',0xfffff412)['data']=self.after('write',r2.RESULT)['data']=0xfe81
+        self.events[-1]['result']=0xfe81
+        p=self.b/'reset.ram';d=bytearray(p.read_bytes());d[r2.RESULT:r2.RESULT+2]=bytes.fromhex('fe81');p.write_bytes(d)
+        p=self.b/'cpu.trace';p.write_text(p.read_text().replace('40ae: stop #$2700\n',''))
+        self.blocked()
+
+    def test_corroborated_nonzero_with_zero_ori_tail_is_fail(self):
+        self.after('read',0xfffff412)['data']=self.after('write',r2.RESULT)['data']=0xfe81
+        self.events[-1].update(result=0xfe81,pc=0x40b2,next_pc=0x40b4,sr=0x2708)
+        p=self.b/'reset.ram';d=bytearray(p.read_bytes());d[r2.RESULT:r2.RESULT+2]=bytes.fromhex('fe81');p.write_bytes(d)
+        p=self.b/'cpu.trace';p.write_text(p.read_text()+'40b2: ori.b #$0,D0\n')
+        self.flush();self.assertEqual(r2.verify(self.root)['status'],'FAIL')
+
+    def test_observer_cannot_assert_pass(self):
+        self.obs['status']='PASS';self.blocked()
+
+    def test_malformed_matching_source_identity(self):
+        self.run['source_commit']=self.obs['source_commit']='not-a-commit';self.blocked()
+
+    def test_malformed_events_stay_blocked(self):
+        for bad in (None,[],42,'forged observation'):
+            with self.subTest(bad=bad):
+                old=self.events[0];self.events[0]=bad;self.write()
+                self.assertEqual(r2.verify_reset(self.b)['status'],'BLOCKED')
+                self.events[0]=old
 
     def test_a_failure_cannot_be_overridden_by_b(self):
         p=self.root/'save_restore/observation.json';d=json.loads(p.read_text());d['status']='BLOCKED';p.write_text(json.dumps(d))
@@ -205,7 +297,7 @@ class LuaObserver(unittest.TestCase):
     def check_callbacks(self,case):
         from d1_2_run import lua
         payload,endpoint=r2.reset_fixture()
-        cfg=dict(output='/mock',execution='reset',revision='R2',execution_id='mock',source_commit='1'*40,
+        cfg=dict(output='/mock',execution='reset',revision='R2.1',execution_id='mock',source_commit='1'*40,
                  binary_sha256=r2.BINARY_SHA,fixture_sha256=r2.B_SHA,hex=payload.hex(),endpoint=endpoint,stop_pc=r2.STOP)
         setup="""
 local cb,tap={},{}
@@ -215,7 +307,7 @@ local cfg=CONFIG
 local ram={}
 os.getenv=function() return 'offline-only' end
 dofile=function() return cfg end
-io.open=function(path) return {write=function(_,s)
+io.open=function(path) return {seek=function() return 1234 end,write=function(_,s)
     if path:find('observation.json',1,true) then output=output..s end
 end,close=function() end} end
 local space={data_width=16,read_u16=function(_,a) if a==0xfffff412 then return port end;return ram[a] or 0 end,
@@ -227,7 +319,9 @@ end
 local state={CURPC={value=0x4000},PC={value=0x4002},SP={value=0x8000},SR={value=0x2700},IR={value=0x4a79}}
 local cpu={state=state,spaces={program=space},debug={bpclear=function() end,
     bpset=function() bp_installs=bp_installs+1 end,go=function() end}}
-manager={machine={devices={[':maincpu']=cpu},debugger={execution_state='stop',command=function() end},
+manager={machine={devices={[':maincpu']=cpu},debugger={execution_state='stop',command=function()
+    assert(not in_tap,'Debugger command called from tap!')
+end},
     exit=function() assert(not in_tap,'Exit called from tap!');exits=exits+1 end,soft_reset=function() end}}
 emu={time=function() return 0.1 end,register_prestart=function(fn) cb.prestart=fn end,
     register_periodic=function(fn) cb.periodic=fn end,add_machine_reset_notifier=function(fn) cb.reset=fn;return {} end}
@@ -255,7 +349,9 @@ else
     state.CURPC.value=0x4000;observe('read',0x20000,1)
     state.CURPC.value=0x40a2;observe('read',0xfffff412,0)
     state.CURPC.value=0x40a8;observe('write',0x20002,0);ram[0x20002]=0
-    state.CURPC.value=cfg.stop_pc;state.PC.value=cfg.stop_pc+4;state.IR.value=0x4e72
+    ram[0x20000]=1
+    state.CURPC.value=cfg.stop_pc+4;state.PC.value=cfg.stop_pc+8;state.IR.value=0
+    if CASE=='before_stop' then state.CURPC.value=0x40a8;state.PC.value=0x40ae end
 end
 cb.periodic()
 if CASE=='missing_vectors' then
@@ -263,16 +359,25 @@ if CASE=='missing_vectors' then
     emu.time=function() return 1.1 end;cb.periodic()
 end
 assert(exits==1)
-if CASE=='complete' then
+if CASE=='complete' or CASE=='before_stop' then
     assert(output:find('"status":"CAPTURED"',1,true))
     assert(output:find('"kind":"cpu_reset_complete"',1,true))
+    assert(output:find('"capture_callback":"periodic"',1,true))
+    assert(output:find('"post_cpu_event_count":7',1,true))
+    assert(output:find('"trace_bytes":1234',1,true))
     assert(not output:find('"kind":"profile_reset"',1,true))
+    assert(not output:find('"status":"PASS"',1,true))
 else assert(output:find('"status":"BLOCKED"',1,true)) end
 """.replace('CASE',json.dumps(case))
         check_lua(setup+'\n'+(HERE/'d2_2_reset_r2_boot.lua').read_text()+'\n'+steps)
 
     def test_complete_without_reset_notifier_or_post_reset_breakpoint(self):
         self.check_callbacks('complete')
+
+    def test_capture_before_stop_is_not_observer_pass(self):
+        # Capture must not wait on a PC. The independent trace/state verifier
+        # above blocks premature captures even after all seven native events.
+        self.check_callbacks('before_stop')
 
     def test_trace_budget_never_exits_from_bus_tap(self):
         self.check_callbacks('budget')

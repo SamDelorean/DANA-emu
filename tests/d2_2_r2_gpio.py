@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R2 CPU-origin reset observation. Reuse qualified A unchanged; never emulate a CPU."""
+"""R2.1 CPU-origin reset capture. Reuse qualified A unchanged; never emulate a CPU."""
 import argparse
 import hashlib
 import json
@@ -41,24 +41,71 @@ class Incomplete(Exception):
     pass
 
 
+def verify_terminal(root, complete, events):
+    """Corroborate a bounded terminal path, not an exact transient PC sample.
+
+    The pinned core traces before dispatch and exports pipelined PC/CURPC.
+    Require STOP plus consistent SR/SP and a sample at the traced terminal
+    instruction (or its next word). Only the two zero-ORI tail entries actually
+    observed in native R2 are allowed. This proves the observation path, not
+    permanent physical STOP/halt behavior.
+    """
+    trace=(root/'cpu.trace').read_bytes()
+    if (complete.get('capture_callback')!='periodic' or complete.get('trace_bytes')!=len(trace)
+            or complete.get('event_count')!=complete['seq'] or events[-1] is not complete
+            or complete.get('post_cpu_event_count')!=7
+            or complete.get('cpu_event_count')!=sum(e.get('origin')=='cpu' for e in events)):
+        raise Incomplete('UNBOUND_PERIODIC_CAPTURE_OR_TRACE')
+    rows=re.findall(r'^\s*([0-9a-fA-F]+):([^\r\n]*)',trace.decode(),re.M)
+    pcs=[int(pc,16) for pc,_ in rows]
+    if pcs.count(0x4000)!=2 or pcs.count(BODY)!=1:
+        raise Incomplete('MISSING_OR_REPLAYED_NATIVE_INSTRUCTIONS')
+    second=pcs.index(0x4000,pcs.index(0x4000)+1)
+    path=pcs[second:]
+    if path[:5]!=[0x4000,0x4006,POST,STORE,STOP]:
+        raise Incomplete('MISSING_STOP_OR_POST_RESET_BRANCH_OR_FIXTURE_REPLAY')
+    if not re.fullmatch(r'\s*stop\s+#\$?2700\s*',rows[second+4][1],re.I):
+        raise Incomplete('NATIVE_STOP_INSTRUCTION_NOT_PROVED')
+    tail=path[5:]
+    if len(tail)>2 or any(pc!=STOP+4 for pc in tail):
+        raise Incomplete('UNEXPECTED_POST_STOP_INSTRUCTIONS_OR_REPLAY')
+    for _,text in rows[second+5:]:
+        if not re.fullmatch(r'\s*ori\.b\s+#\$?0,\s*d0\s*',text,re.I):
+            raise Incomplete('UNEXPECTED_POST_STOP_OPCODE')
+    curpc,pc=complete.get('pc'),complete.get('next_pc')
+    if (not isinstance(curpc,int) or not isinstance(pc,int)
+            or curpc not in (path[-1],path[-1]+2) or pc-curpc not in (0,2,4)
+            or pc<STOP+2 or complete.get('sp')!=0x8000
+            or not isinstance(complete.get('ir'),int) or not 0<=complete['ir']<=0xffff):
+        raise Incomplete('TERMINAL_CPU_SAMPLE_NOT_CORROBORATED')
+    # STOP loads 2700. The observed zero-ORI tail can set N/Z from D0's
+    # low byte, without changing SP, memory, X/V/C, S or interrupt mask.
+    low=complete['result'] & 0xff
+    tail_sr=0x2700 | (4 if low==0 else 8 if low & 0x80 else 0)
+    if complete.get('sr') not in ({0x2700,tail_sr} if tail else {0x2700}):
+        raise Incomplete('TERMINAL_SR_NOT_CORROBORATED')
+
+
 def verify_reset(root):
     root=Path(root)
     try:
         run=json.loads((root/'run.json').read_text())
         obs=json.loads((root/'observation.json').read_text())
+        if not isinstance(run,dict) or not isinstance(obs,dict):raise Incomplete('INVALID_RECORD_SHAPE')
         qualified.staged_identity(run)
-        for key,wanted in (('execution','reset'),('variant','diag'),('revision','R2'),
+        for key,wanted in (('execution','reset'),('variant','diag'),('revision','R2.1'),
                            ('fixture_sha256',B_SHA),('binary_sha256',BINARY_SHA)):
             if run.get(key)!=wanted or obs.get(key)!=wanted:raise Incomplete('INVALID_'+key.upper())
         for key in ('source_commit','execution_id'):
             if not run.get(key) or run[key]!=obs.get(key):raise Incomplete('UNBOUND_'+key.upper())
         if not isinstance(run.get('pid'),int) or run['pid']<=0:raise Incomplete('MISSING_PROCESS_ID')
         if run.get('exit_code')!=0:raise Incomplete('NATIVE_PROCESS_EXIT_OR_TIMEOUT')
-        if obs.get('status') not in ('PASS','CAPTURED'):
-            return {'status':obs.get('status') if obs.get('status') in ('FAIL','BLOCKED') else 'BLOCKED',
+        if obs.get('status')!='CAPTURED':
+            return {'status':'BLOCKED',
                     'reason':obs.get('reason','INCOMPLETE_OBSERVATION')}
         events=obs['events']
         if not isinstance(events,list) or len(events)>256:raise Incomplete('EVENT_BUDGET')
+        if any(not isinstance(e,dict) for e in events):raise Incomplete('INVALID_RAW_EVENT_SHAPE')
         if [e.get('seq') for e in events]!=list(range(len(events))):raise Incomplete('MISSING_OR_DUPLICATE_RAW_SEQUENCE')
         if any(e.get('epoch') not in (0,1) for e in events):raise Incomplete('INVALID_RESET_EPOCH')
         def one(kind,origin,epoch,request):
@@ -146,13 +193,7 @@ def verify_reset(root):
         expected[RESULT:RESULT+2]=struct.pack('>H',result['data'])
         if reset!=expected:raise Incomplete('RESET_RAM_RESULT_MARKER_OR_CORRUPTION')
         if (complete.get('marker'),complete.get('result'))!=(1,result['data']):raise Incomplete('RAM_OBSERVATION_CONTRADICTION')
-        if complete.get('next_pc')!=STOP+4 or complete.get('sp')!=0x8000 or complete.get('sr')!=0x2700:
-            raise Incomplete('NATIVE_STOP_STATE_NOT_PROVED')
-        pcs=[int(v,16) for v in re.findall(r'^\s*([0-9a-fA-F]+):',(root/'cpu.trace').read_text(),re.M)]
-        if pcs.count(0x4000)!=2 or pcs.count(BODY)!=1:raise Incomplete('MISSING_OR_REPLAYED_NATIVE_INSTRUCTIONS')
-        second=pcs[pcs.index(0x4000,pcs.index(0x4000)+1):]
-        if second[:5]!=[0x4000,0x4006,POST,STORE,STOP] or any(BODY<=pc<=ENDPOINT for pc in second):
-            raise Incomplete('POST_RESET_BRANCH_OR_FIXTURE_REPLAY')
+        verify_terminal(root,complete,events)
         if read['data']!=0:
             return {'status':'FAIL','reason':'CONFIRMED_CPU_POST_RESET_PORTC_NONZERO','value':read['data']}
         return {'status':'PASS','scope':'CPU-origin R-direct reset observation only','binary':run['command'][0],
@@ -175,15 +216,15 @@ def verify(root):
             status='BLOCKED';reason='TWO_INDEPENDENT_PROCESSES_NOT_PROVED'
         elif any(a[k]!=b[k] for k in ('binary','binary_sha256','source_commit')) or a['binary_sha256']!=BINARY_SHA:
             status='BLOCKED';reason='INCONSISTENT_OR_UNQUALIFIED_DIAG_IDENTITY'
-        else:reason='BOTH_INDEPENDENT_EXECUTIONS_VERIFIED_CPU_RESET_R2'
-    return {'status':status,'reason':reason,'revision':'R2','executions':results}
+        else:reason='BOTH_INDEPENDENT_EXECUTIONS_VERIFIED_CPU_RESET_R21'
+    return {'status':status,'reason':reason,'revision':'R2.1','executions':results}
 
 
 def execute_reset(binary,root,source):
     root.mkdir();payload,endpoint=reset_fixture()
     plugin=root/'plugin';plugin.mkdir();shutil.copyfile(HERE/'d2_2_reset_r2_boot.lua',plugin/'boot.lua')
     config={'output':str(root),'hex':payload.hex(),'endpoint':endpoint,'stop_pc':STOP,'execution':'reset',
-            'revision':'R2','execution_id':uuid.uuid4().hex,'source_commit':source,
+            'revision':'R2.1','execution_id':uuid.uuid4().hex,'source_commit':source,
             'binary_sha256':qualified.digest(binary),'fixture_sha256':B_SHA}
     cfg=root/'config.lua';cfg.write_text('return '+lua(config)+'\n')
     command=[str(binary),'asmdana','-noreadconfig','-debug','-debugger','none','-pluginspath',str(plugin),

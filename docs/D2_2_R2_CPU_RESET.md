@@ -1,4 +1,148 @@
-# D2.2-R2 — CPU-origin Port C reset observation
+# D2.2-R2.1 — CPU-origin Port C reset capture completion
+
+**2026-10-18: R2.1_STATIC_PASS / NATIVE_PENDING.** Reviewed HEAD
+`5065259a651face37a6cd7b363f4080bb0b741ca` matched the clean feature branch
+and remote before editing. Canonical `main` at
+`e05d28e9c34d8bd7100a949791c0581754250631` and the complete supplied R2.1
+contract were read. This is a B-only diagnostic capture correction on draft
+[PR #7](https://github.com/SamDelorean/DANA-emu/pull/7), not new hardware.
+
+## Historical native R2 remains BLOCKED
+
+The supplied contract and canonical HANDOFF report archive
+`portc_reset_r2_2dl7aw59.tar.gz`, SHA256
+`7acacf0e542d72e9a21c34db8eab1cfd696452c8abc8c37531b2fde4a310fe52`,
+with 31/31 internal hashes independently verified by the supervisor. A PID
+309035 passed; B PID 309045 timed out after the seven correct post-reset CPU
+events, including Port C read zero and CPU result store zero, and trace STOP
+at `40AE` followed by two `ori.b #$0,D0` entries at `40B2`. B never emitted
+`cpu_reset_complete` or `reset.ram`. Its result stays **BLOCKED**. These are
+carried-forward review findings, not a new private archive download/audit.
+The exact-PC gate is a probable cause; sampled periodic PC was absent, so the
+precise native cause remains unconfirmed.
+
+## Bounded R2.1 correction
+
+The periodic callback now captures once `ready and post_ready()` establishes
+the same seven raw CPU events. No sampled PC is a Lua completion prerequisite.
+It closes/flushes the native trace through existing MAME `trace off`, records
+its byte count, samples CPU/RAM diagnostics and dumps the entire 4 MiB RAM.
+`pc` means CURPC, `next_pc` means PC; IR, SR, SP, marker, result, total event
+count before capture, total CPU event count, post-reset CPU count, epoch,
+request ID and virtual time accompany the capture. Host snapshot reads are
+excluded from CPU taps. No exit, finish or debugger operation runs inside a
+tap. No post-reset breakpoint or mandatory reset notifier was added. Event
+limit 256, one-second virtual bound, two-second emulator bound, 90-second host
+bound and existing file limits are preserved. Lua reports **CAPTURED**, never
+qualification PASS; captures before STOP remain independently BLOCKED.
+
+Python still requires the complete genuine request/transition/vector/marker/
+read/store chain, only one post-reset MMIO read, all three exact 4 MiB RAM
+comparisons, original-body execution once, separate process/execution IDs,
+matching source identities and the qualified DIAG SHA. A nonzero Port C value
+is FAIL only after every other evidence check passes.
+
+The replacement terminal rule additionally requires:
+
+- A final periodic capture event with exact raw/CPU/post-reset counts and a
+  trace file of the recorded byte length; no instructions appended later.
+- The native post-reset trace `4000,4006,40A2,40A8,40AE`, with an actual
+  `stop #$2700` disassembly at `40AE`. No original-body replay is allowed.
+- Only zero, one or two `ori.b #$0,D0` tail entries at `40B2`, matching the
+  previously observed tail and zero bytes in the fully checked RAM. Any other
+  tail instruction/address or longer tail is BLOCKED.
+- CURPC at the last traced instruction or its next word, PC zero/two/four
+  bytes ahead of CURPC and at least `40B0`, SP `8000`, and a valid 16-bit IR
+  sample. This corroborates pipeline diagnostics without exact `PC=40B2`.
+- SR `2700` after STOP. If the observed zero-ORI tail is present, its N/Z flags
+  derived from the CPU-read result's low byte are also allowed, preserving
+  supervisor mode, interrupt mask and X/V/C. A pre-STOP sample or contradictory
+  SR/SP/trace remains BLOCKED. IR is recorded, not used as an opcode gate.
+
+This rule establishes a bounded observation-path terminal state, not permanent
+physical STOP/halt behavior. Sampling outside the corroborated path is BLOCKED
+and retains diagnostics; no arbitrary PC is accepted. R2 records are not
+silently upgraded to the R2.1 schema or reclassified PASS.
+
+## Pinned source-to-claim evidence
+
+All MAME inspection used the read-only donor at
+`c4e48388ca620472643110db2941ce70aa5f3c07`.
+
+| Source | Verified use |
+| --- | --- |
+| `src/emu/debug/debugcpu.cpp`, `device_debug::trace`, tracer destructor/update | `trace off` destroys/closes the stream; trace is native disassembly before dispatch, not proof of physical halt |
+| `src/emu/debug/debugcmd.cpp`, `execute_trace` | Existing command closes tracing without a breakpoint or CPU state mutation |
+| `src/devices/cpu/m68000/m68000.cpp`, `execute_run`, `state_add` | Native instruction hook, CURPC=`m_ipc`, PC=`m_pc`, IR=`m_ir`; PC is pipeline state |
+| `src/devices/cpu/m68000/m68000-sdf.cpp`, `stop_i16u_df` | STOP loads SR from its operand and invokes the existing debugger wait hook |
+| `src/devices/cpu/m68000/m68kdasm.cpp`, `d68000_stop`, `d68000_ori_8` | Actual native STOP and zero-ORI disassembly spelling accepted by the verifier |
+
+No POSE/Retro68/EmuTOS code was copied. Production GPIO, physical FF versus
+R-direct 00 profiles, CPU/RAM/IRQ/PLLFSR/loader, source lock and donor are
+unchanged. Qualified A functions/Lua, both fixtures and displacement `009A`
+remain exactly unchanged, verified by the frozen hash checks below.
+
+## R2.1 executed offline validation
+
+```sh
+PYTHONPATH=tests python3 -m unittest d2_2_gpio_contract_test d2_2_test_verifiers d2_2_r1_test_reset d2_2_r2_test_reset_cpu -v
+bash -n tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh
+bash tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh
+git diff --check
+```
+
+Actual full-suite output: **`Ran 93 tests in 11.733s` / `OK`, exit 0**:
+40 preserved checks plus 53 R2/R2.1 checks. Callback mocks execute only Lua
+observer logic; Python negatives use synthetic evidence, never an emulator.
+Cases cover differing sampled PC; missing/wrong STOP; premature/false terminal
+capture; trace growth or wrong counts; bounded/wrong tail; missing/duplicate/
+wrong vectors; forged host read/store; duplicate Port C read or preceding
+write; marker/sentinel/result corruption; missing RAM; fixture replay;
+missing request/transition; malformed/mismatching source/executable identity;
+same PID/execution ID; historical incomplete R2; coherent nonzero FAIL and
+incoherent nonzero BLOCKED. Lua mocks also enforce no tap exit/debug commands,
+no required reset notifier or extra breakpoint, and deferred budget/replay
+errors. Python compilation, full Lua parse and embedded job Python AST pass.
+The unauthorised job invocation returns expected **HOLD / exit 2**, before
+Python or any machine access. Full log: local scratch `d2_2_r21/offline_tests.log`.
+
+## Next qualification: Git HOLD only
+
+New job: `tests/hold/008_dana_portc_reset_r21_reuse_diag.job.sh`. The final
+source pin and job SHA are recorded in `tests/d2_2_candidate_status.json`.
+Its independent authorization/reference interface is:
+
+```text
+DANA_D2_2_R21_AUTHORIZED=YES
+DANA_D2_2_R21_BINARY=/absolute/existing/diag/bin/dana-diag
+```
+
+It requires the exact existing binary SHA, verifies production tree identity
+against build source `749517b2f48c9788e5555071561e738017ac5f7c`, copies the
+reference read-only into an isolated stage, runs the Python negatives and two
+independent DIAG processes, re-verifies raw evidence, archives all results and
+hashes and uses only the existing private outbox transport. No build fallback.
+Old `007` is preserved unchanged as historical R2. `008` is LOCAL_GIT_HOLD,
+not uploaded, dispatched or run on T. No emulator, T, Commander, MAME/ROM
+build, binary publication or PR merge occurred in this delivery.
+
+Changed files: B Lua, R2 Python runner/verifier, R2 offline tests, this report,
+HANDOFF, candidate status and new `008` job. Next action: independent source
+review followed by fresh explicit native authorization. No functional R2.1
+PASS is claimed and authentic EmuTOS continuation has not advanced.
+
+PR #7 receives the reviewable diff through the existing feature branch push.
+Direct `gh pr view` returned GraphQL `Forbidden` both normally and on the
+required escalated retry; a PR description edit cannot be claimed. This
+committed report supplies the complete review material without overwriting an
+unread PR body.
+
+---
+
+The following R2 implementation report is retained as historical context;
+its old pending/runtime and exact-PC statements are superseded above.
+
+# D2.2-R2 — CPU-origin Port C reset observation (historical report)
 
 **2026-10-18. R2_STATIC_PASS / NATIVE_PENDING.** Branch `codex/dana-d1-2-ram-bus`, reviewed base `d3742bc37f42e4ed68c0ef89ee64134f0d797cd9`, draft [PR #7](https://github.com/SamDelorean/DANA-emu/pull/7). The complete self-contained user specification supersedes the inaccessible Drive link; that link was not retried after this clarification. Canonical `main` HANDOFF was read before editing.
 
