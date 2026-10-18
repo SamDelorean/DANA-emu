@@ -1,0 +1,149 @@
+{
+  "assignment": "F1 / issue #8",
+  "status": "E1_E2_PASS_E3_INITIAL_GUEST_EXECUTION_PASS_D2_1_PLLFSR_SOURCE_CANDIDATE",
+  "implementation": "SOURCE_CANDIDATE_PREPARED",
+  "parent_commit": "9de5dfe6b1a06a417ae4384fa48a99c5113dfafe",
+  "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "emutos_commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+  "qualified_ram": "D1.2 independent 9/9 PASS preserved",
+  "functional_guest_execution": "PASS_INITIAL_EXECUTION_WITH_REAL_NEXT_HARDWARE_BLOCK",
+  "observed_hardware_dependency": {
+    "module": "VZ Clock Generation Module / PLLFSR",
+    "address": "0xFFFFF202",
+    "width_bits": 16,
+    "pc": "0x0000829A",
+    "operation": "CPU_ORIGIN_WORD_READ",
+    "reproduced_in_two_runs": true,
+    "register_reset_motorola": "0x0347",
+    "E3_status": "PASS_GUEST_EXECUTION_BLOCKED_HARDWARE",
+    "next": "D2.1 PLLFSR isolated native DIAG implementation"
+  },
+  "blockers": [
+    {
+      "domain": "D2_1_PLLFSR_NATIVE",
+      "reason": "Only source driver/Lua observer edits and isolated C++ unit harness staged. Changed DIAG driver not yet compiled or executed on T. Preserve all E3 and D1.2 real PASS."
+    }
+  ],
+  "guest_artifacts": {
+    "status": "PASS_ACTUAL_ORIGINAL_BUILD_AND_INDEPENDENT_SHA256",
+    "source_commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+    "built_on": "spc-HP-t640-Thin-Client",
+    "build_command": "make -j3 dana TOOLCHAIN_PREFIX=m68k-atari-mint-",
+    "entry": "0x00002140",
+    "files": {
+      "emutos.img": {
+        "bytes": 223748,
+        "sha256": "ba590da2661bc582c19bb24d65db04667daf37a17d7aa51fb462b945933ba0a3"
+      },
+      "emutos-dana.rom": {
+        "bytes": 223792,
+        "sha256": "efb055e5ac02526db069aec23c4b71b092fc48317aa4305e93a4a2f4e369243c"
+      },
+      "emutos.map": {
+        "bytes": 124540,
+        "sha256": "17cc980e675e2e1b50e713b9029f6fc3e51d3e55392deb99d53552d4b3af3e68"
+      },
+      "emutos.dana": {
+        "bytes": 223812,
+        "sha256": "c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d"
+      }
+    },
+    "checked": "SHA256 matches real T manifest; map entry and DANARAM1 envelope checked independently",
+    "archive": "https://drive.google.com/file/d/1METSVshkjiuAJgpH5ilXRW5B2giTUkCf/view",
+    "archive_sha256": "b53600abcbafa7345d1d3bceffc1dc6f13bbd8b0788e7e59e2b2aa2746b6e4c6",
+    "source_evidence": "/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/emutos-built"
+  },
+  "local_checks": {
+    "native_driver_header_compilation": "PASS (-std=c++20 -fsyntax-only -Werror)",
+    "mame_source_discovery": "PASS",
+    "new_synthetic_input_tests": 14,
+    "existing_ram_verifier_tests": 25,
+    "existing_mmio_verifier_tests": 11,
+    "python_and_lua_syntax": "PASS"
+  },
+  "remote_execution": "F1/E3 real T R3 PASS, compiled native MAME DIAG and executed authentic guest twice. 3/3 previous Commander calls consumed. D2.1 NOT EXECUTED.",
+  "qualification_job": {
+    "state": "SUPERSEDED_FOR_E3_BY_E3_ONLY_JOB",
+    "path": "tests/hold/000_dana_f1_emutos.job.sh",
+    "sha256": "PENDING_INDEPENDENT_SHA256_OF_UPDATED_F1_SH",
+    "implementation_commit": "9ba89114baaf1e031247484f3d1d8f0209bff775",
+    "checks": [
+      "Original F1 SH updated statically to reuse E1 verified compiler from F1_CROSSMINT_VERIFIED.json and E2 existing real artifacts after full validation",
+      "E3 SH modified but not independently executed or syntactically requalified on canonical T",
+      "No Commander calls allocated to E3 by E1/E2 run"
+    ],
+    "executed": false
+  },
+  "next_action": "Qualify D2.1: execute focused compiled handler unittest, rebuild changed native DIAG once with LLVM21 against pinned donor and no EmuTOS recompilation; run smoke RAM/MMIO + two real guest repeat traces and corrupt-image negative. Only after fresh scoped Commander budget via canonical T dcjob.",
+  "toolchain_recovery": {
+    "status": "PASS_REAL_MINT_MSHORT_LINK",
+    "compiler": "m68k-atari-mint-gcc (MiNT 20230719) 4.6.4",
+    "target": "m68k-atari-mint",
+    "isolated_bin_dir": "/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/crossmint/unpacked/usr/bin",
+    "multilib": "mshort available; compiler and libgcc link PASS",
+    "vendor_gcc_url": "https://tho-otto.m68k.eu/download/mint/gcc-4.6.4-mint-20230719-bin-linux64.tar.xz",
+    "vendor_gcc_archive_sha256": "00f8eac034e1b17f5fb5314bf645a910c578c2ecb9db3854fb0025d0af90e6a9",
+    "vendor_binutils_url": "https://tho-otto.m68k.eu/download/mint/binutils-2.30-mint-20180323-bin-linux64.tar.xz",
+    "vendor_binutils_archive_sha256": "402a3143cefae2121270cb9d211e3a609a4daf04d236dbe9ba55a2105b8ca57e",
+    "betaWisePreserved": true
+  },
+  "emutos_build_subplan": "docs/F1_EMUTOS_BUILD_SUBPLAN.md (main)",
+  "betawise_compiler_reuse": {
+    "repository": "SamDelorean/betawise",
+    "source": "m68k-elf/Makefile",
+    "target": "m68k-elf",
+    "gcc_version_declared": "16.1.0",
+    "toolchain_install_prefix": "${HOME}/.local",
+    "source_build_configuration": "--with-cpu=68000 --disable-multilib",
+    "program_flags": "-m68000 -mpcrel -ffixed-a5 -fshort-enums (NOT -mshort)",
+    "emutos_elf_mode": "ELF=1 uses m68k-elf-gcc with -m68000 -mshort and -lgcc",
+    "compatibility": "UNVERIFIED_ACTUAL_INSTALLED_COMPILER; recipe's --disable-multilib is a likely blocker",
+    "action": "Verify real installed compiler before any CrossMiNT download inside same F1 job; never claim PASS from SmartApplet builds"
+  },
+  "e1e2_job": {
+    "name": "002_dana_f1_e1e2_emutos_vendor_resolve_20261017.job.sh",
+    "sha256": "22e60ee66c83d451c529be12762b5e2f06d2d7b5e9f644d554831181416823ec",
+    "duration_seconds": 40,
+    "dcjob_status": "PASS",
+    "source_reused": true
+  },
+  "e3_execution": {
+    "status": "PASS_INITIAL_GUEST_EXECUTION_REPRODUCIBLE_HARDWARE_BLOCK",
+    "runner": "003_dana_f1_e3_diag_llvm_version_multiline_20261017.job.sh",
+    "supervisor_status": "PASS",
+    "exit_code": 0,
+    "duration_seconds": 2641,
+    "archive": "https://drive.google.com/file/d/1G_EKbuME2QHoVUYnDnbSNBpNNFJTRWgC/view",
+    "archive_sha256": "71bea4c670a58f180f13613b39f0dadc88c7b3d2ff8b5915582d493a0cd8c6ee",
+    "binary_sha256": "4e52c6f69cc9b45447872b4d6fc68c8d30309ed502f9aa8a402cdcb9ed9a58bf",
+    "guest_two_runs": "PASS_REPRODUCIBLE_INITIAL_NATIVE_EXECUTION",
+    "guest_initial_milestones": [
+      "_os_header",
+      "_main",
+      "_realmain",
+      "meminit",
+      "_biosmain",
+      "_dana_init"
+    ],
+    "negative_corrupt_image": "PASS",
+    "RAM_01_RAM_08": "PASS",
+    "MMIO_01": "PASS",
+    "evidence_sha256_count": 91
+  },
+  "d2_1_pllfsr": {
+    "status": "SOURCE_IMPLEMENTED_STATIC_PREPARED_NOT_NATIVE_QUALIFIED",
+    "affected": [
+      "src/mame/skeleton/alphasdana.cpp",
+      "tests/f1_emutos_boot.lua",
+      "tests/d2_1_pllfsr_contract_test.py",
+      "docs/D0_2_EZ_VZ_REGISTER_CONTRACT.md",
+      "docs/D2_1_PLLFSR_IMPLEMENTATION.md"
+    ],
+    "source_manual": "MC68VZ328UM/D Section 4.4.2 Table 4-4",
+    "spec": "16-bit map at 0xFFFFF202..203; reset 0x0347; virtual CLK32 from 32768 Hz scheduler; PROT sticky; QC/PC write lanes and reserved/CLK32 masks",
+    "synthetic_cpp_unit": "PREPARED_SOURCE_TEST_NOT_EXECUTED_IN_THIS_COMMIT",
+    "full_mame_guest": "UNRUN",
+    "no_new_rom_builds": true,
+    "no_commander_calls_this_increment": true
+  }
+}

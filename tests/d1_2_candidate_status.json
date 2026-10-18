@@ -1,0 +1,89 @@
+{
+  "increment": "D1.2",
+  "status": "CLOSED_PASS",
+  "qualification": "INDEPENDENT_REAL_T_QUALIFIED",
+  "base_commit": "3408d5849a132da5647d839c51cf174e94dff94b",
+  "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+  "bootstrap_runtime_status": "PASS_REAL_CPU_VECTOR_READS_NO_LUA_RESET_NOTIFIER_REQUIRED",
+  "guest_memory_tests_executed": true,
+  "local_verification": {
+    "fixture_assembly_and_regeneration": "completed",
+    "python_and_lua_syntax": "checked",
+    "verifier_unit_tests": "25_OF_25_PASS_REAL_T_R5_SYNTHETIC_ONLY",
+    "unit_test_evidence": "synthetic_only",
+    "missing_binary_runner": "BLOCKED_as_expected",
+    "previous_synthetic_verifier_unit_tests": 15,
+    "r3_4_static_review": "completed; not a runtime PASS",
+    "r3_8": "Lua false notifier gate removed; independent verifier now checks ordered CPU-origin reset vector reads at 0,2,4,6 with exact 16-bit data and initial registers; synthetic negative cases added; R4 recorded vector trace and four tampered controls independently checked in isolated local Python predicate; full suite pending."
+  },
+  "next_step": "D1.3.1 STATIC_FIRST: review pinned MC68VZ328 datasheet register/MMIO decoder mapping and native MAME address-map primitives, define exact small MMIO window read/write fixture and expected evidence before implementing. Stable deferred; do not start EmuTOS or add GUI/SD. Any subsequent remote build/launch is a new atomic authorized action and must respect the 10-call block; 2/10 used in R5.",
+  "development_variant": "diag",
+  "active_case_ids": [
+    "RAM-01",
+    "RAM-02",
+    "RAM-03",
+    "RAM-04",
+    "RAM-05",
+    "RAM-06",
+    "RAM-07",
+    "RAM-08",
+    "RAM-09"
+  ],
+  "deferred_cases": {
+    "RAM-10": {
+      "status": "DEFERRED_STABLE_PARITY",
+      "reason": "Run stable/diag parity only during separately approved stable activation",
+      "counts_for_pass": false
+    }
+  },
+  "real_t": {
+    "R3": {
+      "status": "BLOCKED_HARNESS",
+      "result_folder_id": "1aPzSmxoprvNyxSbASrtMxtuIKcDwGzHY",
+      "unit_test_pass_count": 17,
+      "diag_smoke": "PASS",
+      "diag_binary_sha256": "9af8b4216e14e0183352822c9abc5c27a0fc10c1d95f1ddebbc30249adde8c35",
+      "RAM_01": "BLOCKED_BOOTSTRAP_BPSSET_STRING_ARGS"
+    },
+    "R4": {
+      "status": "BLOCKED_HARNESS",
+      "source_commit": "c1436218aa0bb0d0dc4d7b819356c1603114b11d",
+      "result_folder_id": "1uyHw8ObsBgLvW67HPgSTWd2bWlNC0pLt",
+      "unit_test_pass_count": 17,
+      "diag_smoke": "PASS",
+      "RAM_01": "BLOCKED_MISSING_RESET_NOTIFICATION_DESPITE_OBSERVED_RESET_VECTORS_PC_0x4000_SP_0x8000_SR_0x2700"
+    },
+    "R5": {
+      "status": "PASS",
+      "execution_scope": "D1.2 DIAG native M68000 / 4MiB post-bootstrap RAM and bus RAM-01..RAM-09 only; not EmuTOS, MMIO or physical Dana reset map",
+      "source_commit": "7fcb66aaf1aa419bea7eb3d4d3784cc75f673ae0",
+      "mame_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+      "diag_binary_sha256": "9af8b4216e14e0183352822c9abc5c27a0fc10c1d95f1ddebbc30249adde8c35",
+      "binary_origin": "REUSED_VERIFIED_R2_DIAG",
+      "diag_build_rc": 0,
+      "d1_1_diag_cli_smoke": "PASS",
+      "synthetic_unit_tests": "25/25 PASS",
+      "guest_RAM_01_to_RAM_09": "9/9 PASS",
+      "RAM_10": "DEFERRED_STABLE_PARITY",
+      "independent_evidence_audit": "PASS",
+      "independent_checked": [
+        "nine per-case real CPU observation/run/verification records",
+        "real CPU reset-vector reads 0,2,4,6 data words 0000,8000,0000,4000",
+        "fixture and binary/source hashes",
+        "4MiB initial/final RAM dumps each",
+        "8/16/32-bit writes and big-endian values",
+        "upper addresses 0x3ffffe,0x3ffffc,0x3fffff",
+        "M68000 exception vector 3, address error frames and stack writes",
+        "unmapped address 0x400000 no alias",
+        "RAM-09 equal normalized RAM-01 clean-repeat"
+      ],
+      "evidence_drive_run_folder_id": "1CIbxw7nuftqs-M6l7Ap4I0-8MDerHWHV",
+      "evidence_wrapper_file_id": "1tt1f8pHm2j77C-fTY8mQbca5F0I3-6qg",
+      "evidence_suite_file_id": "1uHQQ0f7fX79lMzPM0RQH4fXK_sBGE92g",
+      "runtime_archive_sha256": "76835ff2595d0a23b7bfd25c91bb7e21e19ea1a20e271002a2e5ce67f4fcbc1d"
+    }
+  },
+  "commander_calls_authorized": 10,
+  "commander_calls_used": 2,
+  "commander_calls_remaining": 8
+}
