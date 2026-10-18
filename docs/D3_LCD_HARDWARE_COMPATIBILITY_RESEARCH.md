@@ -72,3 +72,56 @@ Pinned `src/devices/video/mc68328lcd.cpp/.h` supplies an MAME panel sink with `f
 5. **Full electrical/refresh precision later**: PLL-derived clock, 50–70 Hz timing validation, pin waveforms, LACD, analog contrast, PWM and hardware cursor/grayscale if guest later uses them. Touchscreen is a **separate input subsystem**. Physical panel part number/pinout and replacement compatibility remain **unknown**, not relevant to the first DIAG bitmap.
 
 **No Codex agent was invoked and no runtime emulator test was run during this research.** When handing a subsequent LCD increment to Codex, give the user the **full exact copyable prompt** and require Codex to read these pinned sources first. Never use generic MAME, stable, or POSE as a test emulator: **dana-diag is exclusive**.
+
+## 6. Supplemental pin-multiplex and donor-geometry audit — 2026-10-17
+
+**Status: STATIC SOURCE AUDIT ONLY.** This supplements, rather than restarts, Sections 1–5. No emulator, T, Commander, Codex, ROM rebuild, product driver edit or D2.2 job was involved. **No D3 runtime PASS is claimed.** Immutable source pins remain those listed in Section 1.
+
+### 6.1 Physical VZ pin function vs. Dana board control
+
+The manufacturer MC68VZ328UM/D §§2.3/8.2.1 pin descriptions and current original-guest initialization together establish the following multiplexing. These are **VZ CPU pin functions**, not a proven pinout of the physical glass module or Dana LCD ribbon:
+
+| VZ pins | Dedicated LCD signal in 4-bit mode | Dana-relevant constraint |
+| --- | --- | --- |
+| PC[3:0] | LD[3:0], four pixel-data wires | `PCSEL=0` selects dedicated functions; D2.2 currently models only the PCSEL configuration latch, not physical signal propagation. |
+| PC4 | LFRM frame marker (older donor/manual spells FLM/LFLM) | Motorola UMAD requires the LFRM naming correction. |
+| PC5 | LLP line pulse | This is frame/line timing, not a separate memory address/data bus. |
+| PC6 | LCLK pixel shift clock | Separate from the CPU clock and LCD frame rate. |
+| PC7 | LACD alternate crystal direction | Needed for electrically faithful STN waveforms, not for decoding an initial logical framebuffer. |
+| PK[7:4] | LD[7:4] only for wider bus modes | In the currently evidenced 4-bit guest mode, Dana uses PK7 and PK4 as **board GPIO**, respectively panel enable and backlight. Do not indiscriminately switch to an 8-wire data bus. |
+| PF0 | LCONTRAST dedicated function | Original EmuTOS writes PFSEL bit0, but the separate Dana-specific serial contrast transaction below must not be replaced with a fabricated PWM register write. |
+
+Pinned `bios/dana.c` performs `PCSEL=0; PCPDEN=0; PFSEL|=1; PKSEL|=0x90; PKDATA|=0x90`. This gives the port-C D2.2 work a direct functional dependency in D3: **the PCSEL latch precedes actual LCD signaling, but its existence alone does not implement the LCD controller**.
+
+The original `bios/dana2.S::_dana_set_lcd_contrast` bit-bangs **PF6 on PFDATA=0xFFFFF429 as serial data** and **PK6 clock / PK3 command-strobe on PKDATA=0xFFFFF441**. The pinned Dana-specific Retro68 POSE class separately corroborates **PK7=0x80 panel power** and **PK4=0x10 backlight**. Guest GPIO read/modify/write behavior must remain coherent; do not fake a ready/power state or assign LCD data pins to those GPIOs.
+
+### 6.2 Critical MAME reuse boundary: 560 means 560, not 561
+
+Pinned MAME `mc68328.cpp` contains both classic `mc68328_device` and `mc68ez328_device` LCD implementations. **They are not interchangeable with VZ register semantics**:
+
+- The **classic** `mc68328_device::lcd_get_width()` returns `(LXMAX & mask)+1`, which would be **561** for Dana's `LXMAX=0x0230`: an off-by-one if copied unchanged.
+- The **EZ** implementation returns `LXMAX & 0x03F0`, giving **560**, in agreement with manufacturer Table 8-4: VZ `LXMAX` is the actual pixel width, a multiple of sixteen. Its height remains **`LYMAX+1 = 0x009F+1 = 160`**.
+- The **VZ** `LVPW=0x23` means **35 16-bit memory words per line**, hence 70 bytes, with 140 four-pixel shift groups per line. Do not use the classic `LLBAR`-dependent word-count calculation for Dana.
+- The EZ-specific donor `lrra_w(u8)` on `0xFFFFFA29` is **not valid for VZ**; official UMAD fixes VZ LRRA at `0xFFFFFA28`, **16 bits**, reset `0x00FF`.
+
+**Reuse split:** use the BSD-3-Clause `mc68328_lcd_device` panel sink (`flm_w`, `llp_w`, `lsclk_w`, `ld_w`, `lcd_info_changed`, `video_update`), MAME screen/palette/scheduler facilities, native CPU address space and DMA-style RAM reading. Implement a **VZ-accurate register/geometry/clock/pin generator** in Dana's own hardware path. Pinned `src/mame/palm/palm.cpp` provides working `SCREEN(config,...).set_lcd()`, `MC68328_LCD`, callback-binding and video-update integration examples, **source only**.
+
+Test-owned 16-bit sample `0xA53C` must yield exactly four consecutive LD[3:0] values **A, 5, 3, C** (the first active pixel on LD3) and render 16 ordered 1-bpp pixels; prevent channel/polarity reversal or a 561st column. The donor `mc68328_lcd_device` saves panel timing/counters but its `m_lcd_bitmap` is not directly registered as a save-state item in the examined source. Therefore after a save/load, require a deterministic complete new scan/frame before asserting restored screenshot equivalence, rather than assuming the display bitmap itself was serialized.
+
+### 6.3 Performance/refresh and distinct Dana models
+
+At the manual's **general LCD refresh target 50–70 Hz**, the 1-bpp Dana frame entails:
+- **11,200 guest-RAM bytes / 5,600 words per frame**, approximately **560–784 kB/s** of ideal raw frame-data reads.
+- **22,400 four-pixel LD groups per frame**, approximately **1.12–1.568 million groups/s** averaged over a full frame. Actual shift-clock frequency requires blanking, PLL, LRRA and DMA scheduling; these are **not measured Dana clock rates**.
+- An illustrative 60 Hz frame produces 672,000 bytes/s and 1.344 million groups/s, before hardware timing overhead.
+
+The original Dana was reported with **560x160 and 4 grayscale shades** in specifications attributed directly to AlphaSmart (2003 review: https://the-gadgeteer.com/2003/06/19/alphasmart_dana_palm_powered_laptop_review/); contemporary Dana Wireless announcement advertises **16 grayscale shades** (https://www.palminfocenter.com/news/5583/alphasmart-announces-the-dana-wireless/). These are product-level reports, not validated exact glass controller part numbers or ribbon pinouts. The **actual immutable EmuTOS-Dana port configures `LPICF=0x08` (1bpp monochrome)**; neither historical product claim changes that first guest-functional contract. Support for 4/16 gray modes is a **separate, version-dependent future scope**, not a reason to defer D3 first pixels. The Motorola UMAD explicitly corrects the earlier mistaken product feature description of **color STN** to **single monochrome STN**.
+
+### 6.4 Concrete pre-integration verdict
+
+1. **Compatible now by source audit:** MAME's 4-line/1bpp serialization and panel sink; 560x160 screen infrastructure; standard MAME timer and memory APIs.
+2. **Must be adapted to VZ before functional PASS:** LCD MMIO with accurate 8/16/32-bit widths and byte lanes, actual 560-pixel width, 35-word line stride, dynamically guest-written LSSA, 1 MiB image-boundary and 4 MiB RAM limits, LCDON-controlled scanning and selective GPIO mux/power semantics.
+3. **Not required for first virtual screen:** glass vendor and flat-flex connector pinout, LCD bias voltages, electrical drive waveforms, real measured MHz, touchscreen/stylus, full grayscale palette, full Dana Flash cold boot.
+4. **Acceptance:** test-owned CPU-origin MMIO + real 4 MiB guest RAM bitmap → exactly 560x160/1bpp at `dana-diag`, repeatability, off/on, multi-buffer LSSA and save/restore; then **unmodified EmuTOS-generated** frame only after real D2.2/GPIO blockers are resolved. Never substitute a host-painted image or another emulator.
+
+**New source cross-checks:** [VZ manual](https://www.nxp.com/docs/en/user-guide/MC68VZ328UM.pdf) §§2.3, 8.2–8.3 and [UMAD](https://www.nxp.com/docs/en/user-guide/MC68VZ328UMAD.pdf); [pinned MAME CPU LCD scan](https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/machine/mc68328.cpp) (`lcd_get_width`, `lcd_get_line_word_count`, `lcd_scan_tick`); [pinned MAME panel](https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/video/mc68328lcd.cpp) and [Palm wiring](https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/mame/palm/palm.cpp); [original EmuTOS Dana](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/dana.c) and [contrast bit-bang](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/dana2.S); [pinned Dana-specific POSE](https://github.com/csnover/Retro68/blob/d917b67b16bef7bcf5c75a74f617710c32addcbc/PalmUtils/poser/SrcShared/Hardware/EmRegsVZAlphaSmart.cpp), consulted for behavior only (GPL). No third-party implementation code is copied.
