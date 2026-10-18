@@ -1,5 +1,5 @@
 {
-  "status": "BLOCKED",
+  "status": "SOURCE_READY_SPEC_VERIFIED_NATIVE_UNRUN",
   "scope": "Issue 9 Port C R-direct continuation candidate",
   "source_base": "4494a7e702244e744d21908a4661550a86f560de",
   "native_runtime": "UNRUN",
@@ -19,7 +19,27 @@
       "R_direct_profile": "0x00"
     }
   },
-  "physical_reset_and_manufacturer_contract": "BLOCKED_SPEC_NXP_PDFS_NETWORK_POLICY_403",
+  "physical_reset_and_manufacturer_contract": {
+    "status": "VERIFIED_FROM_MOTOROLA_USER_MANUAL_AND_ADDENDUM",
+    "PCPDEN": {
+      "address": "0xFFFFF412",
+      "width_bits": 8,
+      "physical_reset": "0xFF",
+      "rw_mask": "0xFF",
+      "meaning": "Each 1 enables Port C pull-down resistor"
+    },
+    "PCSEL": {
+      "address": "0xFFFFF413",
+      "width_bits": 8,
+      "physical_reset": "0xFF",
+      "rw_mask": "0xFF",
+      "meaning": "0 dedicated function, 1 GPIO"
+    },
+    "source": "MC68VZ328UM/D 10.4.3.4-10.4.3.5 Tables 10-15/10-16",
+    "addendum": "MC68VZ328UMAD/D Rev7: no reset change for these; LCD pin mnemonic LFLM to LFRM",
+    "implementation_scope": "R_DIRECT_POST_BOOTSTRAP_SOFTWARE_PROFILE_ZERO_NOT_HARDWARE_COLD_RESET",
+    "physical_io_pin_effects": "NOT_MODELED"
+  },
   "next_actual_hardware_dependency": "UNOBSERVED_THIS_CANDIDATE",
   "source_predicted_next_access": "PFSEL 0xFFFFF42B; not native evidence",
   "prior_D2_1_raw_bus_lane_interpretation": "0xFFFFF412 mask 0x00FF selects PCSEL at 0xFFFFF413",
@@ -33,8 +53,8 @@
   ],
   "qualification_job": {
     "path": "tests/hold/005_dana_portc_native_diag.job.sh",
-    "state": "LOCAL_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
-    "drive_blocker": "NO_CONNECTED_DRIVE_TOOL_OR_CONFIGURED_RCLONE_REMOTE",
+    "state": "GITHUB_SOURCE_HOLD_NO_T_LAUNCH_PENDING_DRIVE_UPLOAD",
+    "drive_blocker": "NOT_RECHECKED_AFTER_SOURCE_AND_MANUAL_VERIFICATION",
     "emulator": "STAGED_DANA_DIAG_ONLY",
     "authorization_variable": "DANA_D2_2_AUTHORIZED=YES",
     "source_commit": "b0258eb126994e5fbb61866ec3070aae7c538fc8",
@@ -42,5 +62,6 @@
   },
   "T_calls": 0,
   "Commander_calls": 0,
-  "guest_rebuilds": 0
+  "guest_rebuilds": 0,
+  "next_action": "Preserve D2.2 R-direct handlers; pin native job to updated source commit, qualify job syntax/SHA and upload to private Drive HOLD; no native T or other emulator until separate authorization."
 }
