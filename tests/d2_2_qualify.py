@@ -73,7 +73,8 @@ def assess(observations):
         raise ValueError('Non-repeatable CPU/bus hardware continuation')
     return {'status':'PASS','scope':'Authentic CPU-origin Port C continuation only',
             'next_dependencies':dependencies,'zero_write_counts':counts,
-            'manufacturer_reset':'BLOCKED_SPEC_OFFICIAL_PDFS_UNAVAILABLE'}
+            'manufacturer_reset':'MOTOROLA_0xFF_PHYSICAL_R_DIRECT_0x00_SOFTWARE',
+            'manufacturer_source':'MC68VZ328UM_D_10.4.3.4-10.4.3.5_TABLES_10-15_10-16'}
 
 
 def main():
