@@ -79,9 +79,12 @@
     "emulator": "STAGED_DANA_DIAG_ONLY",
     "authorization_variable": "DANA_D2_2_R1_AUTHORIZED=YES",
     "reference_variable": "DANA_D2_2_R1_BINARY=/absolute/existing/diag/bin/dana-diag",
-    "rebuild_fallback": false
+    "rebuild_fallback": false,
+    "source_commit": "e7e1c386325c67b144f56a03d35b407400ae2c86",
+    "sha256": "f0b4e9b91ca26e38236e55ee844b4882d47a5410b9b1fb064d084639c7bdbd20"
   },
   "native_R1": "PENDING",
   "T_calls_this_revision": 0,
-  "Commander_calls_this_revision": 0
+  "Commander_calls_this_revision": 0,
+  "counts_scope": "THIS_CODEX_R1_DELIVERY_ONLY"
 }
