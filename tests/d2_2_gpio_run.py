@@ -275,4 +275,7 @@ def main():
     return {'PASS':0,'FAIL':1,'BLOCKED':2}[result['status']]
 
 
-if __name__=='__main__':sys.exit(main())
+if __name__=='__main__':
+    # R2 changes B only; qualified.execute and its A Lua/fixture/verifier stay intact.
+    from d2_2_r2_gpio import main as r2_main
+    sys.exit(r2_main())

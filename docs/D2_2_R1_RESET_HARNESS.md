@@ -1,5 +1,7 @@
 # D2.2-R1 — independent native Port C save/restore and reset qualification
 
+> **2026-10-18 checkpoint:** Independent native review reports A PASS, B BLOCKED/VIRTUAL_TIMEOUT despite vectors and fixture replay. This R1 document is historical. [R2](D2_2_R2_CPU_RESET.md) preserves qualified A and uses a CPU marker/read/store/STOP path for B, without requiring the absent post-reset callback or a post-reset breakpoint. R2_STATIC_PASS / NATIVE_PENDING; no new native execution or production change.
+
 **2026-10-17 local. Harness implementation and offline checks complete; native R1 qualification PENDING.** Continue `codex/dana-d1-2-ram-bus`, draft [PR #7](https://github.com/SamDelorean/DANA-emu/pull/7), from `e9a71dbbac609197aa84042081bfde842a516d4b`. No production source, register handler, reset profile, guest, toolchain or reference checkout changed.
 
 ## Trigger and bounded correction
