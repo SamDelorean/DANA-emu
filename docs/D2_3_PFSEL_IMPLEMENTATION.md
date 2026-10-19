@@ -167,7 +167,9 @@ readbacks, traces, RAM, build logs, map, provenance, independent results and a
 hash manifest go to the existing private outbox archive/receipt transport.
 Upload problems prevent success. No binary is published.
 
-Final immutable source pin/job SHA are in `tests/d2_3_candidate_status.json`.
+Immutable job source: `11cb0d3f46c787f0a5061118b324f2bcedc4a712`.
+Job SHA256: `eb2f94bcb6c6d881c178e162e799227121061768a87045fa13461acda8965b27`.
+These identities are also in `tests/d2_3_candidate_status.json`.
 **Remaining:** full new MAME compilation and all native D2.3/E5 outcomes are
 NATIVE_PENDING. No emulator, MAME/EmuTOS build, T/Commander action, merge or
 Drive dispatch occurred in Codex. Only isolated allowed C++ logic programs and

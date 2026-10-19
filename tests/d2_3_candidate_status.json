@@ -119,13 +119,13 @@
   },
   "qualification_job": {
     "path": "tests/hold/010_dana_d23_pfsel_diag.job.sh",
-    "state": "SOURCE_FREEZE_PENDING_LOCAL_GIT_HOLD",
+    "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization": [
       "DANA_D2_3_AUTHORIZED=YES",
       "DANA_D2_3_BUILD_AUTHORIZED=YES"
     ],
-    "source_commit": null,
-    "sha256": null,
+    "source_commit": "11cb0d3f46c787f0a5061118b324f2bcedc4a712",
+    "sha256": "eb2f94bcb6c6d881c178e162e799227121061768a87045fa13461acda8965b27",
     "new_DIAG_builds": 1,
     "ROM_builds": 0,
     "native_processes": 4,
