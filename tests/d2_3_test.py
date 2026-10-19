@@ -413,6 +413,9 @@ int main() {
         self.assertIn('PORT_START("KEYS")',src)
         for key in ('KEYCODE_A','KEYCODE_B','KEYCODE_ENTER','KEYCODE_SPACE'):
             self.assertIn(key,src)
+        # Guest polls PF1 active-low pen interrupt. Idle must NOT look pressed.
+        self.assertIn('u8 pf_r(offs_t reg)',src)
+        self.assertIn('value |= 0x02;',src)
         self.assertIn('m_st_ready=true;',src)
         self.assertIn('m_st_hello=true;',src)
         self.assertIn('(m_spi2_ctrl & 0x2100)!=0x2100',src)
