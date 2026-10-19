@@ -119,7 +119,7 @@ private:
 #undef DANA_LCD_BYTE
 #define DANA_LCD_WORD(NAME) \
     u16 NAME##_r() { return m_##NAME; } \
-    void NAME##_w(offs_t, u16 data, u16 mask) { COMBINE_DATA(&m_##NAME); }
+    void NAME##_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_##NAME); }
     DANA_LCD_WORD(lxmax)
     DANA_LCD_WORD(lymax)
     DANA_LCD_WORD(lrra)
