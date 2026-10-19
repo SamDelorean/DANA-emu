@@ -329,12 +329,12 @@ u8 alphasdana_state::st_exchange(u8 command)
     if (m_st_queue_left)
     {
         u8 const bits=m_st_pending_keys;
-        m_st_queue_left=0;
+        --m_st_queue_left;
         // Four bounded host keys: A, B, Return, Space. In real Dana protocol
         // these are ST scan bytes, not Atari/Amiga key codes.
         static constexpr u8 st_scan[4]={0x2b,0x7a,0x2e,0x7e};
         for(unsigned i=0;i<4;++i)
-            if (bits & (1<<i)) { m_st_pending_keys &= ~(1<<i); m_st_queue_left=1; return st_scan[i]; }
+            if (bits & (1<<i)) { m_st_pending_keys &= ~(1<<i); return st_scan[i]; }
         return 0;
     }
     u8 const keys=m_keys->read() & 0x0f;
@@ -344,7 +344,7 @@ u8 alphasdana_state::st_exchange(u8 command)
         m_st_pending_keys=keys;
         unsigned count=0;
         for(unsigned i=0;i<4;++i) count+=BIT(keys,i);
-        m_st_queue_left=count ? 1 : 0;
+        m_st_queue_left=count;
         return u8(0x40 | count);
     }
     return 0;
