@@ -54,6 +54,33 @@ protected:
 
 private:
     void program_map(address_map &map) ATTR_COLD;
+    void cpu_space_map(address_map &map) ATTR_COLD;
+    void update_irq_lines();
+    u8 irq_vector_r(offs_t offset);
+    TIMER_CALLBACK_MEMBER(timer1_compare);
+    u32 timer1_source_hz() const;
+    void timer1_schedule();
+    u16 timer1_tctl_r() { return m_tctl1; }
+    void timer1_tctl_w(offs_t, u16 data, u16 mem_mask);
+    u16 timer1_tprer_r() { return m_tprer1; }
+    void timer1_tprer_w(offs_t, u16 data, u16 mem_mask);
+    u16 timer1_tcmp_r() { return m_tcmp1; }
+    void timer1_tcmp_w(offs_t, u16 data, u16 mem_mask);
+    u16 timer1_tcr_r() { return m_tcr1; }
+    u16 timer1_tcn_r();
+    u16 timer1_tstat_r();
+    void timer1_tstat_w(offs_t, u16 data, u16 mem_mask);
+    u16 uart1_ustcnt_r() { return m_ustcnt1; }
+    void uart1_ustcnt_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_ustcnt1); }
+    u16 uart1_ubaud_r() { return m_ubaud1; }
+    void uart1_ubaud_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_ubaud1); }
+    u16 uart1_urx_r() { return m_urx1; }
+    u16 uart1_utx_r() { return (m_utx1 & 0x1fff) | 0xe000; }
+    void uart1_utx_w(offs_t, u16 data, u16 mem_mask);
+    u16 uart1_umisc_r() { return m_umisc1; }
+    void uart1_umisc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_umisc1); }
+    u16 uart1_prescaler_r() { return m_uart_prescaler1; }
+    void uart1_prescaler_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_uart_prescaler1); }
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
@@ -159,6 +186,11 @@ private:
     required_shared_ptr<u16> m_ram;
     required_ioport m_keys;
     emu_timer *m_clk32_timer = nullptr;
+    emu_timer *m_timer1_timer = nullptr;
+    u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
+    u16 m_tcr1=0, m_tcn1=0, m_tstat1=0, m_tstat_clear1=0;
+    u16 m_ustcnt1=0, m_ubaud1=0x0002, m_urx1=0, m_utx1=0, m_umisc1=0;
+    u16 m_uart_prescaler1=0;
     u16 m_pllfsr = 0x0347;
     bool m_clk32_high = false;
     u8 m_ivr = 0;
@@ -185,6 +217,7 @@ private:
 void alphasdana_state::machine_start()
 {
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
+    m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
     save_item(NAME(m_pllfsr));
     save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
@@ -192,6 +225,13 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_icr));
     save_item(NAME(m_imr));
     save_item(NAME(m_pending));
+    save_item(NAME(m_tctl1)); save_item(NAME(m_tprer1));
+    save_item(NAME(m_tcmp1)); save_item(NAME(m_tcr1));
+    save_item(NAME(m_tcn1)); save_item(NAME(m_tstat1));
+    save_item(NAME(m_tstat_clear1));
+    save_item(NAME(m_ustcnt1)); save_item(NAME(m_ubaud1));
+    save_item(NAME(m_urx1)); save_item(NAME(m_utx1));
+    save_item(NAME(m_umisc1)); save_item(NAME(m_uart_prescaler1));
     save_item(NAME(m_pcpden));
     save_item(NAME(m_pcsel));
     save_item(NAME(m_pfsel));
@@ -233,6 +273,12 @@ void alphasdana_state::machine_reset()
     m_icr = 0;
     m_imr = 0x00ffffff;
     m_pending = 0;
+    m_tctl1=0; m_tprer1=0; m_tcmp1=0xffff;
+    m_tcr1=0; m_tcn1=0; m_tstat1=0; m_tstat_clear1=0;
+    m_timer1_timer->adjust(attotime::never);
+    m_ustcnt1=0; m_ubaud1=0x0002; m_urx1=0;
+    m_utx1=0; m_umisc1=0; m_uart_prescaler1=0;
+    update_irq_lines();
     // dbztool@d327023 danainit.sh configures PCPDEN=PCSEL=0 before RAM
     // entry. This machine implements that synthetic post-bootstrap profile.
     // POSE's 0xff initial values are NOT manufacturer reset evidence.
@@ -442,16 +488,15 @@ void alphasdana_state::ivr_w(u8 data)
 }
 
 
-// VZ interrupt configuration/status prefix used by dana_init. Native MAME
-// register/word-lane pattern (mc68328.cpp), VZ mask/layout from the UM interrupt-controller definitions and
-// D0.2. No IRQ sources are implemented/asserted here: pending really is zero.
-// PLLCR, PCTRL, Timer and UART stay unmapped pending independent contracts.
-// PLLFSR and the two Port C configuration bytes are independently decoded.
+// VZ interrupt group. Timer1 source bit1 -> IRQ6, UART1 bit2 -> IRQ4.
+// Guest IVR=0x40 and CPU space IACK allow authentic interrupt vectors.
+// PLLCR/PCTRL and unrelated sources stay unimplemented; no broad MMIO stub.
 void alphasdana_state::imr_w(offs_t offset, u16 data, u16 mem_mask)
 {
     unsigned const shift = offset ? 0 : 16;
     u32 const mask = u32(mem_mask) << shift;
     m_imr = ((m_imr & ~mask) | (u32(data & mem_mask) << shift)) & 0x00ffffff;
+    update_irq_lines();
 }
 
 void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
@@ -464,6 +509,7 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
             | ((m_icr >> 7) & 4) | ((m_icr >> 5) & 8);
         m_pending &= ~(u32(data & mem_mask & edges) << 16);
     }
+    update_irq_lines();
 }
 
 QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
@@ -521,6 +567,11 @@ QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
     return std::make_pair(std::error_condition(), std::string());
 }
 
+void alphasdana_state::cpu_space_map(address_map &map)
+{
+    // The M68000 IRQ acknowledge vector lives in CPU space, not MMIO RAM.
+    map(0xfffffff0,0xffffffff).r(FUNC(alphasdana_state::irq_vector_r)).umask16(0x00ff);
+}
 void alphasdana_state::program_map(address_map &map)
 {
     // Preserve the independently qualified D1.2 synthetic post-bootstrap RAM.
@@ -534,6 +585,20 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff304, 0xfffff307).rw(FUNC(alphasdana_state::imr_r), FUNC(alphasdana_state::imr_w));
     map(0xfffff30c, 0xfffff30f).rw(FUNC(alphasdana_state::isr_r), FUNC(alphasdana_state::isr_w));
     map(0xfffff310, 0xfffff313).r(FUNC(alphasdana_state::ipr_r));
+    // Timer1 / UART1 complete register groups (individual, true VZ lanes).
+    map(0xfffff600,0xfffff601).rw(FUNC(alphasdana_state::timer1_tctl_r),FUNC(alphasdana_state::timer1_tctl_w));
+    map(0xfffff602,0xfffff603).rw(FUNC(alphasdana_state::timer1_tprer_r),FUNC(alphasdana_state::timer1_tprer_w));
+    map(0xfffff604,0xfffff605).rw(FUNC(alphasdana_state::timer1_tcmp_r),FUNC(alphasdana_state::timer1_tcmp_w));
+    map(0xfffff606,0xfffff607).r(FUNC(alphasdana_state::timer1_tcr_r));
+    map(0xfffff608,0xfffff609).r(FUNC(alphasdana_state::timer1_tcn_r));
+    map(0xfffff60a,0xfffff60b).rw(FUNC(alphasdana_state::timer1_tstat_r),FUNC(alphasdana_state::timer1_tstat_w));
+    map(0xfffff900,0xfffff901).rw(FUNC(alphasdana_state::uart1_ustcnt_r),FUNC(alphasdana_state::uart1_ustcnt_w));
+    map(0xfffff902,0xfffff903).rw(FUNC(alphasdana_state::uart1_ubaud_r),FUNC(alphasdana_state::uart1_ubaud_w));
+    map(0xfffff904,0xfffff905).r(FUNC(alphasdana_state::uart1_urx_r));
+    map(0xfffff906,0xfffff907).rw(FUNC(alphasdana_state::uart1_utx_r),FUNC(alphasdana_state::uart1_utx_w));
+    map(0xfffff908,0xfffff909).rw(FUNC(alphasdana_state::uart1_umisc_r),FUNC(alphasdana_state::uart1_umisc_w));
+    map(0xfffff90a,0xfffff90b).rw(FUNC(alphasdana_state::uart1_prescaler_r),FUNC(alphasdana_state::uart1_prescaler_w));
+
     // VZ Port C: eight pulldown enables and eight GPIO/function selects.
     // Native u8 handlers preserve the M68000 high/even and low/odd lanes,
     // including a word spanning both registers. No PCDIR/PCDATA, external
@@ -585,6 +650,7 @@ void alphasdana_state::alphasdana(machine_config &config)
     // Placeholder CPU frequency, not a calibrated VZ PLL.
     DANA_VZ_CPU(config, m_maincpu, 1'000'000);
     m_maincpu->set_addrmap(AS_PROGRAM, &alphasdana_state::program_map);
+    m_maincpu->set_addrmap(AS_CPU_SPACE, &alphasdana_state::cpu_space_map);
     // Reuse MAME's LCD screen infrastructure; the only pixel source is guest RAM.
     SCREEN(config, m_screen).set_lcd();
     m_screen->set_refresh_hz(60); // Display cadence provisional; VZ PLL timing pending.
