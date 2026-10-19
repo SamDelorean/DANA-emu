@@ -423,6 +423,151 @@ int main() {
         self.assertFalse(f1.implemented_byte(0xfffff800,'read',False))
         self.assertTrue(f1.implemented_byte(0xfffff802,'read',True))
 
+
+class IntegratedTimerUARTIRQ(unittest.TestCase):
+    """Single grouped source test: timer scheduler, IRQ6/4 IACK and UART1 TX."""
+    def test_production_cpp_timer_uart_irq_in_isolation(self):
+        src=DRIVER.read_text()
+        a=src.index('void alphasdana_state::update_irq_lines()')
+        b=src.index('QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)',a)
+        production=src[a:b]
+        code=r"""
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+using u8=std::uint8_t;
+using u16=std::uint16_t;
+using u32=std::uint32_t;
+using u64=std::uint64_t;
+using offs_t=unsigned;
+#define ASSERT_LINE 1
+#define CLEAR_LINE 0
+#define COMBINE_DATA(dst) (*(dst)=(*(dst)&~mem_mask)|(data&mem_mask))
+#define TIMER_CALLBACK_MEMBER(name) void name()
+#define logerror(...) ((void)0)
+struct attotime {
+    long double seconds;
+    static attotime never;
+    static attotime from_ticks(u64 ticks, u32 hz) {
+        return {static_cast<long double>(ticks)/hz};
+    }
+    u64 as_ticks(u32 hz) const { return u64(seconds*hz); }
+};
+attotime attotime::never{-1};
+struct FakeCPU {
+    int irq4=0,irq6=0;
+    void set_input_line(int level,int value) {
+        if (level==6) irq6=value;
+        else if (level==4) irq4=value;
+        else assert(false);
+    }
+};
+struct FakeTimer {
+    attotime delay=attotime::never;
+    attotime elapsed_value{0};
+    void adjust(attotime value) { delay=value; }
+    attotime elapsed() const { return elapsed_value; }
+};
+struct alphasdana_state {
+    FakeCPU *m_maincpu;
+    FakeTimer *m_timer1_timer;
+    u16 m_pllfsr=0x0347,m_tctl1=0,m_tprer1=0,m_tcmp1=0xffff;
+    u16 m_tcr1=0,m_tcn1=0,m_tstat1=0,m_tstat_clear1=0;
+    u16 m_utx1=0;
+    u32 m_pending=0,m_imr=0x00ffffff;
+    u8 m_ivr=0x40;
+    void update_irq_lines();
+    u8 irq_vector_r(offs_t);
+    TIMER_CALLBACK_MEMBER(timer1_compare);
+    u32 timer1_source_hz() const;
+    void timer1_schedule();
+    void timer1_tctl_w(offs_t,u16,u16);
+    void timer1_tprer_w(offs_t,u16,u16);
+    void timer1_tcmp_w(offs_t,u16,u16);
+    u16 timer1_tcn_r();
+    u16 timer1_tstat_r();
+    void timer1_tstat_w(offs_t,u16,u16);
+    void uart1_utx_w(offs_t,u16,u16);
+};
+""" + production + r"""
+int main() {
+    FakeCPU cpu;
+    FakeTimer timer;
+    alphasdana_state m;
+    m.m_maincpu=&cpu;
+    m.m_timer1_timer=&timer;
+    assert(m.timer1_source_hz()==33161216);
+    assert(m.irq_vector_r(6)==0x46 && m.irq_vector_r(4)==0x44);
+    m.timer1_tprer_w(0,2,0xffff);
+    m.timer1_tcmp_w(0,0xd7e4,0xffff);
+    m.timer1_tctl_w(0,0x0033,0xffff);
+    assert(timer.delay.seconds>0.004L && timer.delay.seconds<0.006L);
+    m.timer1_compare();
+    assert((m.m_tstat1&1) && (m.m_pending&2));
+    assert(cpu.irq6==0); // masked after reset
+    m.m_imr &= ~u32(2);
+    m.update_irq_lines();
+    assert(cpu.irq6==1);
+    assert(m.timer1_tstat_r()==1);
+    m.timer1_tstat_w(0,0,0xffff); // MAME donor read-then-write clear
+    assert(m.m_tstat1==0 && (m.m_pending&2)==0 && cpu.irq6==0);
+    // UART1 Tx-empty/Tx-ready, no unsolicited RX IRQ.
+    m.uart1_utx_w(0,0x0045,0x00ff);
+    assert(m.m_utx1==0x45 && cpu.irq4==0);
+    m.m_pending|=4;
+    m.update_irq_lines();
+    assert(cpu.irq4==0); // still masked
+    m.m_imr &= ~u32(4);
+    m.update_irq_lines();
+    assert(cpu.irq4==1 && cpu.irq6==0);
+    m.m_pending &= ~u32(4);
+    m.update_irq_lines();
+    assert(cpu.irq4==0);
+    m.timer1_tctl_w(0,0,0xffff);
+    assert(timer.delay.seconds<0);
+}
+"""
+        with tempfile.TemporaryDirectory(prefix='dana-timer-uart-cpp-') as tmp:
+            p=Path(tmp)
+            (p/'test.cpp').write_text(code)
+            compiler=shutil.which('c++')
+            self.assertIsNotNone(compiler)
+            subprocess.run([compiler,'-std=c++20','-O2','-Wall','-Wextra','-Werror',
+                            str(p/'test.cpp'),'-o',str(p/'test')],check=True,timeout=90)
+            subprocess.run([str(p/'test')],check=True,timeout=10)
+
+    def test_complete_vz_timer_uart_irq_map(self):
+        src=DRIVER.read_text()
+        pairs=[
+            ('timer1_tctl','0xfffff600,0xfffff601'),
+            ('timer1_tprer','0xfffff602,0xfffff603'),
+            ('timer1_tcmp','0xfffff604,0xfffff605'),
+            ('timer1_tcr','0xfffff606,0xfffff607'),
+            ('timer1_tcn','0xfffff608,0xfffff609'),
+            ('timer1_tstat','0xfffff60a,0xfffff60b'),
+            ('uart1_ustcnt','0xfffff900,0xfffff901'),
+            ('uart1_ubaud','0xfffff902,0xfffff903'),
+            ('uart1_urx','0xfffff904,0xfffff905'),
+            ('uart1_utx','0xfffff906,0xfffff907'),
+            ('uart1_umisc','0xfffff908,0xfffff909'),
+            ('uart1_prescaler','0xfffff90a,0xfffff90b')]
+        for name,address in pairs:
+            self.assertIn('map('+address+')',src)
+            self.assertIn('FUNC(alphasdana_state::'+name+'_r)',src)
+        for state in ('tctl1','tprer1','tcmp1','tcr1','tcn1','tstat1','tstat_clear1',
+                      'ustcnt1','ubaud1','urx1','utx1','umisc1','uart_prescaler1'):
+            self.assertIn('save_item(NAME(m_'+state+'));',src)
+        self.assertIn('set_addrmap(AS_CPU_SPACE, &alphasdana_state::cpu_space_map)',src)
+        self.assertIn('map(0xfffffff0,0xffffffff)',src)
+        self.assertIn('m_pending |= 0x00000002;',src)
+        self.assertIn('(active & 0x00000002)',src)
+        self.assertIn('(active & 0x00000004)',src)
+        self.assertNotIn('map(0xfffff600,0xfffff6ff)',src)
+        self.assertTrue(f1.implemented_byte(0xfffff602,'write',True))
+        self.assertTrue(f1.implemented_byte(0xfffff900,'read',True))
+        self.assertFalse(f1.implemented_byte(0xfffff602,'write',False))
+        self.assertFalse(f1.implemented_byte(0xfffff90c,'read',True))
+
 if __name__=='__main__':
     result=unittest.main(exit=False)
     print('D2_3_STATIC_PASS' if result.result.wasSuccessful() else 'D2_3_STATIC_FAIL')
