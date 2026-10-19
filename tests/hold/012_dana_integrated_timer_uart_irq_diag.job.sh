@@ -215,8 +215,12 @@ try:
         if len(version)>32768 or not re.search(r'\bversion 21\.',version):raise RuntimeError('BLOCKED_CLANG21_VERSION')
         summary['toolchain'][compiler]=version.splitlines()[:8]
     command=['make','-j3','TARGET=mame','SUBTARGET=danadiag','SOURCES='+driver,'BUILDDIR=build/dana-diag',
-             'REGENIE=1','TOOLS=0','DEBUG=1','PRECOMPILE=0','USE_QTDEBUG=0',
+             'TOOLS=0','DEBUG=1','PRECOMPILE=0','USE_QTDEBUG=0',
              'OVERRIDE_CC='+cc,'OVERRIDE_CXX='+cxx,'OVERRIDE_LD='+cxx]
+    # Donor MAME makefile uses "ifdef REGENIE"; even REGENIE=0
+    # forces full project regeneration. Omit this variable to retain
+    # 011 generated projects and their incremental object/dependency cache.
+    summary['incremental_build']['regenie_forced']=False
     summary['MAME_builds']=1;save()
     stage('build-diag',command,cwd=mame,timeout=7200,env=dict(os.environ,CC=cc,CXX=cxx,LD=cxx))
     # Record objective reused-versus-touched object metadata, not an
