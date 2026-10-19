@@ -273,7 +273,7 @@ class IntegratedGPIOAndLCD(unittest.TestCase):
     """Grouped source behavior; no claim that new dana-diag binary was run."""
     def test_rdirect_eight_port_profile(self):
         src=DRIVER.read_text()
-        match=re.search(r'static constexpr u8 profile\\[32\\] = \\{([^}]*)\\}',src,re.S)
+        match=re.search(r'static constexpr u8 profile\[32\] = \{([^}]*)\}',src,re.S)
         self.assertIsNotNone(match)
         profile=[int(v,16) for v in re.findall(r'0x[0-9a-f]+',match.group(1))]
         self.assertEqual(profile,[0x60,0,0,0x60,0,0,0x1f,0x10,
