@@ -173,7 +173,11 @@ try:
         observation=json.loads((folder/'observation.json').read_text())
         mmio=observation['events']
         def count_mmio(lo,hi):
+            # Only CPU bus transactions up to the FIRST unsupported peripheral
+            # qualify native forward progress. Deferred post-block activity is
+            # retained in the raw trace but not scored as working hardware.
             return sum(e.get('origin')=='cpu' and e.get('kind') in ('read','write')
+                       and not e.get('after_dependency',False)
                        and lo<=e.get('address',-1)<=hi for e in mmio)
         lcd=observation.get('guest_lcd') or {}
         item=dict(run=which,spi2_cpu_events=count_mmio(0xfffff800,0xfffff803),
@@ -189,8 +193,37 @@ try:
             item.update(lcd_frame_present=True,lcd_frame_sha256=digest(framebuffer))
         elif framebuffer.exists():
             raise RuntimeError('BLOCKED_UNPROGRAMMED_LCD_FRAME_WRITTEN:'+which)
+        # A bus readback of 0xAA is evidence of the ST greeting only if
+        # the authentic 68000 performed it before any unsupported dependency.
+        item['st_greeting_cpu_read'] = any(
+            e.get('origin')=='cpu' and e.get('kind')=='read'
+            and not e.get('after_dependency',False)
+            and e.get('address')==0xfffff800
+            and (e.get('data',0)&0xff)==0xaa for e in mmio)
+        item['lcd_snapshot_class'] = (
+            'UNCONFIGURED' if not lcd.get('geometry_configured') else
+            'FRAME_SNAPSHOT_NONBLANK' if lcd.get('nonzero_bytes',0)>0 else
+            'FRAME_SNAPSHOT_BLANK')
         integrated.append(item)
     summary['integrated_observations']=integrated
+    # Full system/peripheral qualification is never implied by an early
+    # authentic EmuTOS first-dependency result. Interactive host keys, native
+    # keyboard events and LCD graphical correctness require independent proof.
+    summary['component_verdicts'] = dict(
+        pfsel_A_B='PASS_SCOPED',
+        emutos_continuation=native['status'],
+        spi2_st_greeting=('CPU_ORIGIN_OBSERVED'
+                          if all(r['st_greeting_cpu_read'] for r in integrated)
+                          else 'NATIVE_PENDING'),
+        lcd_guest_frame=('CAPTURED_NONBLANK'
+                         if all(r['lcd_snapshot_class']=='FRAME_SNAPSHOT_NONBLANK' for r in integrated)
+                         else 'CAPTURED_BLANK' if all(r['lcd_frame_present'] for r in integrated)
+                         else 'NATIVE_PENDING'),
+        lcd_visual_correctness='NOT_QUALIFIED',
+        keyboard_interactive='NOT_QUALIFIED',
+        lcd_dma_timing='NOT_QUALIFIED',
+        touchscreen='NOT_QUALIFIED',
+        full_emutos_boot='NOT_QUALIFIED')
     save()
     summary.update(native_result=native,native_status=native['status'],reason=native['reason'])
     summary['status']='BLOCKED_TRANSPORT_PENDING' if native['status']=='REAL_PROGRESS_PASS_SCOPED' else native['status']
