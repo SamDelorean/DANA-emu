@@ -64,11 +64,11 @@ def write_verified_guest_png(frame_bytes,out):
     def chunk(kind,data):
         return (struct.pack('!I',len(data))+kind+data+
                 struct.pack('!I',zlib.crc32(kind+data)&0xffffffff))
-    png=(b'\\x89PNG\\r\\n\\x1a\\n'+
+    png=(b'\x89PNG\r\n\x1a\n'+
          chunk(b'IHDR',struct.pack('!2I5B',560,160,8,0,0,0,0))+
          chunk(b'IDAT',zlib.compress(scan,9))+chunk(b'IEND',b''))
     out.write_bytes(png)
-    if not png.startswith(b'\\x89PNG\\r\\n\\x1a\\n'):raise RuntimeError('INVALID_DERIVED_PNG')
+    if not png.startswith(b'\x89PNG\r\n\x1a\n'):raise RuntimeError('INVALID_DERIVED_PNG')
     return digest(out)
 
 
