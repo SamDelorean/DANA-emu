@@ -266,13 +266,15 @@ try:
     import re
     irq6_runs=[]
     for which in ('run-1','run-2'):
-        console=evidence/'guest'/which/'console.log'
-        log=console.read_text(errors='replace')
+        run_dir=evidence/'guest'/which
+        logs=[run_dir/name for name in ('error.log','console.log') if (run_dir/name).is_file()]
+        if not logs:raise RuntimeError('BLOCKED_NATIVE_GUEST_DIAGNOSTIC_LOGS_MISSING:'+which)
+        log='\\n'.join(p.read_text(errors='replace') for p in logs)
         ack=re.findall(r'DANA_VZ_IACK level=6 vector=46 pending=([0-9a-fA-F]+) imr=([0-9a-fA-F]+) ack6=([0-9]+)',log)
         comparisons=re.findall(r'DANA_VZ_TIMER1_COMPARE count=([0-9]+) ',log)
         ack_valid=[int(n) for pending,masked,n in ack
             if int(pending,16)&2 and not int(masked,16)&2 and int(n)>0]
-        irq6_runs.append(dict(run=which,compare_log_entries=len(comparisons),
+        irq6_runs.append(dict(run=which,log_sources=[p.name for p in logs],compare_log_entries=len(comparisons),
                               qualifying_iacks=len(ack_valid),first_iack=ack_valid[0] if ack_valid else None))
     summary['irq6_native_evidence']=irq6_runs
     summary['timer1_irq6_delivery']=(
