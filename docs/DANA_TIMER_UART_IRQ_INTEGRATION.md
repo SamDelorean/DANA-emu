@@ -1,3 +1,9 @@
+### Incremental build acceptance — original 011 log comparison
+
+The full native 011 evidence archive's `evidence/build-diag.log` was inspected directly: **1,130** `Compiling` lines, **33** `Generating` lines and final `Linking danadiagd...`. The 011 `evidence/source-manifest.json` and `evidence/binary_qualification.json` both confirm donor `c4e48388ca620472643110db2941ce70aa5f3c07`, source `03c9c1a05dcb0d4446e95cd82af07237a0f3bd98`, driver SHA256 `0f0f1235678f88e1a554864350c522e8ea7f8374196bad8fd101cb2b1b5e6466` and DIAG SHA256 `56d094fa49459bc29539098a9f333fe7bca826e5c302c3d643a230efb5a28004`. The 012 script uses these same identities to verify that its previous build is genuinely qualified.
+
+The 012 script audits the object cache before/after the incremental `make`; it now explicitly **rejects a cache regression or more than 16 updated/added object files** with `BLOCKED_EXCESSIVE_OBJECT_REBUILD_NOT_INCREMENTAL` (instead of misclassifying a broad build as a minimal rebuild). It reports the exact changed-object list. This 16-object bound is a conservative project acceptance ceiling for a single changed driver, not a benchmark measurement of 012. It checks this threshold **after** make, so it prevents false PASS but is not a guarantee that any wasted compile has been preempted. No new native run or T cache verification was authorized or performed.
+
 ## Job012 incremental MAME build reuse (19 October 2026)
 
 **Policy: reuse prior fully compiled `dana-diag`, update only the driver. No fallback to a fresh full MAME build.**
