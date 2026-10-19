@@ -92,7 +92,16 @@ private:
     void pb_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pd, 1)
     DANA_GPIO_PORT(pe, 2)
-    DANA_GPIO_PORT(pf, 3)
+    // PF1 is the pen IRQ input, active low. Without a touch event it is
+    // pulled high; returning the raw DATA latch (zero) fabricates a press.
+    u8 pf_r(offs_t reg)
+    {
+        u8 value=m_gpio[3*4+reg];
+        if (reg==1 && !(m_gpio[3*4] & 0x02))
+            value |= 0x02;
+        return value;
+    }
+    void pf_w(offs_t reg, u8 value) { m_gpio[3*4+reg]=value; }
     DANA_GPIO_PORT(pg, 4)
     DANA_GPIO_PORT(pj, 5)
     u8 pk_r(offs_t reg);
