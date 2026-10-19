@@ -470,6 +470,9 @@ void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
     // sticky PROT[14] is set; PROT can only be cleared by machine reset.
     // One write may set the counters and PROT together. Subsequent writes
     // cannot alter the counters, even when they attempt to clear PROT.
+    // Snapshot elapsed ticks against the OLD source frequency before any
+    // permitted PLL retune. Otherwise the new schedule loses partial ticks.
+    if (m_tctl1 & 1) m_tcn1=timer1_tcn_r();
     u16 const counter_mask = mem_mask & 0x0fff;
     if (!(m_pllfsr & 0x4000))
         m_pllfsr = (m_pllfsr & ~counter_mask) | (data & counter_mask);
@@ -580,20 +583,11 @@ void alphasdana_state::timer1_schedule()
     // MAME's MC68328 timer has restart (FRR=0) and free-run (FRR=1)
     // modes. Schedule the NEXT compare from the current counter position,
     // never restart an entire period on a mid-cycle register write.
-    u32 remaining=0;
-    if (m_tctl1 & 0x0100)
-    {
-        remaining=(u32(m_tcmp1)-u32(m_tcn1)) & 0xffff;
-        if (!remaining) remaining=65536;
-    }
-    else
-    {
-        // In restart mode a comparator value changed to BELOW the live
-        // counter is not reached until the 16-bit counter wraps. Restart
-        // occurs at an actual compare, not at the register-write boundary.
-        remaining=(u32(m_tcmp1)-u32(m_tcn1)) & 0xffff;
-        if (!remaining) remaining=65536;
-    }
+    // Both free-run and restart reach the comparator through a wrapping
+    // 16-bit counter. They differ only in the post-match counter value:
+    // restart resets it to zero; free-run retains the comparator position.
+    u32 remaining=(u32(m_tcmp1)-u32(m_tcn1)) & 0xffff;
+    if (!remaining) remaining=65536;
     m_timer1_timer->adjust(attotime::from_ticks(
         u64(m_tprer1+1)*remaining,hz));
 }
