@@ -470,6 +470,10 @@ void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
         m_pllfsr = (m_pllfsr & ~counter_mask) | (data & counter_mask);
     if (data & mem_mask & 0x4000)
         m_pllfsr |= 0x4000;
+    // Timer1 SYSCLK follows guest PLLFSR; refreshing here does not create
+    // any scheduled tick while Timer1 remains disabled.
+    if (m_tctl1 & 1)
+        timer1_schedule();
 }
 
 u8 alphasdana_state::ivr_r()
