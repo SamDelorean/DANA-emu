@@ -229,7 +229,8 @@ try:
         cached_objects_reused=len(set(cache_objects)&set(updated_objects))-len(
             set(touched)&set(cache_objects)),
         object_files_updated=len(touched),object_files_added=len(set(updated_objects)-set(cache_objects)),
-        updated_object_files=touched[:128],updated_object_list_truncated=len(touched)>128)
+        updated_object_files=touched[:128],updated_object_list_truncated=len(touched)>128,
+        resulting_binary_sha256=None)
     save()
     # Original qualified 011 stage, binary and manifest are immutable. This
     # catches accidental writes through a symlink or an unsafe clone.
@@ -242,7 +243,12 @@ try:
     if not built.is_file() or not os.access(built,os.X_OK):raise RuntimeError('BLOCKED_DIAG_OUTPUT_MISSING')
     binary=stage_root/'diag/bin/dana-diag';binary.parent.mkdir();shutil.copy2(built,binary)
     new_sha=digest(binary)
-    if new_sha==BINARY_SHA:raise RuntimeError('BLOCKED_OLD_E4_BINARY_CANNOT_QUALIFY_PFSEL')
+    summary['incremental_build']['resulting_binary_sha256']=new_sha
+    save()
+    if new_sha in (BINARY_SHA,PRIOR_011_DIAG_SHA):
+        raise RuntimeError('BLOCKED_INCREMENTAL_BUILD_REUSED_OBSOLETE_BINARY')
+    if not touched:
+        raise RuntimeError('BLOCKED_INCREMENTAL_BUILD_NO_OBJECTS_RECOMPILED')
     source_manifest=stage_root/'diag/source-manifest.json'
     staged=json.loads(source_manifest.read_text())
     staged.update(status='BUILT_DIAG',source_commit=SOURCE,binary_sha256=new_sha,
