@@ -195,6 +195,13 @@ try:
     # Only the Dana driver was modified between pinned builds. Preserve all
     # other MAME source/objects; writing bytes here updates its mtime so make
     # detects the changed skeleton driver and relinks danadiagd.
+    # Preserve object metadata before running the incremental make. The
+    # resulting evidence reports EXACTLY which object files were replaced.
+    cache_objects={str(p.relative_to(mame)):(p.stat().st_size,p.stat().st_mtime_ns)
+                   for p in (mame/'build/dana-diag').rglob('*.o')
+                   if p.is_file() and not p.is_symlink()}
+    if len(cache_objects)!=old_object_count:
+        raise RuntimeError('BLOCKED_INCREMENTAL_OBJECT_CACHE_CHANGED')
     (mame/driver).write_bytes((source/driver).read_bytes())
     if digest(mame/driver)!=digest(source/driver):
         raise RuntimeError('BLOCKED_STAGED_DRIVER_MISMATCH')
@@ -212,6 +219,25 @@ try:
              'OVERRIDE_CC='+cc,'OVERRIDE_CXX='+cxx,'OVERRIDE_LD='+cxx]
     summary['MAME_builds']=1;save()
     stage('build-diag',command,cwd=mame,timeout=7200,env=dict(os.environ,CC=cc,CXX=cxx,LD=cxx))
+    # Record objective reused-versus-touched object metadata, not an
+    # unsupported assertion that a full MAME rebuild did not happen.
+    updated_objects={str(p.relative_to(mame)):(p.stat().st_size,p.stat().st_mtime_ns)
+                     for p in (mame/'build/dana-diag').rglob('*.o')
+                     if p.is_file() and not p.is_symlink()}
+    touched=sorted(k for k,v in updated_objects.items() if cache_objects.get(k)!=v)
+    summary['incremental_build'].update(
+        cached_objects_reused=len(set(cache_objects)&set(updated_objects))-len(
+            set(touched)&set(cache_objects)),
+        object_files_updated=len(touched),object_files_added=len(set(updated_objects)-set(cache_objects)),
+        updated_object_files=touched[:128],updated_object_list_truncated=len(touched)>128)
+    save()
+    # Original qualified 011 stage, binary and manifest are immutable. This
+    # catches accidental writes through a symlink or an unsafe clone.
+    if (digest(old_source/driver)!=PRIOR_011_DRIVER_SHA
+            or digest(old_diag)!=PRIOR_011_DIAG_SHA
+            or digest(old_source/'danadiagd')!=PRIOR_011_DIAG_SHA
+            or json.loads(old_manifest_file.read_text())!=old_manifest):
+        raise RuntimeError('BLOCKED_PRIOR_011_BUILD_EVIDENCE_MUTATED')
     built=mame/'danadiagd'
     if not built.is_file() or not os.access(built,os.X_OK):raise RuntimeError('BLOCKED_DIAG_OUTPUT_MISSING')
     binary=stage_root/'diag/bin/dana-diag';binary.parent.mkdir();shutil.copy2(built,binary)
@@ -219,7 +245,8 @@ try:
     if new_sha==BINARY_SHA:raise RuntimeError('BLOCKED_OLD_E4_BINARY_CANNOT_QUALIFY_PFSEL')
     source_manifest=stage_root/'diag/source-manifest.json'
     staged=json.loads(source_manifest.read_text())
-    staged.update(status='BUILT_DIAG',source_commit=SOURCE,binary_sha256=new_sha)
+    staged.update(status='BUILT_DIAG',source_commit=SOURCE,binary_sha256=new_sha,
+                  driver_sha256=digest(source/driver))
     source_manifest.write_text(json.dumps(staged,indent=2)+'\n')
     qualification=evidence/'binary_qualification.json'
     build=dict(schema='dana-d23-build-v1',source_commit=SOURCE,driver_sha256=digest(source/driver),
