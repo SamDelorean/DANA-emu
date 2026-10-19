@@ -119,7 +119,9 @@ local function implemented_byte(address,kind)
             or address==0xfffffa2d
             or address==0xfffffa33
             or (address>=0xfffffa36 and address<=0xfffffa37)
-            or (address>=0xfffff800 and address<=0xfffff803)))
+            or (address>=0xfffff800 and address<=0xfffff803)
+            or (address>=0xfffff600 and address<=0xfffff60b)
+            or (address>=0xfffff900 and address<=0xfffff90b)))
 end
 local function bus_bytes(address,mask)
     -- MAME's 16-bit tap address is word-aligned, even for byte accesses.
