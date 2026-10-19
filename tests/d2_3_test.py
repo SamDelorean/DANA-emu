@@ -323,6 +323,103 @@ class IntegratedGPIOAndLCD(unittest.TestCase):
         self.assertIn('address>=0xfffffa27',lua)
         self.assertIn('address<=0xfffff443',lua)
 
+
+class IntegratedSPI2AndKeyboard(unittest.TestCase):
+    """Exercise extracted *production C++* handshake / SPI2 / ST queue logic."""
+    def test_native_cpp_st_reset_spi2_and_key_events(self):
+        src=DRIVER.read_text()
+        start=src.index('void alphasdana_state::st_input_reset()')
+        end=src.index('void alphasdana_state::lcd_bootstrap_reset()',start)
+        methods=src[start:end]
+        code=r"""
+#include <cstdint>
+#include <cassert>
+using u8=std::uint8_t;
+using u16=std::uint16_t;
+using offs_t=unsigned;
+#define BIT(value, index) (((value) >> (index)) & 1)
+#define COMBINE_DATA(dst) (*(dst)=(*(dst)&~mem_mask)|(data&mem_mask))
+struct Keys { unsigned value=0; unsigned read() const { return value; } };
+struct alphasdana_state {
+    Keys *m_keys;
+    u8 m_gpio[32]{};
+    u16 m_spi2_data=0, m_spi2_ctrl=0;
+    bool m_st_ready=false, m_st_hello=false, m_st_reset_held=false;
+    u8 m_st_old_keys=0, m_st_pending_keys=0, m_st_queue_left=0;
+    void st_input_reset();
+    void pb_w(offs_t, u8);
+    u8 pk_r(offs_t);
+    void pk_w(offs_t, u8);
+    u8 st_exchange(u8);
+    void spi2_ctrl_w(offs_t, u16, u16);
+};
+""" + methods + r"""
+int main() {
+    Keys k;
+    alphasdana_state t;
+    t.m_keys=&k;
+    t.st_input_reset();
+    t.m_gpio[6*4]=0xf9;
+    t.m_gpio[6*4+1]=0;
+    t.m_gpio[2*4+1]=0; // ST chip select active low.
+    assert(!(t.pk_r(1)&4));
+    t.pk_w(0,0xfd); // guest PK2 output pulse -> ST ready.
+    t.pk_w(0,0xf9); // guest releases PK2 to input.
+    assert((t.pk_r(1)&4) && t.m_st_ready);
+    t.m_spi2_data=0;
+    t.spi2_ctrl_w(0,0x2307,0xffff);
+    assert((t.m_spi2_ctrl&0x80) && !(t.m_spi2_ctrl&0x100));
+    assert((t.m_spi2_data&0xff)==0xaa);
+    t.m_spi2_data=0;
+    t.spi2_ctrl_w(0,0x2307,0xffff);
+    assert((t.m_spi2_data&0xff)==0);
+    k.value=3;
+    assert(t.st_exchange(0)==0x42); // 2 keys, ST protocol header.
+    assert(t.st_exchange(0)==0x2b); // A
+    assert(t.st_exchange(0)==0x7a); // B
+    assert(t.st_exchange(0)==0);
+    k.value=0;
+    assert(t.st_exchange(0)==0x40); // all released.
+    t.pb_w(1,0x40); // ST hardware reset high.
+    assert(!t.m_st_ready && !(t.pk_r(1)&4));
+    t.pb_w(1,0); // release reset.
+    assert(t.m_st_ready && t.m_st_hello);
+    t.m_gpio[2*4+1]=8; // ST deselected (PE3 high).
+    assert(t.st_exchange(0)==0xff);
+    t.m_gpio[2*4+1]=0;
+    assert(t.st_exchange(0)==0xaa);
+    // Unsupported 16-bit pen/ADC transfer must not emulate a sample.
+    t.m_spi2_data=0;
+    t.spi2_ctrl_w(0,0x234f,0xffff);
+    assert(t.m_spi2_data==0xffff);
+}
+"""
+        with tempfile.TemporaryDirectory(prefix='dana-spi2-cpp-') as tmp:
+            p=Path(tmp)
+            (p/'test.cpp').write_text(code)
+            compiler=shutil.which('c++')
+            self.assertIsNotNone(compiler)
+            subprocess.run([compiler,'-std=c++20','-O2','-Wall','-Wextra','-Werror',
+                            str(p/'test.cpp'),'-o',str(p/'test')],check=True,timeout=90)
+            subprocess.run([str(p/'test')],check=True,timeout=10)
+
+    def test_real_spi2_registers_st_io_and_serialized_state(self):
+        src=DRIVER.read_text()
+        for name in ('spi2_data','spi2_ctrl','st_ready','st_hello','st_reset_held',
+                     'st_old_keys','st_pending_keys','st_queue_left'):
+            self.assertEqual(src.count('save_item(NAME(m_'+name+'));'),1)
+        self.assertIn('map(0xfffff800,0xfffff801)',src)
+        self.assertIn('map(0xfffff802,0xfffff803)',src)
+        self.assertIn('PORT_START("KEYS")',src)
+        for key in ('KEYCODE_A','KEYCODE_B','KEYCODE_ENTER','KEYCODE_SPACE'):
+            self.assertIn(key,src)
+        self.assertIn('m_st_ready=true;',src)
+        self.assertIn('m_st_hello=true;',src)
+        self.assertIn('(m_spi2_ctrl & 0x2100)!=0x2100',src)
+        self.assertIn('m_spi2_ctrl=(m_spi2_ctrl & ~0x0100) | 0x0080;',src)
+        self.assertFalse(f1.implemented_byte(0xfffff800,'read',False))
+        self.assertTrue(f1.implemented_byte(0xfffff802,'read',True))
+
 if __name__=='__main__':
     result=unittest.main(exit=False)
     print('D2_3_STATIC_PASS' if result.result.wasSuccessful() else 'D2_3_STATIC_FAIL')
