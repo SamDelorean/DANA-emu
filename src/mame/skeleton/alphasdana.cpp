@@ -42,6 +42,7 @@ public:
         , m_guest_ready(*this, "dana_guest_loaded")
         , m_screen(*this, "screen")
         , m_ram(*this, "ram")
+        , m_keys(*this, "KEYS")
     {
     }
 
@@ -86,15 +87,28 @@ private:
 #define DANA_GPIO_PORT(NAME, INDEX) \
     u8 NAME##_r(offs_t reg) { return m_gpio[(INDEX)*4 + reg]; } \
     void NAME##_w(offs_t reg, u8 value) { m_gpio[(INDEX)*4 + reg] = value; }
-    DANA_GPIO_PORT(pb, 0)
+    // Port B and K observe the ST controller reset/ready handshake.
+    u8 pb_r(offs_t reg) { return m_gpio[reg]; }
+    void pb_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pd, 1)
     DANA_GPIO_PORT(pe, 2)
     DANA_GPIO_PORT(pf, 3)
     DANA_GPIO_PORT(pg, 4)
     DANA_GPIO_PORT(pj, 5)
-    DANA_GPIO_PORT(pk, 6)
+    u8 pk_r(offs_t reg);
+    void pk_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pm, 7)
 #undef DANA_GPIO_PORT
+
+    // Genuine guest-visible SPI2 (VZ 0xF800 DATA / 0xF802 CTRL).
+    // The controller models byte exchange with Dana's ST keyboard, not
+    // a high-level key injection into the guest OS.
+    u16 spi2_data_r() { return m_spi2_data; }
+    void spi2_data_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_spi2_data); }
+    u16 spi2_ctrl_r() { return m_spi2_ctrl; }
+    void spi2_ctrl_w(offs_t, u16 data, u16 mem_mask);
+    u8 st_exchange(u8 command);
+    void st_input_reset();
 
     // Guest-owned VZ LCD configuration registers; the DMA-backed screen
     // reads real emulated RAM. No LCD IRQ, contrast voltage or clock emulation.
@@ -134,6 +148,7 @@ private:
     output_finder<> m_guest_ready;
     required_device<screen_device> m_screen;
     required_shared_ptr<u16> m_ram;
+    required_ioport m_keys;
     emu_timer *m_clk32_timer = nullptr;
     u16 m_pllfsr = 0x0347;
     bool m_clk32_high = false;
@@ -146,6 +161,9 @@ private:
     u8 m_pcsel = 0;
     u8 m_pfsel = 0xc5;
     u8 m_gpio[32] = {};
+    u16 m_spi2_data = 0, m_spi2_ctrl = 0;
+    bool m_st_ready = false, m_st_hello = false, m_st_reset_held = false;
+    u8 m_st_old_keys = 0, m_st_pending_keys = 0, m_st_queue_left = 0;
     u32 m_lssa = 0;
     u8 m_lvpw = 0xff;
     u16 m_lxmax = 0x03f0;
@@ -169,6 +187,14 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pcsel));
     save_item(NAME(m_pfsel));
     save_item(NAME(m_gpio));
+    save_item(NAME(m_spi2_data));
+    save_item(NAME(m_spi2_ctrl));
+    save_item(NAME(m_st_ready));
+    save_item(NAME(m_st_hello));
+    save_item(NAME(m_st_reset_held));
+    save_item(NAME(m_st_old_keys));
+    save_item(NAME(m_st_pending_keys));
+    save_item(NAME(m_st_queue_left));
     save_item(NAME(m_lssa));
     save_item(NAME(m_lvpw));
     save_item(NAME(m_lxmax));
@@ -204,6 +230,7 @@ void alphasdana_state::machine_reset()
     portc_reset();
     pfsel_reset();
     gpio_bootstrap_reset();
+    st_input_reset();
     lcd_bootstrap_reset();
     // Quickload is timer-driven. Suppress *all* CPU fetches until validation
     // and the complete RAM/bootstrap seed have succeeded. No-image tests keep
@@ -225,6 +252,118 @@ void alphasdana_state::gpio_bootstrap_reset()
     };
     for (unsigned i=0; i<32; ++i)
         m_gpio[i] = profile[i];
+}
+
+
+void alphasdana_state::st_input_reset()
+{
+    // The reference Dana has a separate ST controller; initialize the
+    // interface to unready, not a permanently asserted input pin.
+    m_st_ready=false; m_st_hello=false; m_st_reset_held=false;
+    m_st_old_keys=0; m_st_pending_keys=0; m_st_queue_left=0;
+    m_spi2_data=0; m_spi2_ctrl=0;
+}
+
+void alphasdana_state::pb_w(offs_t reg, u8 value)
+{
+    u8 const old=m_gpio[reg];
+    m_gpio[reg]=value;
+    if (reg==1)
+    {
+        // PB6 drives the auxiliary controller reset line.
+        if ((value & 0x40) && !(old & 0x40))
+        {
+            st_input_reset();
+            m_st_reset_held=true;
+        }
+        else if (!(value & 0x40) && (old & 0x40) && m_st_reset_held)
+        {
+            m_st_reset_held=false;
+            m_st_ready=true;
+            m_st_hello=true;
+        }
+    }
+}
+
+u8 alphasdana_state::pk_r(offs_t reg)
+{
+    u8 result=m_gpio[6*4+reg];
+    if (reg==1 && !(m_gpio[6*4] & 0x04))
+    {
+        // PK2 reads the ST ready INPUT while configured as GPIO input.
+        // Never replace the output latch when the CPU drives this pin.
+        result=(result & ~0x04) | (m_st_ready ? 0x04 : 0);
+    }
+    return result;
+}
+
+void alphasdana_state::pk_w(offs_t reg, u8 value)
+{
+    u8 const old=m_gpio[6*4+reg];
+    m_gpio[6*4+reg]=value;
+    if (reg==0 && (value & 0x04) && !(old & 0x04)
+        && !(m_gpio[6*4+1] & 0x04))
+    {
+        // The software's PK2 output pulse wakes the separate ST controller.
+        // Once released as input, PKDATA reports the ready line.
+        m_st_ready=true;
+        m_st_hello=true;
+    }
+}
+
+u8 alphasdana_state::st_exchange(u8 command)
+{
+    // ST selection is active-low PE3; pen ADC and other SPI slaves are not
+    // claimed as implemented. A deselected ST returns an idle data level.
+    if (!m_st_ready || (m_gpio[2*4+1] & 0x08))
+        return 0xff;
+    if (m_st_hello)
+    {
+        m_st_hello=false;
+        return 0xaa;
+    }
+    // Version/query commands are not fabricated. No queued host event while
+    // not polling means zero data, exactly as the guest tests.
+    if (command)
+        return 0;
+    if (m_st_queue_left)
+    {
+        u8 const bits=m_st_pending_keys;
+        m_st_queue_left=0;
+        // Four bounded host keys: A, B, Return, Space. In real Dana protocol
+        // these are ST scan bytes, not Atari/Amiga key codes.
+        static constexpr u8 st_scan[4]={0x2b,0x7a,0x2e,0x7e};
+        for(unsigned i=0;i<4;++i)
+            if (bits & (1<<i)) { m_st_pending_keys &= ~(1<<i); m_st_queue_left=1; return st_scan[i]; }
+        return 0;
+    }
+    u8 const keys=m_keys->read() & 0x0f;
+    if (keys!=m_st_old_keys)
+    {
+        m_st_old_keys=keys;
+        m_st_pending_keys=keys;
+        unsigned count=0;
+        for(unsigned i=0;i<4;++i) count+=BIT(keys,i);
+        m_st_queue_left=count ? 1 : 0;
+        return u8(0x40 | count);
+    }
+    return 0;
+}
+
+void alphasdana_state::spi2_ctrl_w(offs_t, u16 data, u16 mem_mask)
+{
+    COMBINE_DATA(&m_spi2_ctrl);
+    // Motorola VZ SPI2: enable=0x2000, exchange=0x0100,
+    // interrupt-status/completion=0x0080; 0x2307 is guest's 8-bit xfer.
+    if ((m_spi2_ctrl & 0x2100)!=0x2100)
+        return;
+    unsigned const width=(m_spi2_ctrl & 0x000f)+1;
+    // Guest's ST transactions use 8-bit. Preserve the 16-bit data path for
+    // ADC wiring later; never invent valid pen conversion data.
+    u16 const in = width==8 ? st_exchange(u8(m_spi2_data)) : 0xffff;
+    m_spi2_data = width==8 ? (m_spi2_data & 0xff00) | (in & 0xff) : in;
+    m_spi2_ctrl=(m_spi2_ctrl & ~0x0100) | 0x0080;
+    // IRQ synthesis is intentionally deferred: EmuTOS polls bit7.
 }
 
 void alphasdana_state::lcd_bootstrap_reset()
@@ -409,6 +548,10 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff440,0xfffff443).rw(FUNC(alphasdana_state::pk_r),FUNC(alphasdana_state::pk_w));
     map(0xfffff448,0xfffff44b).rw(FUNC(alphasdana_state::pm_r),FUNC(alphasdana_state::pm_w));
 
+    // Dana SPI2 register pair (ST keyboard and pen bus).
+    map(0xfffff800,0xfffff801).rw(FUNC(alphasdana_state::spi2_data_r),FUNC(alphasdana_state::spi2_data_w));
+    map(0xfffff802,0xfffff803).rw(FUNC(alphasdana_state::spi2_ctrl_r),FUNC(alphasdana_state::spi2_ctrl_w));
+
     // Dana LCD controller programmed by authentic EmuTOS. Native big-endian
     // word splitting for LSSA and LRRA, especially AD-corrected 16-bit LRRA.
     map(0xfffffa00,0xfffffa03).rw(FUNC(alphasdana_state::lssa_r),FUNC(alphasdana_state::lssa_w));
@@ -442,6 +585,13 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
+    // Small, independently visible ST scan-code subset; no key matrix spoof.
+    PORT_START("KEYS")
+    PORT_BIT(0x01,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("A") PORT_CODE(KEYCODE_A) PORT_CHAR('a')
+    PORT_BIT(0x02,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("B") PORT_CODE(KEYCODE_B) PORT_CHAR('b')
+    PORT_BIT(0x04,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Return") PORT_CODE(KEYCODE_ENTER) PORT_CHAR(13)
+    PORT_BIT(0x08,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Space") PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
+    PORT_BIT(0xf0,IP_ACTIVE_HIGH,IPT_UNUSED)
 INPUT_PORTS_END
 
 ROM_START(asmdana)
