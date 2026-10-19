@@ -393,7 +393,8 @@ void alphasdana_state::program_map(address_map &map)
     // See docs/D2_2_PORTC_IMPLEMENTATION.md for the primary-source limitation.
     map(0xfffff412, 0xfffff412).rw(FUNC(alphasdana_state::pcpden_r), FUNC(alphasdana_state::pcpden_w));
     map(0xfffff413, 0xfffff413).rw(FUNC(alphasdana_state::pcsel_r), FUNC(alphasdana_state::pcsel_w));
-    // Only PFSEL, low/odd byte of F42A. PFPUEN at F42A stays unmapped.
+    // Preserve the individually qualified PFSEL low byte; the grouped Port F
+    // mapping below now provides its separate F42A PFPUEN high byte.
     map(0xfffff42b, 0xfffff42b).rw(FUNC(alphasdana_state::pfsel_r), FUNC(alphasdana_state::pfsel_w));
 
     // One coherent Dana VZ R-direct GPIO family. DATA registers are output
