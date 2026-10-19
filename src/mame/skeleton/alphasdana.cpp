@@ -190,6 +190,7 @@ private:
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
     u16 m_tcr1=0, m_tcn1=0, m_tstat1=0, m_tstat_clear1=0;
+    u32 m_timer1_compares=0, m_timer1_iacks=0;
     u16 m_ustcnt1=0, m_ubaud1=0x0002, m_urx1=0, m_utx1=0, m_umisc1=0;
     u16 m_uart_prescaler1=0;
     u16 m_pllfsr = 0x0347;
@@ -230,6 +231,8 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_tcmp1)); save_item(NAME(m_tcr1));
     save_item(NAME(m_tcn1)); save_item(NAME(m_tstat1));
     save_item(NAME(m_tstat_clear1));
+    save_item(NAME(m_timer1_compares));
+    save_item(NAME(m_timer1_iacks));
     save_item(NAME(m_ustcnt1)); save_item(NAME(m_ubaud1));
     save_item(NAME(m_urx1)); save_item(NAME(m_utx1));
     save_item(NAME(m_umisc1)); save_item(NAME(m_uart_prescaler1));
@@ -276,6 +279,7 @@ void alphasdana_state::machine_reset()
     m_pending = 0;
     m_tctl1=0; m_tprer1=0; m_tcmp1=0xffff;
     m_tcr1=0; m_tcn1=0; m_tstat1=0; m_tstat_clear1=0;
+    m_timer1_compares=0; m_timer1_iacks=0;
     m_timer1_timer->adjust(attotime::never);
     m_ustcnt1=0; m_ubaud1=0x0002; m_urx1=0;
     m_utx1=0; m_umisc1=0; m_uart_prescaler1=0;
@@ -535,8 +539,14 @@ u8 alphasdana_state::irq_vector_r(offs_t offset)
     // DragonBall CPU-space IACK convention. IVR=0x40 gives the authentic
     // EmuTOS VEC_USER(6)=0x46 and VEC_USER(4)=0x44.
     u8 const vector=m_ivr | (offset & 7);
-    logerror("DANA_VZ_IACK level=%u vector=%02x pending=%08x imr=%08x\n",
-        unsigned(offset & 7), vector, m_pending, m_imr);
+    if ((offset & 7)==6 && (m_pending & ~m_imr & 2))
+        ++m_timer1_iacks;
+    // Bound diagnostics to the early authentic boot. Counters remain live and
+    // save-state backed, avoiding thousands of repetitive log lines.
+    if ((offset & 7)!=6 || m_timer1_iacks<=16)
+        logerror("DANA_VZ_IACK level=%u vector=%02x pending=%08x imr=%08x ack6=%u\n",
+            unsigned(offset & 7), vector, m_pending, m_imr,
+            unsigned(m_timer1_iacks));
     return vector;
 }
 
@@ -563,34 +573,58 @@ void alphasdana_state::timer1_schedule()
 {
     u32 const hz=timer1_source_hz();
     if (!(m_tctl1 & 1) || !hz || !m_tcmp1)
+    {
         m_timer1_timer->adjust(attotime::never);
+        return;
+    }
+    // MAME's MC68328 timer has restart (FRR=0) and free-run (FRR=1)
+    // modes. Schedule the NEXT compare from the current counter position,
+    // never restart an entire period on a mid-cycle register write.
+    u32 remaining=0;
+    if (m_tctl1 & 0x0100)
+    {
+        remaining=(u32(m_tcmp1)-u32(m_tcn1)) & 0xffff;
+        if (!remaining) remaining=65536;
+    }
     else
-        m_timer1_timer->adjust(attotime::from_ticks(
-            u64(m_tprer1+1)*u64(m_tcmp1),hz));
+    {
+        remaining = m_tcn1 < m_tcmp1 ? m_tcmp1-m_tcn1 : m_tcmp1;
+        if (!remaining) remaining=m_tcmp1;
+    }
+    m_timer1_timer->adjust(attotime::from_ticks(
+        u64(m_tprer1+1)*remaining,hz));
 }
 TIMER_CALLBACK_MEMBER(alphasdana_state::timer1_compare)
 {
-    // Coalesced virtual-time scheduling: only one callback per compare.
+    // One virtual-time callback per actual comparator match. FRR=0 resets
+    // counter; FRR=1 retains comparator position and wraps at 16 bits.
     m_tstat1 |= 1;
-    if (!(m_tctl1 & 0x0100)) m_tcn1=0;
+    m_tcn1=(m_tctl1 & 0x0100) ? m_tcmp1 : 0;
+    ++m_timer1_compares;
     if (m_tctl1 & 0x0010) m_pending |= 0x00000002;
+    if (m_timer1_compares<=16)
+        logerror("DANA_VZ_TIMER1_COMPARE count=%u tctl=%04x tprer=%04x tcmp=%04x pending=%08x\n",
+            unsigned(m_timer1_compares),m_tctl1,m_tprer1,m_tcmp1,m_pending);
     update_irq_lines();
     timer1_schedule();
 }
 void alphasdana_state::timer1_tctl_w(offs_t, u16 data, u16 mem_mask)
 {
     bool const enabled=bool(m_tctl1 & 1);
+    if (enabled) m_tcn1=timer1_tcn_r();
     COMBINE_DATA(&m_tctl1);
     if (!enabled && (m_tctl1 & 1)) m_tcn1=0;
     timer1_schedule();
 }
 void alphasdana_state::timer1_tprer_w(offs_t, u16 data, u16 mem_mask)
 {
+    if (m_tctl1 & 1) m_tcn1=timer1_tcn_r();
     COMBINE_DATA(&m_tprer1);
     timer1_schedule();
 }
 void alphasdana_state::timer1_tcmp_w(offs_t, u16 data, u16 mem_mask)
 {
+    if (m_tctl1 & 1) m_tcn1=timer1_tcn_r();
     COMBINE_DATA(&m_tcmp1);
     timer1_schedule();
 }
@@ -598,8 +632,8 @@ u16 alphasdana_state::timer1_tcn_r()
 {
     u32 const hz=timer1_source_hz();
     if (!(m_tctl1 & 1) || !hz || !m_tcmp1) return m_tcn1;
-    u64 const count=m_timer1_timer->elapsed().as_ticks(hz)/u64(m_tprer1+1);
-    return u16(count % m_tcmp1);
+    u64 const delta=m_timer1_timer->elapsed().as_ticks(hz)/u64(m_tprer1+1);
+    return u16((u64(m_tcn1)+delta)&0xffff);
 }
 u16 alphasdana_state::timer1_tstat_r()
 {
