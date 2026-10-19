@@ -560,7 +560,7 @@ int main() {
                       'ustcnt1','ubaud1','urx1','utx1','umisc1','uart_prescaler1'):
             self.assertIn('save_item(NAME(m_'+state+'));',src)
         self.assertIn('m_maincpu->set_unscaled_clock(guest_system_clock_hz());',src)
-        self.assertIn('if (m_guest_loaded)\\n        m_maincpu->set_unscaled_clock(guest_system_clock_hz());',src)
+        self.assertIn('if (m_guest_loaded)\n        m_maincpu->set_unscaled_clock(guest_system_clock_hz());',src)
         self.assertIn("DANA_VZ_CPU(config, m_maincpu, 1'000'000)",src)
         self.assertIn('set_addrmap(AS_CPU_SPACE, &alphasdana_state::cpu_space_map)',src)
         self.assertIn('map(0xfffffff0,0xffffffff)',src)
