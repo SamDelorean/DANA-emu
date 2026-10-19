@@ -68,7 +68,24 @@ def implemented_byte(address,kind,pfsel=False):
     return (0xfffff202<=address<=0xfffff203 or address==0xfffff300
         or 0xfffff302<=address<=0xfffff307 or 0xfffff30c<=address<=0xfffff30f
         or (kind=='read' and 0xfffff310<=address<=0xfffff313)
-        or address in (0xfffff412,0xfffff413) or (pfsel and address==0xfffff42b))
+        or address in (0xfffff412,0xfffff413) or (pfsel and address==0xfffff42b)
+        or (pfsel and (0xfffff408<=address<=0xfffff40b or
+          0xfffff418<=address<=0xfffff41b or
+          0xfffff420<=address<=0xfffff423 or
+          0xfffff428<=address<=0xfffff433 or
+          0xfffff438<=address<=0xfffff43b or
+          0xfffff440<=address<=0xfffff443 or
+          0xfffff448<=address<=0xfffff44b or
+          0xfffffa00<=address<=0xfffffa03 or
+          address==0xfffffa05 or
+          0xfffffa08<=address<=0xfffffa0b or
+          0xfffffa20<=address<=0xfffffa21 or
+          address==0xfffffa23 or
+          address==0xfffffa25 or
+          0xfffffa27<=address<=0xfffffa29 or
+          address==0xfffffa2d or
+          address==0xfffffa33 or
+          0xfffffa36<=address<=0xfffffa37)))
 
 
 def verify_e4(root,guest,expected_source=None,qualification=None):
