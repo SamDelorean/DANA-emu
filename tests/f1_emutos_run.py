@@ -85,7 +85,8 @@ def implemented_byte(address,kind,pfsel=False):
           0xfffffa27<=address<=0xfffffa29 or
           address==0xfffffa2d or
           address==0xfffffa33 or
-          0xfffffa36<=address<=0xfffffa37)))
+          0xfffffa36<=address<=0xfffffa37 or
+          0xfffff800<=address<=0xfffff803)))
 
 
 def verify_e4(root,guest,expected_source=None,qualification=None):
