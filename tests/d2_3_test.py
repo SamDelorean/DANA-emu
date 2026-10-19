@@ -499,11 +499,12 @@ int main() {
     m.m_maincpu=&cpu;
     m.m_timer1_timer=&timer;
     assert(m.guest_system_clock_hz()==33161216);
-    assert(m.timer1_source_hz()==33161216);
+    assert(m.timer1_source_hz()==0); // Timer1 disabled until TCTL enabled.
     assert(m.irq_vector_r(6)==0x46 && m.irq_vector_r(4)==0x44);
     m.timer1_tprer_w(0,2,0xffff);
     m.timer1_tcmp_w(0,0xd7e4,0xffff);
     m.timer1_tctl_w(0,0x0033,0xffff);
+    assert(m.timer1_source_hz()==33161216);
     assert(timer.delay.seconds>0.004L && timer.delay.seconds<0.006L);
     m.timer1_compare();
     assert(m.m_timer1_compares==1);
