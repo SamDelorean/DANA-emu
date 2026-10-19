@@ -26,6 +26,11 @@ BUILD_SOURCE = '749517b2f48c9788e5555071561e738017ac5f7c'
 MAME_PIN = 'c4e48388ca620472643110db2941ce70aa5f3c07'
 GUEST_PIN = '9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
 BINARY_SHA = 'd7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5'
+# Immutable verified 011 baseline for incremental object reuse only.
+PRIOR_011_SOURCE = '03c9c1a05dcb0d4446e95cd82af07237a0f3bd98'
+PRIOR_011_DRIVER_SHA = '0f0f1235678f88e1a554864350c522e8ea7f8374196bad8fd101cb2b1b5e6466'
+PRIOR_011_DIAG_SHA = '56d094fa49459bc29539098a9f333fe7bca826e5c302c3d643a230efb5a28004'
+PRIOR_011_STAGE = Path('/home/spc/DANA_EMU_ISOLATED/dana_gpio_lcd_spi2_st_e02rhrsq/mame-stage/diag')
 E4_ARCHIVE_SHA = '55b60457439105b7fd01a7c927222a1654eccc36523be0dbda12ddb59775f5e0'
 PRESERVED = Path('/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/emutos-built')
 EXPECTED = {
@@ -135,11 +140,64 @@ try:
           cwd=source,env=dict(os.environ,PYTHONPATH=str(source/'tests')))
     donor=Path('/home/spc/Projects/alphasmart/as2k-stable-eeepc900-local/mame-as3k-donor')
     stage('donor-pin',['git','-C',str(donor),'cat-file','-e',MAME_PIN+'^{commit}'])
+    # Incremental Dana-only build: reuse the qualified 011 object tree,
+    # *without* rewriting the old 011 source/evidence/binary. The old full
+    # donor unpack/prepare path is deliberately not a fallback.
     stage_root=root/'mame-stage'
-    stage('prepare-diag',['bash','tests/d1_1_diag_smoke.sh','prepare',str(donor),str(stage_root)],cwd=source,timeout=900)
-    mame=stage_root/'diag/source'
+    staged_diag=stage_root/'diag'
+    staged_diag.mkdir(parents=True)
+    old_source=PRIOR_011_STAGE/'source'
+    old_manifest_file=PRIOR_011_STAGE/'source-manifest.json'
+    old_diag=PRIOR_011_STAGE/'bin/dana-diag'
     driver='src/mame/skeleton/alphasdana.cpp'
-    if digest(mame/driver)!=digest(source/driver):raise RuntimeError('BLOCKED_STAGED_DRIVER_MISMATCH')
+    if not old_source.is_dir() or old_source.is_symlink():
+        raise RuntimeError('BLOCKED_PRIOR_011_BUILD_CACHE_MISSING')
+    if not old_manifest_file.is_file() or old_manifest_file.is_symlink() or not old_diag.is_file():
+        raise RuntimeError('BLOCKED_PRIOR_011_BUILD_EVIDENCE_MISSING')
+    old_manifest=json.loads(old_manifest_file.read_text())
+    for key,value in (('mame_commit',MAME_PIN),('variant','diag'),('status','BUILT_DIAG'),
+                      ('source_commit',PRIOR_011_SOURCE),
+                      ('binary_sha256',PRIOR_011_DIAG_SHA),
+                      ('driver_sha256',PRIOR_011_DRIVER_SHA)):
+        if old_manifest.get(key)!=value:
+            raise RuntimeError('BLOCKED_PRIOR_011_PROVENANCE_MISMATCH:'+key)
+    if digest(old_source/driver)!=PRIOR_011_DRIVER_SHA or digest(old_diag)!=PRIOR_011_DIAG_SHA:
+        raise RuntimeError('BLOCKED_PRIOR_011_SOURCE_OR_BINARY_CHANGED')
+    if digest(old_source/'danadiagd')!=PRIOR_011_DIAG_SHA:
+        raise RuntimeError('BLOCKED_PRIOR_011_BUILD_OUTPUT_CHANGED')
+    old_list=old_source/'src/mame/mame.lst'
+    if digest(old_list)!=old_manifest.get('list_sha256'):
+        raise RuntimeError('BLOCKED_PRIOR_011_DRIVER_LIST_CHANGED')
+    objects=old_source/'build/dana-diag'
+    if not objects.is_dir() or objects.is_symlink():
+        raise RuntimeError('BLOCKED_PRIOR_011_OBJECT_CACHE_MISSING')
+    old_object_count=sum(1 for p in objects.rglob('*.o') if p.is_file() and not p.is_symlink())
+    if old_object_count<100:
+        raise RuntimeError('BLOCKED_PRIOR_011_OBJECT_CACHE_INCOMPLETE')
+    summary['incremental_build']=dict(
+        mode='COPY_ON_WRITE_REUSE_011_THEN_DRIVER_ONLY_INCREMENTAL_MAKE',
+        prior_source_commit=PRIOR_011_SOURCE,prior_binary_sha256=PRIOR_011_DIAG_SHA,
+        donor_commit=MAME_PIN,cached_object_count=old_object_count,
+        prior_stage=str(PRIOR_011_STAGE),full_donor_reextraction=False,
+        full_mame_rebuild_fallback=False,only_modified_production_file=driver)
+    save()
+    # cp -a retains every 011 object/dependency timestamp; reflinks when
+    # available. Unlike hardlinks, it cannot mutate the qualified old stage.
+    stage('copy-011-compiled-cache',
+          ['cp','-a','--reflink=auto',str(old_source),str(staged_diag/'source')],
+          timeout=1200)
+    mame=staged_diag/'source'
+    if digest(mame/driver)!=PRIOR_011_DRIVER_SHA or digest(mame/'danadiagd')!=PRIOR_011_DIAG_SHA:
+        raise RuntimeError('BLOCKED_INCREMENTAL_CACHE_COPY_CHANGED')
+    if digest(mame/'src/mame/mame.lst')!=old_manifest['list_sha256']:
+        raise RuntimeError('BLOCKED_INCREMENTAL_DRIVER_LIST_CHANGED')
+    shutil.copy2(old_manifest_file,staged_diag/'source-manifest.json')
+    # Only the Dana driver was modified between pinned builds. Preserve all
+    # other MAME source/objects; writing bytes here updates its mtime so make
+    # detects the changed skeleton driver and relinks danadiagd.
+    (mame/driver).write_bytes((source/driver).read_bytes())
+    if digest(mame/driver)!=digest(source/driver):
+        raise RuntimeError('BLOCKED_STAGED_DRIVER_MISMATCH')
     cc=shutil.which('clang-21') or shutil.which('clang')
     cxx=shutil.which('clang++-21') or shutil.which('clang++')
     if not cc or not cxx:raise RuntimeError('BLOCKED_CLANG21_MISSING_NO_INSTALL')
