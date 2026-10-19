@@ -255,6 +255,14 @@ try:
         updated_object_files=touched[:128],updated_object_list_truncated=len(touched)>128,
         resulting_binary_sha256=None)
     save()
+    # Hard acceptance bound: 011 built 1,130 source units from scratch; a
+    # Dana driver-only incremental build must touch a tiny subset. Keep the
+    # precise list above and reject a broad rebuild, never claim cache reuse
+    # merely because make returned exit zero.
+    if len(touched)>16:
+        raise RuntimeError('BLOCKED_EXCESSIVE_OBJECT_REBUILD_NOT_INCREMENTAL:'+str(len(touched)))
+    if len(updated_objects)<old_object_count:
+        raise RuntimeError('BLOCKED_INCREMENTAL_OBJECT_CACHE_SHRANK')
     # Original qualified 011 stage, binary and manifest are immutable. This
     # catches accidental writes through a symlink or an unsafe clone.
     if (digest(old_source/driver)!=PRIOR_011_DRIVER_SHA
