@@ -479,6 +479,7 @@ struct alphasdana_state {
     void update_irq_lines();
     u8 irq_vector_r(offs_t);
     TIMER_CALLBACK_MEMBER(timer1_compare);
+    u32 guest_system_clock_hz() const;
     u32 timer1_source_hz() const;
     void timer1_schedule();
     void timer1_tctl_w(offs_t,u16,u16);
@@ -496,6 +497,7 @@ int main() {
     alphasdana_state m;
     m.m_maincpu=&cpu;
     m.m_timer1_timer=&timer;
+    assert(m.guest_system_clock_hz()==33161216);
     assert(m.timer1_source_hz()==33161216);
     assert(m.irq_vector_r(6)==0x46 && m.irq_vector_r(4)==0x44);
     m.timer1_tprer_w(0,2,0xffff);
@@ -557,6 +559,9 @@ int main() {
         for state in ('tctl1','tprer1','tcmp1','tcr1','tcn1','tstat1','tstat_clear1',
                       'ustcnt1','ubaud1','urx1','utx1','umisc1','uart_prescaler1'):
             self.assertIn('save_item(NAME(m_'+state+'));',src)
+        self.assertIn('m_maincpu->set_unscaled_clock(guest_system_clock_hz());',src)
+        self.assertIn('if (m_guest_loaded)\\n        m_maincpu->set_unscaled_clock(guest_system_clock_hz());',src)
+        self.assertIn("DANA_VZ_CPU(config, m_maincpu, 1'000'000)",src)
         self.assertIn('set_addrmap(AS_CPU_SPACE, &alphasdana_state::cpu_space_map)',src)
         self.assertIn('map(0xfffffff0,0xffffffff)',src)
         self.assertIn('m_pending |= 0x00000002;',src)
