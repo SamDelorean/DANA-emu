@@ -465,7 +465,7 @@ struct FakeCPU {
 struct FakeTimer {
     attotime delay=attotime::never;
     attotime elapsed_value{0};
-    void adjust(attotime value) { delay=value; }
+    void adjust(attotime value) { delay=value; elapsed_value={0}; }
     attotime elapsed() const { return elapsed_value; }
 };
 struct alphasdana_state {
@@ -473,6 +473,7 @@ struct alphasdana_state {
     FakeTimer *m_timer1_timer;
     u16 m_pllfsr=0x0347,m_tctl1=0,m_tprer1=0,m_tcmp1=0xffff;
     u16 m_tcr1=0,m_tcn1=0,m_tstat1=0,m_tstat_clear1=0;
+    u32 m_timer1_compares=0,m_timer1_iacks=0;
     u16 m_utx1=0;
     u32 m_pending=0,m_imr=0x00ffffff;
     u8 m_ivr=0x40;
@@ -505,11 +506,13 @@ int main() {
     m.timer1_tctl_w(0,0x0033,0xffff);
     assert(timer.delay.seconds>0.004L && timer.delay.seconds<0.006L);
     m.timer1_compare();
+    assert(m.m_timer1_compares==1);
     assert((m.m_tstat1&1) && (m.m_pending&2));
     assert(cpu.irq6==0); // masked after reset
     m.m_imr &= ~u32(2);
     m.update_irq_lines();
     assert(cpu.irq6==1);
+    assert(m.irq_vector_r(6)==0x46 && m.m_timer1_iacks==1);
     assert(m.timer1_tstat_r()==1);
     m.timer1_tstat_w(0,0,0xffff); // MAME donor read-then-write clear
     assert(m.m_tstat1==0 && (m.m_pending&2)==0 && cpu.irq6==0);
@@ -527,6 +530,30 @@ int main() {
     assert(cpu.irq4==0);
     m.timer1_tctl_w(0,0,0xffff);
     assert(timer.delay.seconds<0);
+
+    // Preserve live counter when modifying comparator during an active
+    // period, and compute the 16-bit wrap instead of resetting a full cycle.
+    m.timer1_tprer_w(0,2,0xffff);
+    m.timer1_tcmp_w(0,150,0xffff);
+    m.timer1_tctl_w(0,0x0033,0xffff);
+    u32 const hz=m.timer1_source_hz();
+    timer.elapsed_value=attotime::from_ticks(300,hz); // 100 prescaled ticks
+    assert(m.timer1_tcn_r()==100);
+    m.timer1_tcmp_w(0,150,0xffff);
+    assert(m.m_tcn1==100);
+    assert(std::fabs(timer.delay.seconds-150.0L/hz)<1e-9L);
+    timer.elapsed_value=attotime::from_ticks(300,hz);
+    m.timer1_tcmp_w(0,50,0xffff); // comparator now below counter
+    assert(m.m_tcn1==200);
+    assert(std::fabs(timer.delay.seconds-(u64(65536-200+50)*3.0L/hz))<1e-9L);
+    m.timer1_tctl_w(0,0,0xffff);
+
+    // Genuine free-run: next comparator match is one 16-bit wrap away.
+    m.timer1_tcmp_w(0,150,0xffff);
+    m.timer1_tctl_w(0,0x0133,0xffff);
+    m.timer1_compare();
+    assert(m.m_tcn1==150);
+    assert(std::fabs(timer.delay.seconds-(65536.0L*3.0L/hz))<1e-9L);
 }
 """
         with tempfile.TemporaryDirectory(prefix='dana-timer-uart-cpp-') as tmp:
@@ -557,7 +584,7 @@ int main() {
             self.assertIn('map('+address+')',src)
             self.assertIn('FUNC(alphasdana_state::'+name+'_r)',src)
         for state in ('tctl1','tprer1','tcmp1','tcr1','tcn1','tstat1','tstat_clear1',
-                      'ustcnt1','ubaud1','urx1','utx1','umisc1','uart_prescaler1'):
+                      'timer1_compares','timer1_iacks','ustcnt1','ubaud1','urx1','utx1','umisc1','uart_prescaler1'):
             self.assertIn('save_item(NAME(m_'+state+'));',src)
         self.assertIn('m_maincpu->set_unscaled_clock(guest_system_clock_hz());',src)
         self.assertIn('if (m_guest_loaded)\n        m_maincpu->set_unscaled_clock(guest_system_clock_hz());',src)
