@@ -195,6 +195,23 @@ try:
     # Only the Dana driver was modified between pinned builds. Preserve all
     # other MAME source/objects; writing bytes here updates its mtime so make
     # detects the changed skeleton driver and relinks danadiagd.
+    # Generated dependency/project files can refer to the *absolute* 011
+    # staging directory. Rebase only those paths in the COPIED cache, not
+    # original MAME source/object files or the immutable 011 directory.
+    previous_root=os.fsencode(str(old_source))
+    copied_root=os.fsencode(str(mame))
+    rewritten=[]
+    for p in (mame/'build/dana-diag').rglob('*'):
+        if not p.is_file() or p.is_symlink() or not (
+                p.name=='Makefile' or p.suffix in ('.d','.make','.mk','.mak')):
+            continue
+        blob=p.read_bytes()
+        if previous_root in blob:
+            p.write_bytes(blob.replace(previous_root,copied_root))
+            rewritten.append(str(p.relative_to(mame)))
+    summary['incremental_build']['rebased_cache_metadata_files']=rewritten[:128]
+    summary['incremental_build']['rebased_metadata_count']=len(rewritten)
+    if len(rewritten)>128:summary['incremental_build']['rebased_metadata_truncated']=True
     # Preserve object metadata before running the incremental make. The
     # resulting evidence reports EXACTLY which object files were replaced.
     cache_objects={str(p.relative_to(mame)):(p.stat().st_size,p.stat().st_mtime_ns)
@@ -222,7 +239,9 @@ try:
     # 011 generated projects and their incremental object/dependency cache.
     summary['incremental_build']['regenie_forced']=False
     summary['MAME_builds']=1;save()
-    stage('build-diag',command,cwd=mame,timeout=7200,env=dict(os.environ,CC=cc,CXX=cxx,LD=cxx))
+    build_env=dict(os.environ,CC=cc,CXX=cxx,LD=cxx)
+    build_env.pop('REGENIE',None)
+    stage('build-diag',command,cwd=mame,timeout=7200,env=build_env)
     # Record objective reused-versus-touched object metadata, not an
     # unsupported assertion that a full MAME rebuild did not happen.
     updated_objects={str(p.relative_to(mame)):(p.stat().st_size,p.stat().st_mtime_ns)
