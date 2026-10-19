@@ -21,8 +21,38 @@ from d1_2_run import lua
 def save(path,data):path.write_text(json.dumps(data,indent=2)+'\n')
 
 BINARY_SHA='d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5'
+OLD_DRIVER_SHA='6bff19e0ae1e6c7a1f99a86fcfa2fbe235ac096c6624a10f6600fbd8851ddcf0'
 OLD_PC=0x8392
 TRACE_LIMIT=5*1024*1024
+MAME_PIN='c4e48388ca620472643110db2941ce70aa5f3c07'
+
+
+def qualify_pfsel_build(binary,qualification,expected_source=None):
+    """Require a newly compiled DIAG identity; never widen the old E4 binary."""
+    from d2_2_gpio_run import diag_path
+    if not Path(binary).is_absolute():raise ValueError('Explicit absolute new DIAG path required')
+    binary=diag_path(binary)
+    q=json.loads(Path(qualification).read_text())
+    if not isinstance(q,dict):raise ValueError('Invalid build qualification object')
+    source=expected_source or subprocess.check_output(['git','-C',str(PROJECT),'rev-parse','HEAD'],text=True).strip()
+    manifest_path=binary.parent.parent/'source-manifest.json'
+    manifest=json.loads(manifest_path.read_text())
+    if not isinstance(manifest,dict):raise ValueError('Invalid staged build manifest object')
+    if (q.get('source_manifest_sha256')!=sha(manifest_path) or manifest.get('status')!='BUILT_DIAG'
+            or manifest.get('source_commit')!=source or manifest.get('mame_commit')!=MAME_PIN
+            or manifest.get('variant')!='diag' or manifest.get('binary_sha256')!=sha(binary)
+            or manifest.get('driver_sha256')!=sha(PROJECT/'src/mame/skeleton/alphasdana.cpp')):
+        raise ValueError('Missing matching staged PFSEL build manifest')
+    command=q.get('build_command',[])
+    if (q.get('schema')!='dana-d23-build-v1' or q.get('source_commit')!=source
+            or q.get('driver_sha256')!=sha(PROJECT/'src/mame/skeleton/alphasdana.cpp')
+            or q.get('mame_commit')!=MAME_PIN or q.get('subtarget')!='danadiag'
+            or q.get('build_exit_code')!=0 or q.get('variant')!='diag'
+            or q.get('binary_sha256')!=sha(binary) or sha(binary)==BINARY_SHA
+            or q.get('binary')!=str(binary) or not isinstance(command,list)
+            or not {'make','-j3','SUBTARGET=danadiag','DEBUG=1','SOURCES=src/mame/skeleton/alphasdana.cpp'}.issubset(command)):
+        raise ValueError('New source-qualified PFSEL DIAG required; old E4 binary forbidden')
+    return q
 
 
 def selected_bytes(event):
@@ -33,15 +63,15 @@ def selected_bytes(event):
     return [address+i for i,lane in enumerate((0xff00,0xff)) if mask & lane]
 
 
-def implemented_byte(address,kind):
+def implemented_byte(address,kind,pfsel=False):
     # Match only the individually decoded production addresses; no new device.
     return (0xfffff202<=address<=0xfffff203 or address==0xfffff300
         or 0xfffff302<=address<=0xfffff307 or 0xfffff30c<=address<=0xfffff30f
         or (kind=='read' and 0xfffff310<=address<=0xfffff313)
-        or address in (0xfffff412,0xfffff413))
+        or address in (0xfffff412,0xfffff413) or (pfsel and address==0xfffff42b))
 
 
-def verify_e4(root,guest,expected_source=None):
+def verify_e4(root,guest,expected_source=None,qualification=None):
     """Independent raw-evidence check. A single run cannot qualify E4."""
     root=Path(root)
     try:
@@ -55,8 +85,16 @@ def verify_e4(root,guest,expected_source=None):
         run=json.loads((root/'run.json').read_text());obs=json.loads((root/'observation.json').read_text())
         if not isinstance(run,dict) or not isinstance(obs,dict):raise ValueError('Invalid evidence objects')
         staged_identity(run)
+        pfsel=qualification is not None
+        revision='F1-E5' if pfsel else 'F1-E4'
+        expected_binary=BINARY_SHA
+        if pfsel:
+            build=qualify_pfsel_build(Path(run['command'][0]),qualification,expected_source)
+            expected_binary=build['binary_sha256']
+            if run.get('qualification_sha256')!=sha(Path(qualification)) or obs.get('qualification_sha256')!=sha(Path(qualification)):
+                raise ValueError('Unbound PFSEL build qualification')
         if run.get('exit_code')!=0 or run.get('reason')=='HOST_TIMEOUT':raise ValueError('Native process incomplete')
-        for key,value in (('revision','F1-E4'),('variant','diag'),('binary_sha256',BINARY_SHA),
+        for key,value in (('revision',revision),('variant','diag'),('binary_sha256',expected_binary),
                           ('package_sha256',manifest['package']['sha256']),
                           ('image_sha256',manifest['artifacts']['emutos.img']['sha256'])):
             if run.get(key)!=value or obs.get(key)!=value:raise ValueError('Identity mismatch: '+key)
@@ -64,9 +102,10 @@ def verify_e4(root,guest,expected_source=None):
         for key,pattern in (('source_commit',r'[0-9a-f]{40}'),('execution_id',r'[0-9a-f]{32}')):
             if not re.fullmatch(pattern,run.get(key,'')) or run[key]!=obs.get(key):
                 raise ValueError('Unbound '+key)
-        if run['source_commit']!=expected_source or run.get('driver_sha256')!=sha(PROJECT/'src/mame/skeleton/alphasdana.cpp'):
+        wanted_driver=sha(PROJECT/'src/mame/skeleton/alphasdana.cpp') if pfsel else OLD_DRIVER_SHA
+        if run['source_commit']!=expected_source or run.get('driver_sha256')!=wanted_driver:
             raise ValueError('Wrong harness or production source identity')
-        if obs.get('status')!='CAPTURED' or obs.get('schema')!='dana-f1-e4-observation-v1':
+        if obs.get('status')!='CAPTURED' or obs.get('schema')!=('dana-f1-e5-observation-v1' if pfsel else 'dana-f1-e4-observation-v1'):
             raise ValueError('No E4 capture')
         if run.get('full_boot') is not False or obs.get('full_boot') is not False:
             raise ValueError('False or ambiguous full-boot claim')
@@ -139,7 +178,7 @@ def verify_e4(root,guest,expected_source=None):
         missing=[]
         for e in bus:
             for address in selected_bytes(e):
-                if address>=0x400000 and not implemented_byte(address,e['kind']):missing.append((e,address))
+                if address>=0x400000 and not implemented_byte(address,e['kind'],pfsel):missing.append((e,address))
         if not missing:
             return {'status':'BLOCKED_GUEST','reason':'NO_NEW_CPU_DEPENDENCY_WITHIN_BOUND',
                     'milestones':path,'old_pcsel_crossing_proved':crossing_proved,'full_boot':False}
@@ -153,6 +192,16 @@ def verify_e4(root,guest,expected_source=None):
             raise ValueError('Claimed dependency is not first raw unsupported CPU access')
         if not crossing_proved or crossing[0]['seq']>=event['seq']:
             raise ValueError('No genuine old-PCSEL CPU write before new dependency')
+        if pfsel:
+            reads=[e for e in bus if e['address']==0xfffff42a and e['mask']==0xff
+                   and e['kind']=='read' and e['state']['CURPC']==0x83a2]
+            writes=[e for e in bus if e['address']==0xfffff42a and e['mask']==0xff
+                    and e['kind']=='write' and e['state']['CURPC']==0x83a8]
+            if (len(reads)!=1 or len(writes)!=1 or reads[0]['data'] & 255!=0xc5
+                    or writes[0]['data'] & 255!=0xc5
+                    or not crossing[0]['seq']<reads[0]['seq']<writes[0]['seq']<event['seq']
+                    or not pcs.index(OLD_PC)<pcs.index(0x83a2)<pcs.index(0x83a8)<pcs.index(event['state']['CURPC'])):
+                raise ValueError('Native PFSEL C5 read/ORI/write path not proved')
         pc=event['state']['CURPC']
         if not syms['__text']<=pc<syms['__text']+manifest['artifacts']['emutos.img']['size']:
             raise ValueError('Unknown dependency instruction path')
@@ -175,10 +224,11 @@ def verify_e4(root,guest,expected_source=None):
         return {'status':'BLOCKED_HARNESS','domain':'EVIDENCE','reason':str(exc),'full_boot':False}
 
 
-def verify_e4_pair(root,guest,expected_source=None):
-    runs=[verify_e4(Path(root)/name,guest,expected_source) for name in ('run-1','run-2')]
+def verify_e4_pair(root,guest,expected_source=None,qualification=None):
+    runs=[verify_e4(Path(root)/name,guest,expected_source,qualification) for name in ('run-1','run-2')]
     result={'status':'BLOCKED_HARNESS','scope':'F1-E4 two-run authentic post-Port-C continuation only',
             'full_boot':False,'runs':runs,'reason':'TWO_GENUINE_PROGRESS_OBSERVATIONS_REQUIRED'}
+    if qualification:result['scope']='F1-E5 two-run authentic post-PFSEL continuation only'
     if any(r['status']!='OBSERVED_UNQUALIFIED_SINGLE_RUN' for r in runs):
         if any(r['status']=='BLOCKED_GUEST' for r in runs):result['status']='BLOCKED_GUEST'
         return result
@@ -193,6 +243,7 @@ def verify_e4_pair(root,guest,expected_source=None):
         result.update(status='REAL_PROGRESS_PASS_SCOPED',reason='OLD_PCSEL_CROSSED_NEW_DEPENDENCY_REPRODUCED',
                       normalized_dependency=a['normalized_dependency'],
                       raw_bus_prefix_equal=a['normalized_bus_prefix']==b['normalized_bus_prefix'])
+        if qualification:result['reason']='PFSEL_C5_READ_WRITE_AND_NEW_DEPENDENCY_REPRODUCED'
     return result
 
 def verify(root,guest):
@@ -252,11 +303,12 @@ def limits():
     # Finite native trace/console artifacts, rather than unlimited trace output.
     resource.setrlimit(resource.RLIMIT_FSIZE,(5*1024*1024,5*1024*1024))
 
-def run(binary,guest,root,reject=False,post_portc=False):
+def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
     from d2_2_gpio_run import diag_path
     if not Path(binary).is_absolute():raise ValueError('Explicit absolute DIAG path required')
     binary=diag_path(binary)
-    if post_portc and sha(binary)!=BINARY_SHA:raise ValueError('Qualified DIAG SHA required; no fallback')
+    if qualification:qualify_pfsel_build(binary,qualification)
+    elif post_portc and sha(binary)!=BINARY_SHA:raise ValueError('Qualified DIAG SHA required; no fallback')
     manifest=(validate_qualified if post_portc else validate)(guest);syms=manifest['symbols'];root=Path(root).resolve()
     root.mkdir(parents=True,exist_ok=False)
     plugin=root/'plugin';plugin.mkdir();shutil.copyfile(HERE/'f1_emutos_boot.lua',plugin/'boot.lua')
@@ -266,6 +318,7 @@ def run(binary,guest,root,reject=False,post_portc=False):
         config.update(revision='F1-E4',variant='diag',execution_id=uuid.uuid4().hex,
                       source_commit=subprocess.check_output(['git','-C',str(PROJECT),'rev-parse','HEAD'],text=True).strip(),
                       image_sha256=manifest['artifacts']['emutos.img']['sha256'],full_boot=False)
+        if qualification:config.update(revision='F1-E5',qualification_sha256=sha(Path(qualification)))
     cfg=root/'config.lua';cfg.write_text('return '+lua(config)+'\n')
     environment=dict(os.environ,DANA_F1_CONFIG=str(cfg))
     image=Path(guest).resolve()/'emutos.dana'
@@ -276,10 +329,11 @@ def run(binary,guest,root,reject=False,post_portc=False):
              '-debug','-debugger','none','-pluginspath',str(plugin),'-plugins','-video','none',
              '-sound','none','-log','-skip_gameinfo','-seconds_to_run','6']
     record={'binary_sha256':config['binary_sha256'],'command':command,
-            'driver_sha256':sha(PROJECT/'src/mame/skeleton/alphasdana.cpp'),
+            'driver_sha256':sha(PROJECT/'src/mame/skeleton/alphasdana.cpp') if qualification else OLD_DRIVER_SHA,
             'package_sha256':config['package_sha256'],'host_timeout_seconds':180}
     if post_portc:
         record.update({k:config[k] for k in ('revision','variant','execution_id','source_commit','image_sha256','full_boot')})
+        if qualification:record['qualification_sha256']=config['qualification_sha256']
     try:
         with (root/'console.log').open('wb') as log:
             proc=subprocess.Popen(command,cwd=root,env=environment,stdout=log,stderr=subprocess.STDOUT,preexec_fn=limits)
@@ -300,7 +354,7 @@ def run(binary,guest,root,reject=False,post_portc=False):
                     'reason':'DIGEST_REJECTED_BEFORE_CPU_FETCH' if rejected else 'NATIVE_REJECTION_NOT_PROVED'}
         except (OSError,ValueError,KeyError) as error:
             result={'status':'BLOCKED','reason':str(error)}
-    else:result=(verify_e4 if post_portc else verify)(root,guest)
+    else:result=verify_e4(root,guest,qualification=qualification) if post_portc else verify(root,guest)
     save(root/'result.json',result)
     return result
 
@@ -308,17 +362,19 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('diag',type=Path)
     p.add_argument('guest',type=Path);p.add_argument('evidence',type=Path)
     p.add_argument('--post-portc',action='store_true',help='F1-E4: two qualified guest runs; no native campaign replay')
+    p.add_argument('--pfsel-build',type=Path,help='F1-E5 only: new DIAG build qualification JSON')
     args=p.parse_args();root=args.evidence.resolve();root.mkdir(parents=True,exist_ok=False)
     try:
         from d2_2_gpio_run import diag_path
         if not args.diag.is_absolute():raise ValueError('Explicit absolute DIAG path required')
         binary=diag_path(args.diag)
-        if args.post_portc:
-            if sha(binary)!=BINARY_SHA:raise ValueError('Qualified DIAG SHA required; no fallback')
+        if args.post_portc or args.pfsel_build:
+            if args.pfsel_build:qualify_pfsel_build(binary,args.pfsel_build)
+            elif sha(binary)!=BINARY_SHA:raise ValueError('Qualified DIAG SHA required; no fallback')
             validate_qualified(args.guest)
-            run(binary,args.guest,root/'run-1',post_portc=True)
-            run(binary,args.guest,root/'run-2',post_portc=True)
-            result=verify_e4_pair(root,args.guest)
+            run(binary,args.guest,root/'run-1',post_portc=True,qualification=args.pfsel_build)
+            run(binary,args.guest,root/'run-2',post_portc=True,qualification=args.pfsel_build)
+            result=verify_e4_pair(root,args.guest,qualification=args.pfsel_build)
             save(root/'result.json',result);print(json.dumps(result,indent=2))
             return 0 if result['status']=='REAL_PROGRESS_PASS_SCOPED' else 2
         validate(args.guest)

@@ -1,0 +1,141 @@
+{
+  "status": "D2_3_STATIC_PASS",
+  "native_runtime": "NATIVE_PENDING",
+  "scope": "PFSEL 8-bit latch in existing R-direct DIAG only",
+  "reviewed_base": "56a0a0040edfc161e45c1131692a64c3649fe3af",
+  "canonical_main_read": "77c9758bdff932a4f94d1cc3052e5837c36ce66b",
+  "register": {
+    "name": "PFSEL",
+    "address": "0xFFFFF42B",
+    "width_bits": 8,
+    "rw_mask": "0xFF",
+    "hardware_reset": "0x87",
+    "R_direct_reset": "0xC5",
+    "dedicated_select": 0,
+    "GPIO_select": 1
+  },
+  "manufacturer": {
+    "manual": "MC68VZ328UM/D Rev0",
+    "section": "10.4.7.5",
+    "table": "10-35",
+    "PDF_page_1_based": 197,
+    "verification": "Supplied exact primary excerpt and independently audited canonical main; raw PDF not retrieved again in Cloud"
+  },
+  "guest_comment_discrepancy": "EmuTOS PFSEL |= 1 comment says enable LCONTRAST; manual SEL0=1 selects GPIO. No guest edit or physical contrast claim.",
+  "source_sha256": {
+    "src/mame/skeleton/alphasdana.cpp": "e294007caecab28f612f7b883f240114cbffb12f41a8f16099abf77de227b61a",
+    "tests/f1_emutos_run.py": "cc08982a6e77f0cad34de8dab13e617b189e87dc0fd51ea92e690b89bd2c1e91",
+    "tests/f1_emutos_boot.lua": "65a98fa2a2fb08bd2ec152356000788ada290ff0252cc8def27cd735ae214a05",
+    "tests/d2_3_pfsel_run.py": "1656e1f1316d3dba386683d802408e5e219273383786f83584371a6022d44c20",
+    "tests/d2_3_pfsel_boot.lua": "41ed9500aa2ee49ffac3cb8a09bb484c85d0355a12558984a2eecdc9a86bc47a",
+    "tests/d2_3_test.py": "e5f60fa4a659e2ce812718d784273d012a4f79b6c14f8374e0196f77067e2a83",
+    "tests/d2_3_pfsel_fixture.s": "e85564991ce0371a2997cab2a0becde00713564b390fd632d33be079d4cdd630"
+  },
+  "source_references": [
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/dana.c",
+      "sha256": "5c70f2ea282e3cf7d86db04048d8dd00505ec19f2498bccb2da53d447a97b47a"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/dana.h",
+      "sha256": "04460984a35474793ea02131e581715b70091262858309bd6c1b43266a51630f"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/dana2.S",
+      "sha256": "45e44d942562feb6a8ad745dcb3df2147872632046a6059ec63c3168afff7ef2"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "bios/screen.c",
+      "sha256": "3ce5c5bb91742f63b027b90a0d5c42e4c32654d4b2399da0bdeb0ca8b74f3d3d"
+    },
+    {
+      "repository": "davidgiven/emutos",
+      "commit": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "path": "util/danaboot.S",
+      "sha256": "cca2ae58aff5d94d56edf72bc66950aaba6751dfcb87918ab2fd495c7c50acce"
+    },
+    {
+      "repository": "davidgiven/dbztool",
+      "commit": "d32702383c2ea3523ea58599c52345435c74e900",
+      "path": "danainit.sh",
+      "sha256": "db8fecc97f60d90cb49d29b2e285dd202867c0d45dee7b7bba873d36ff49abdb"
+    }
+  ],
+  "preserved_native": {
+    "F1_E4": "REAL_PROGRESS_PASS_SCOPED",
+    "main_checkpoint": "9d015868989b2813b772e42cf8b91094a313481d",
+    "archive_sha256": "55b60457439105b7fd01a7c927222a1654eccc36523be0dbda12ddb59775f5e0",
+    "archive_bytes": 457980,
+    "manifest_members": 36,
+    "PIDs": [
+      318446,
+      318469
+    ],
+    "next_measured_dependency": {
+      "register": "PFSEL",
+      "effective": "0xFFFFF42B",
+      "aligned": "0xFFFFF42A",
+      "mask": "0x00FF",
+      "PC": "0x83A2"
+    },
+    "review_origin": "Supplied contract and main HANDOFF; no new private archive audit",
+    "dispatch_origin": "UNKNOWN; historical Commander safety rejection remains preserved"
+  },
+  "historical_binary": {
+    "sha256": "d7bcdf513289a73b8a5c7ab1d258eeac45dc8dd6d89dd7d568cf7784900e6fe5",
+    "source": "749517b2f48c9788e5555071561e738017ac5f7c",
+    "eligible_for_D2_3": false
+  },
+  "new_binary": {
+    "status": "UNBUILT_NATIVE_PENDING",
+    "sha256": null,
+    "policy": "Exactly one source-pinned Clang21 DIAG build after separate native/build authorization; no old binary reuse or fallback"
+  },
+  "fixture": {
+    "bytes": 294,
+    "sha256": "7a73d9966b07eb8669a393735fc7640ea917f25a7428a53eb1afa1de4b7d3a1a",
+    "branch_displacement": "0x010C",
+    "endpoint": "0x4110",
+    "post_read": "0x4116",
+    "store": "0x411C",
+    "stop": "0x4122",
+    "assembler": "GNU MC68000 as/objcopy byte-for-byte PASS; not an emulator or ROM build"
+  },
+  "local_checks": {
+    "tests": 70,
+    "output": "Ran 70 tests in 4.359s; OK; exit 0",
+    "CXX": "Extracted actual PFSEL and preserved Port C logic only; no MAME build",
+    "Lua": "Full parse and callback mocks PASS",
+    "syntax": "Python compile, bash -n, embedded Python AST, diff check PASS",
+    "guards": "No auth, obsolete D2.2/F1-E4 auth, and native-only auth without new build flag: HOLD/exit2"
+  },
+  "qualification_job": {
+    "path": "tests/hold/010_dana_d23_pfsel_diag.job.sh",
+    "state": "SOURCE_FREEZE_PENDING_LOCAL_GIT_HOLD",
+    "authorization": [
+      "DANA_D2_3_AUTHORIZED=YES",
+      "DANA_D2_3_BUILD_AUTHORIZED=YES"
+    ],
+    "source_commit": null,
+    "sha256": null,
+    "new_DIAG_builds": 1,
+    "ROM_builds": 0,
+    "native_processes": 4,
+    "dispatch": "NONE"
+  },
+  "next_action": "Independent source review, then separate scoped T/build/Commander authorization with explicit call cap. Do not bypass historical safety rejection. Native PFSEL and F1-E5 pending; next new peripheral UNKNOWN.",
+  "T_calls": 0,
+  "Commander_calls": 0,
+  "MAME_builds_in_Codex": 0,
+  "ROM_builds_in_Codex": 0,
+  "emulator_executions_in_Codex": 0,
+  "full_boot": false
+}

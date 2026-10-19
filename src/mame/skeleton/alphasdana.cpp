@@ -69,6 +69,10 @@ private:
     void pcpden_w(u8 data) { m_pcpden = data; }
     u8 pcsel_r() { return m_pcsel; }
     void pcsel_w(u8 data) { m_pcsel = data; }
+    // VZ silicon reset is 0x87; this machine uses dbztool's R-direct 0xc5.
+    void pfsel_reset() { m_pfsel = 0xc5; }
+    u8 pfsel_r() { return m_pfsel; }
+    void pfsel_w(u8 data) { m_pfsel = data; }
 
     DECLARE_QUICKLOAD_LOAD_MEMBER(guest_load);
     required_device<dana_vz_cpu_device> m_maincpu;
@@ -84,6 +88,7 @@ private:
     u32 m_pending = 0;
     u8 m_pcpden = 0;
     u8 m_pcsel = 0;
+    u8 m_pfsel = 0xc5;
 };
 
 void alphasdana_state::machine_start()
@@ -98,6 +103,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pending));
     save_item(NAME(m_pcpden));
     save_item(NAME(m_pcsel));
+    save_item(NAME(m_pfsel));
     m_guest_ready = 0;
 }
 
@@ -118,6 +124,7 @@ void alphasdana_state::machine_reset()
     // entry. This machine implements that synthetic post-bootstrap profile.
     // POSE's 0xff initial values are NOT manufacturer reset evidence.
     portc_reset();
+    pfsel_reset();
     // Quickload is timer-driven. Suppress *all* CPU fetches until validation
     // and the complete RAM/bootstrap seed have succeeded. No-image tests keep
     // their independently qualified native reset path unchanged.
@@ -259,6 +266,8 @@ void alphasdana_state::program_map(address_map &map)
     // See docs/D2_2_PORTC_IMPLEMENTATION.md for the primary-source limitation.
     map(0xfffff412, 0xfffff412).rw(FUNC(alphasdana_state::pcpden_r), FUNC(alphasdana_state::pcpden_w));
     map(0xfffff413, 0xfffff413).rw(FUNC(alphasdana_state::pcsel_r), FUNC(alphasdana_state::pcsel_w));
+    // Only PFSEL, low/odd byte of F42A. PFPUEN at F42A stays unmapped.
+    map(0xfffff42b, 0xfffff42b).rw(FUNC(alphasdana_state::pfsel_r), FUNC(alphasdana_state::pfsel_w));
 }
 
 void alphasdana_state::alphasdana(machine_config &config)

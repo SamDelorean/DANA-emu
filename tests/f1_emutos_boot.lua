@@ -6,6 +6,8 @@ local events,taps,subscriptions={}, {}, {}
 local bytes,host=0,false
 local pending,pending_dependency,initialized=nil,nil,false
 local e4=cfg.revision=='F1-E4'
+local e5=cfg.revision=='F1-E5' and type(cfg.qualification_sha256)=='string' and #cfg.qualification_sha256==64
+assert(cfg.revision~='F1-E5' or e5,'Missing new PFSEL build qualification')
 local function encode(x)
     if type(x)=='string' then return string.format('%q',x):gsub('\\\n','\\n') end
     if type(x)=='number' or type(x)=='boolean' then return tostring(x) end
@@ -28,12 +30,13 @@ local function finish(reason,dependency)
     if cpu and cpu.debug then manager.machine.debugger:command('trace off') end
     local trace=io.open(cfg.output..'/guest.trace','rb')
     local trace_bytes=trace and trace:seek('end') or 0;if trace then trace:close() end
-    local result={schema=e4 and 'dana-f1-e4-observation-v1' or 'dana-f1-observation-v1',
+    local result={schema=e5 and 'dana-f1-e5-observation-v1' or e4 and 'dana-f1-e4-observation-v1' or 'dana-f1-observation-v1',
         status='CAPTURED',reason=reason,dependency=dependency,
         first_instruction=first,events=events,final=cpu and state() or {},
         virtual_seconds=emu.time(),package_sha256=cfg.package_sha256,binary_sha256=cfg.binary_sha256,
         revision=cfg.revision,source_commit=cfg.source_commit,execution_id=cfg.execution_id,
         image_sha256=cfg.image_sha256,variant='diag',trace_bytes=trace_bytes,
+        qualification_sha256=cfg.qualification_sha256,
         event_count=#events,trace_mode='native_loop_compression_no_sampling',full_boot=false}
     local f=assert(io.open(cfg.output..'/observation.json','w'));f:write(encode(result),'\n');f:close()
     if space then
@@ -72,6 +75,7 @@ local function implemented_byte(address,kind)
         or (address>=0xfffff30c and address<=0xfffff30f)
         or (kind=='read' and address>=0xfffff310 and address<=0xfffff313)
         or address==0xfffff412 or address==0xfffff413
+        or (e5 and address==0xfffff42b)
 end
 local function bus_bytes(address,mask)
     -- MAME's 16-bit tap address is word-aligned, even for byte accesses.

@@ -1,3 +1,5 @@
+> **Current checkpoint:** F1-E4 is now independently native PASS scoped (canonical main `9d015868989b2813b772e42cf8b91094a313481d`, archive SHA256 `55b60457439105b7fd01a7c927222a1654eccc36523be0dbda12ddb59775f5e0`, 36/36 manifest members). First real next dependency is PFSEL F42B at PC83A2, not a prediction. Original archive remains immutable and old E4 binary is not eligible for new PFSEL. [D2.3 source implementation and F1-E5 qualification](D2_3_PFSEL_IMPLEMENTATION.md) are STATIC_PASS / NATIVE_PENDING on a separately rebuilt DIAG only. No native campaign was repeated here. Earlier pending E4 statements below are historical.
+
 # F1-E4 — Post-Port-C authentic EmuTOS continuation
 
 **2026-10-18: F1_E4_STATIC_PASS / NATIVE_PENDING; implementation PREPARED.**

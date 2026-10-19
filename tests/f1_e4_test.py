@@ -62,7 +62,7 @@ class Evidence(unittest.TestCase):
             run=dict(exit_code=0,pid=100+i,revision='F1-E4',variant='diag',binary_sha256=runner.BINARY_SHA,
                 package_sha256=self.manifest['package']['sha256'],image_sha256=guest.sha(self.guest/'emutos.img'),
                 source_commit=self.source,execution_id=str(i+1)*32,full_boot=False,
-                command=['/qualified/diag/bin/dana-diag','asmdana'],driver_sha256=guest.sha(ROOT/'src/mame/skeleton/alphasdana.cpp'))
+                command=['/qualified/diag/bin/dana-diag','asmdana'],driver_sha256=runner.OLD_DRIVER_SHA)
             obs=dict(run,schema='dana-f1-e4-observation-v1',status='CAPTURED',reason='BLOCKED_HARDWARE',
                      first_instruction=state(0x2140),events=events,dependency=dep,final=state(0x8400),
                      event_count=len(events),trace_bytes=len(trace.encode()),virtual_seconds=.1,

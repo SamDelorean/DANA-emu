@@ -53,7 +53,7 @@ int main() {
                             str(path/'check.cpp'), '-o', str(path/'check')], check=True, timeout=90)
             subprocess.run([str(path/'check')], check=True, timeout=20)
 
-    def test_only_two_new_native_byte_decodes_and_save_reset(self):
+    def test_individual_gpio_decodes_and_save_reset(self):
         src = DRIVER.read_text()
         for addr, name in ((0xfffff412, 'pcpden'), (0xfffff413, 'pcsel')):
             line = f'map(0x{addr:x}, 0x{addr:x}).rw(FUNC(alphasdana_state::{name}_r), FUNC(alphasdana_state::{name}_w));'
@@ -65,7 +65,8 @@ int main() {
         for start, end in re.findall(r'map\((0x[0-9a-f]+), (0x[0-9a-f]+)\)', src):
             a, b = int(start, 16), int(end, 16)
             if a <= 0xfffff4ff and b >= 0xfffff400:
-                self.assertIn((a, b), [(0xfffff412, 0xfffff412), (0xfffff413, 0xfffff413)])
+                self.assertIn((a, b), [(0xfffff412, 0xfffff412), (0xfffff413, 0xfffff413),
+                                       (0xfffff42b, 0xfffff42b)]) # D2.3 independently decoded PFSEL only
             self.assertFalse(0xfff000 <= a <= 0xffffff)
 
     def test_real_lua_lane_and_neighbor_classification(self):
