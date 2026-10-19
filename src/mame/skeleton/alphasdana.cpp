@@ -4,6 +4,7 @@
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
 #include "imagedev/snapquik.h"
+#include "screen.h"
 #include "util/hashing.h"
 
 // Minimal VZ-aware M68000 address-width carrier. The stock M68000 exposes
@@ -39,6 +40,8 @@ public:
         , m_maincpu(*this, "maincpu")
         , m_guest(*this, "guest")
         , m_guest_ready(*this, "dana_guest_loaded")
+        , m_screen(*this, "screen")
+        , m_ram(*this, "ram")
     {
     }
 
@@ -74,10 +77,63 @@ private:
     u8 pfsel_r() { return m_pfsel; }
     void pfsel_w(u8 data) { m_pfsel = data; }
 
+
+    // Post-bootstrap GPIO output/configuration latches. The initial values
+    // come from pinned dbztool/danainit.sh, NOT MC68VZ328 silicon reset.
+    // External GPIO pin inputs (ST, pen, card detect) remain unimplemented.
+    // Port order B, D, E, F, G, J, K, M; DIR/DATA/PUEN/SEL columns.
+    void gpio_bootstrap_reset();
+#define DANA_GPIO_PORT(NAME, INDEX) \
+    u8 NAME##_r(offs_t reg) { return m_gpio[(INDEX)*4 + reg]; } \
+    void NAME##_w(offs_t reg, u8 value) { m_gpio[(INDEX)*4 + reg] = value; }
+    DANA_GPIO_PORT(pb, 0)
+    DANA_GPIO_PORT(pd, 1)
+    DANA_GPIO_PORT(pe, 2)
+    DANA_GPIO_PORT(pf, 3)
+    DANA_GPIO_PORT(pg, 4)
+    DANA_GPIO_PORT(pj, 5)
+    DANA_GPIO_PORT(pk, 6)
+    DANA_GPIO_PORT(pm, 7)
+#undef DANA_GPIO_PORT
+
+    // Guest-owned VZ LCD configuration registers; the DMA-backed screen
+    // reads real emulated RAM. No LCD IRQ, contrast voltage or clock emulation.
+    u16 lssa_r(offs_t offset) { return offset ? u16(m_lssa) : u16(m_lssa >> 16); }
+    void lssa_w(offs_t offset, u16 data, u16 mem_mask)
+    {
+        unsigned const shift = offset ? 0 : 16;
+        u32 const lane = u32(mem_mask) << shift;
+        m_lssa = (m_lssa & ~lane) | (u32(data & mem_mask) << shift);
+    }
+#define DANA_LCD_BYTE(NAME) \
+    u8 NAME##_r() { return m_##NAME; } \
+    void NAME##_w(u8 value) { m_##NAME = value; }
+    DANA_LCD_BYTE(lvpw)
+    DANA_LCD_BYTE(lpicf)
+    DANA_LCD_BYTE(lpolcf)
+    DANA_LCD_BYTE(lacdrc)
+    DANA_LCD_BYTE(lpxcd)
+    DANA_LCD_BYTE(lckcon)
+    DANA_LCD_BYTE(lposr)
+    DANA_LCD_BYTE(lgpmr)
+#undef DANA_LCD_BYTE
+#define DANA_LCD_WORD(NAME) \
+    u16 NAME##_r() { return m_##NAME; } \
+    void NAME##_w(offs_t, u16 data, u16 mask) { COMBINE_DATA(&m_##NAME); }
+    DANA_LCD_WORD(lxmax)
+    DANA_LCD_WORD(lymax)
+    DANA_LCD_WORD(lrra)
+    DANA_LCD_WORD(pwmr)
+#undef DANA_LCD_WORD
+    u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+    void lcd_bootstrap_reset();
+
     DECLARE_QUICKLOAD_LOAD_MEMBER(guest_load);
     required_device<dana_vz_cpu_device> m_maincpu;
     required_device<quickload_image_device> m_guest;
     output_finder<> m_guest_ready;
+    required_device<screen_device> m_screen;
+    required_shared_ptr<u16> m_ram;
     emu_timer *m_clk32_timer = nullptr;
     u16 m_pllfsr = 0x0347;
     bool m_clk32_high = false;
@@ -89,6 +145,14 @@ private:
     u8 m_pcpden = 0;
     u8 m_pcsel = 0;
     u8 m_pfsel = 0xc5;
+    u8 m_gpio[32] = {};
+    u32 m_lssa = 0;
+    u8 m_lvpw = 0xff;
+    u16 m_lxmax = 0x03f0;
+    u16 m_lymax = 0x01ff;
+    u8 m_lpicf = 0, m_lpolcf = 0, m_lacdrc = 0, m_lpxcd = 0;
+    u8 m_lckcon = 0, m_lposr = 0, m_lgpmr = 0x84;
+    u16 m_lrra = 0x00ff, m_pwmr = 0;
 };
 
 void alphasdana_state::machine_start()
@@ -104,6 +168,20 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pcpden));
     save_item(NAME(m_pcsel));
     save_item(NAME(m_pfsel));
+    save_item(NAME(m_gpio));
+    save_item(NAME(m_lssa));
+    save_item(NAME(m_lvpw));
+    save_item(NAME(m_lxmax));
+    save_item(NAME(m_lymax));
+    save_item(NAME(m_lpicf));
+    save_item(NAME(m_lpolcf));
+    save_item(NAME(m_lacdrc));
+    save_item(NAME(m_lpxcd));
+    save_item(NAME(m_lckcon));
+    save_item(NAME(m_lposr));
+    save_item(NAME(m_lgpmr));
+    save_item(NAME(m_lrra));
+    save_item(NAME(m_pwmr));
     m_guest_ready = 0;
 }
 
@@ -125,11 +203,60 @@ void alphasdana_state::machine_reset()
     // POSE's 0xff initial values are NOT manufacturer reset evidence.
     portc_reset();
     pfsel_reset();
+    gpio_bootstrap_reset();
+    lcd_bootstrap_reset();
     // Quickload is timer-driven. Suppress *all* CPU fetches until validation
     // and the complete RAM/bootstrap seed have succeeded. No-image tests keep
     // their independently qualified native reset path unchanged.
     if (m_guest->exists() && !m_guest_loaded)
         m_maincpu->suspend(SUSPEND_REASON_DISABLE, true);
+}
+
+
+void alphasdana_state::gpio_bootstrap_reset()
+{
+    // R-direct preconfiguration from dbztool@d327023/danainit.sh.
+    // B,D,E,F,G,J,K,M: DIR, DATA latch, PUEN, SEL.
+    static constexpr u8 profile[32] = {
+        0x60,0x00,0x00,0x60, 0x00,0x00,0x1f,0x10,
+        0xc8,0x08,0x10,0xc8, 0x44,0x00,0x00,0xc5,
+        0x1f,0x1d,0x00,0x3f, 0xbf,0x40,0x00,0xcf,
+        0xf9,0x00,0x00,0xfd, 0x20,0x20,0x00,0x20
+    };
+    for (unsigned i=0; i<32; ++i)
+        m_gpio[i] = profile[i];
+}
+
+void alphasdana_state::lcd_bootstrap_reset()
+{
+    // D0.2 register contract; LCD is off until explicitly programmed by guest.
+    // These are controller-register initial values, not a physical LCD reset test.
+    m_lssa=0; m_lvpw=0xff; m_lxmax=0x03f0; m_lymax=0x01ff;
+    m_lpicf=0; m_lpolcf=0; m_lacdrc=0; m_lpxcd=0;
+    m_lckcon=0; m_lposr=0; m_lgpmr=0x84; m_lrra=0x00ff; m_pwmr=0;
+}
+
+u32 alphasdana_state::screen_update(screen_device &, bitmap_rgb32 &bitmap, const rectangle &cliprect)
+{
+    // Read the actual guest-allocated 560x160 1-bpp framebuffer, never draw a
+    // host-generated imitation of an EmuTOS screen. The direct RAM share avoids
+    // debugger memory taps falsely classifying video reads as 68000 traffic.
+    rgb_t const off(0xbd, 0xbd, 0xaa), on(0x40, 0x40, 0x40);
+    bitmap.fill(off, cliprect);
+    if (!(m_lckcon & 0x80) || m_lpicf != 8 || m_lvpw != 35
+        || m_lxmax != 560 || m_lymax != 159 || (m_lssa & 1)
+        || m_lssa > 0x400000 - 11200)
+        return 0;
+    for (int y=std::max(cliprect.top(),0); y<=std::min(cliprect.bottom(),159); ++y)
+    {
+        u32 const line = m_lssa + u32(y)*70;
+        for (int x=std::max(cliprect.left(),0); x<=std::min(cliprect.right(),559); ++x)
+        {
+            u16 const word = m_ram[(line >> 1) + u32(x >> 4)];
+            bitmap.pix(y,x) = BIT(word,15-(x & 15)) ? on : off;
+        }
+    }
+    return 0;
 }
 
 TIMER_CALLBACK_MEMBER(alphasdana_state::clk32_tick)
@@ -268,6 +395,35 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff413, 0xfffff413).rw(FUNC(alphasdana_state::pcsel_r), FUNC(alphasdana_state::pcsel_w));
     // Only PFSEL, low/odd byte of F42A. PFPUEN at F42A stays unmapped.
     map(0xfffff42b, 0xfffff42b).rw(FUNC(alphasdana_state::pfsel_r), FUNC(alphasdana_state::pfsel_w));
+
+    // One coherent Dana VZ R-direct GPIO family. DATA registers are output
+    // latches; no external ST/SD/pen input or IRQ is fabricated. Preserve the
+    // separately qualified Port C and PFSEL byte handlers.
+    map(0xfffff408,0xfffff40b).rw(FUNC(alphasdana_state::pb_r),FUNC(alphasdana_state::pb_w));
+    map(0xfffff418,0xfffff41b).rw(FUNC(alphasdana_state::pd_r),FUNC(alphasdana_state::pd_w));
+    map(0xfffff420,0xfffff423).rw(FUNC(alphasdana_state::pe_r),FUNC(alphasdana_state::pe_w));
+    map(0xfffff428,0xfffff42a).rw(FUNC(alphasdana_state::pf_r),FUNC(alphasdana_state::pf_w));
+    map(0xfffff430,0xfffff433).rw(FUNC(alphasdana_state::pg_r),FUNC(alphasdana_state::pg_w));
+    map(0xfffff438,0xfffff43b).rw(FUNC(alphasdana_state::pj_r),FUNC(alphasdana_state::pj_w));
+    map(0xfffff440,0xfffff443).rw(FUNC(alphasdana_state::pk_r),FUNC(alphasdana_state::pk_w));
+    map(0xfffff448,0xfffff44b).rw(FUNC(alphasdana_state::pm_r),FUNC(alphasdana_state::pm_w));
+
+    // Dana LCD controller programmed by authentic EmuTOS. Native big-endian
+    // word splitting for LSSA and LRRA, especially AD-corrected 16-bit LRRA.
+    map(0xfffffa00,0xfffffa03).rw(FUNC(alphasdana_state::lssa_r),FUNC(alphasdana_state::lssa_w));
+    map(0xfffffa05,0xfffffa05).rw(FUNC(alphasdana_state::lvpw_r),FUNC(alphasdana_state::lvpw_w));
+    map(0xfffffa08,0xfffffa09).rw(FUNC(alphasdana_state::lxmax_r),FUNC(alphasdana_state::lxmax_w));
+    map(0xfffffa0a,0xfffffa0b).rw(FUNC(alphasdana_state::lymax_r),FUNC(alphasdana_state::lymax_w));
+    map(0xfffffa20,0xfffffa20).rw(FUNC(alphasdana_state::lpicf_r),FUNC(alphasdana_state::lpicf_w));
+    map(0xfffffa21,0xfffffa21).rw(FUNC(alphasdana_state::lpolcf_r),FUNC(alphasdana_state::lpolcf_w));
+    map(0xfffffa23,0xfffffa23).rw(FUNC(alphasdana_state::lacdrc_r),FUNC(alphasdana_state::lacdrc_w));
+    map(0xfffffa25,0xfffffa25).rw(FUNC(alphasdana_state::lpxcd_r),FUNC(alphasdana_state::lpxcd_w));
+    map(0xfffffa27,0xfffffa27).rw(FUNC(alphasdana_state::lckcon_r),FUNC(alphasdana_state::lckcon_w));
+    map(0xfffffa28,0xfffffa29).rw(FUNC(alphasdana_state::lrra_r),FUNC(alphasdana_state::lrra_w));
+    map(0xfffffa2d,0xfffffa2d).rw(FUNC(alphasdana_state::lposr_r),FUNC(alphasdana_state::lposr_w));
+    map(0xfffffa33,0xfffffa33).rw(FUNC(alphasdana_state::lgpmr_r),FUNC(alphasdana_state::lgpmr_w));
+    map(0xfffffa36,0xfffffa37).rw(FUNC(alphasdana_state::pwmr_r),FUNC(alphasdana_state::pwmr_w));
+
 }
 
 void alphasdana_state::alphasdana(machine_config &config)
@@ -276,6 +432,12 @@ void alphasdana_state::alphasdana(machine_config &config)
     // Placeholder CPU frequency, not a calibrated VZ PLL.
     DANA_VZ_CPU(config, m_maincpu, 1'000'000);
     m_maincpu->set_addrmap(AS_PROGRAM, &alphasdana_state::program_map);
+    // Reuse MAME's LCD screen infrastructure; the only pixel source is guest RAM.
+    SCREEN(config, m_screen).set_lcd();
+    m_screen->set_refresh_hz(60); // Display cadence provisional; VZ PLL timing pending.
+    m_screen->set_size(560,160);
+    m_screen->set_visarea(0,559,0,159);
+    m_screen->set_screen_update(FUNC(alphasdana_state::screen_update));
 }
 
 static INPUT_PORTS_START(alphasdana)
