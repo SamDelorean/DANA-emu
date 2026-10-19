@@ -512,6 +512,107 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
     update_irq_lines();
 }
 
+
+void alphasdana_state::update_irq_lines()
+{
+    // VZ IPR/IMR masks proven by pinned EmuTOS: bit1 Timer1 -> level6,
+    // bit2 UART1 -> level4. UART1 RX is unconnected, so never assert it.
+    u32 const active=m_pending & ~m_imr;
+    m_maincpu->set_input_line(6,(active & 0x00000002) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(4,(active & 0x00000004) ? ASSERT_LINE : CLEAR_LINE);
+}
+
+u8 alphasdana_state::irq_vector_r(offs_t offset)
+{
+    // DragonBall CPU-space IACK convention. IVR=0x40 gives the authentic
+    // EmuTOS VEC_USER(6)=0x46 and VEC_USER(4)=0x44.
+    u8 const vector=m_ivr | (offset & 7);
+    logerror("DANA_VZ_IACK level=%u vector=%02x pending=%08x imr=%08x\n",
+        unsigned(offset & 7), vector, m_pending, m_imr);
+    return vector;
+}
+
+u32 alphasdana_state::timer1_source_hz() const
+{
+    // Guest PLLFSR formula is from EmuTOS-Dana bios/dana.c::dana_init.
+    // It is not the provisional MAME CPU execution clock.
+    u32 const guest_hz=(u32(m_pllfsr & 0xff)*14
+        + u32((m_pllfsr >> 8) & 0x3f)+15)*32768;
+    switch(m_tctl1 & 0x000e)
+    {
+    case 0x0002: return guest_hz;
+    case 0x0004: return guest_hz/16;
+    case 0x0008: case 0x000a: case 0x000c: case 0x000e:
+        return 32768;
+    default: return 0; // STOP or external TIN; no invented clock.
+    }
+}
+void alphasdana_state::timer1_schedule()
+{
+    u32 const hz=timer1_source_hz();
+    if (!(m_tctl1 & 1) || !hz || !m_tcmp1)
+        m_timer1_timer->adjust(attotime::never);
+    else
+        m_timer1_timer->adjust(attotime::from_ticks(
+            u64(m_tprer1+1)*u64(m_tcmp1),hz));
+}
+TIMER_CALLBACK_MEMBER(alphasdana_state::timer1_compare)
+{
+    // Coalesced virtual-time scheduling: only one callback per compare.
+    m_tstat1 |= 1;
+    if (!(m_tctl1 & 0x0100)) m_tcn1=0;
+    if (m_tctl1 & 0x0010) m_pending |= 0x00000002;
+    update_irq_lines();
+    timer1_schedule();
+}
+void alphasdana_state::timer1_tctl_w(offs_t, u16 data, u16 mem_mask)
+{
+    bool const enabled=bool(m_tctl1 & 1);
+    COMBINE_DATA(&m_tctl1);
+    if (!enabled && (m_tctl1 & 1)) m_tcn1=0;
+    timer1_schedule();
+}
+void alphasdana_state::timer1_tprer_w(offs_t, u16 data, u16 mem_mask)
+{
+    COMBINE_DATA(&m_tprer1);
+    timer1_schedule();
+}
+void alphasdana_state::timer1_tcmp_w(offs_t, u16 data, u16 mem_mask)
+{
+    COMBINE_DATA(&m_tcmp1);
+    timer1_schedule();
+}
+u16 alphasdana_state::timer1_tcn_r()
+{
+    u32 const hz=timer1_source_hz();
+    if (!(m_tctl1 & 1) || !hz || !m_tcmp1) return m_tcn1;
+    u64 const count=m_timer1_timer->elapsed().as_ticks(hz)/u64(m_tprer1+1);
+    return u16(count % m_tcmp1);
+}
+u16 alphasdana_state::timer1_tstat_r()
+{
+    // Reuse MAME mc68328::tstat_r read-then-write clearing semantics.
+    m_tstat_clear1 |= m_tstat1;
+    return m_tstat1;
+}
+void alphasdana_state::timer1_tstat_w(offs_t, u16, u16 mem_mask)
+{
+    m_tstat1 &= ~(m_tstat_clear1 & mem_mask);
+    m_tstat_clear1 &= ~mem_mask;
+    if (!(m_tstat1 & 1)) m_pending &= ~u32(0x00000002);
+    update_irq_lines();
+}
+void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
+{
+    // Source-backed ready/empty UART transmitter. No unsolicited RX IRQ.
+    m_utx1=(m_utx1 & ~mem_mask) | (data & mem_mask & 0x1fff);
+    if (mem_mask & 0x00ff)
+        logerror("DANA_VZ_UART1_TX data=%02x char=%c\n",
+            unsigned(data & 0xff),
+            (data & 0xff)>=32 && (data & 0xff)<=126
+                ? char(data & 0xff) : '.');
+}
+
 QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
 {
     // DANARAM1: 64-byte big-endian map-verified envelope, followed by the
