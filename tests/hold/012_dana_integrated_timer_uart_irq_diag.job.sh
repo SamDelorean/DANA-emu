@@ -16,6 +16,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import struct
+import zlib
 import tarfile
 import tempfile
 
@@ -48,6 +50,26 @@ def digest(path):
     with Path(path).open('rb') as f:
         for block in iter(lambda:f.read(1024*1024),b''):h.update(block)
     return h.hexdigest()
+
+
+def write_verified_guest_png(frame_bytes,out):
+    # Pure-stdlib representation of the actual 560x160x1bpp RAM snapshot.
+    # This is not an image of the MAME host window. No synthetic text/pixels.
+    if len(frame_bytes)!=11200:raise ValueError('INVALID_LCD_FRAME_SIZE')
+    scan=bytearray()
+    for row in range(160):
+        scan.append(0)  # PNG filter type 0
+        for value in frame_bytes[row*70:(row+1)*70]:
+            scan.extend(48 if value & (1 << bit) else 240 for bit in range(7,-1,-1))
+    def chunk(kind,data):
+        return (struct.pack('!I',len(data))+kind+data+
+                struct.pack('!I',zlib.crc32(kind+data)&0xffffffff))
+    png=(b'\\x89PNG\\r\\n\\x1a\\n'+
+         chunk(b'IHDR',struct.pack('!2I5B',560,160,8,0,0,0,0))+
+         chunk(b'IDAT',zlib.compress(scan,9))+chunk(b'IEND',b''))
+    out.write_bytes(png)
+    if not png.startswith(b'\\x89PNG\\r\\n\\x1a\\n'):raise RuntimeError('INVALID_DERIVED_PNG')
+    return digest(out)
 
 
 def facts(directory):
@@ -193,8 +215,12 @@ try:
             blob=framebuffer.read_bytes()
             if sum(v!=0 for v in blob)!=lcd.get('nonzero_bytes') or lcd.get('frame_bytes')!=11200:
                 raise RuntimeError('BLOCKED_GUEST_LCD_FRAME_METADATA_MISMATCH:'+which)
-            item.update(lcd_frame_present=True,lcd_frame_sha256=digest(framebuffer))
-        elif framebuffer.exists():
+            screen=folder/'lcd-screen.png'
+            screen_sha=write_verified_guest_png(blob,screen)
+            item.update(lcd_frame_present=True,lcd_frame_sha256=digest(framebuffer),
+                        lcd_png_sha256=screen_sha,
+                        lcd_png_class='VERIFIED_GUEST_RAM_DERIVED_NOT_MAME_WINDOW')
+        elif framebuffer.exists() or (folder/'lcd-screen.png').exists():
             raise RuntimeError('BLOCKED_UNPROGRAMMED_LCD_FRAME_WRITTEN:'+which)
         # A bus readback of 0xAA is evidence of the ST greeting only if
         # the authentic 68000 performed it before any unsupported dependency.
