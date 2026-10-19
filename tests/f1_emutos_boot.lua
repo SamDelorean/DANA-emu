@@ -25,11 +25,37 @@ local function state()
     for _,k in ipairs({'CURPC','PC','SR','SP','IR','D0','D1','D2','D3','A0'}) do s[k]=cpu.state[k].value end
     return s
 end
+-- Read back only the guest-owned framebuffer configured through real MMIO.
+-- Evidence, not a host-generated screen or physical LCD qualification.
+local function lcd_guest_frame()
+    if not e5 or not space then return nil end
+    local cfg_lcd={lssa=space:read_u32(0xfffffa00),
+        lvpw=space:read_u8(0xfffffa05),lxmax=space:read_u16(0xfffffa08),
+        lymax=space:read_u16(0xfffffa0a),lpicf=space:read_u8(0xfffffa20),
+        lckcon=space:read_u8(0xfffffa27)}
+    local valid=(cfg_lcd.lckcon & 0x80)~=0 and cfg_lcd.lvpw==35
+        and cfg_lcd.lxmax==560 and cfg_lcd.lymax==159 and cfg_lcd.lpicf==8
+        and (cfg_lcd.lssa & 1)==0 and cfg_lcd.lssa<=0x400000-11200
+    cfg_lcd.geometry_configured=valid
+    if not valid then return cfg_lcd end
+    local frame=assert(io.open(cfg.output..'/lcd-frame.bin','wb'))
+    local nonzero=0
+    for index=0,11199 do
+        local byte=space:read_u8(cfg_lcd.lssa+index)
+        if byte~=0 then nonzero=nonzero+1 end
+        frame:write(string.char(byte))
+    end
+    frame:close()
+    cfg_lcd.frame_bytes=11200
+    cfg_lcd.nonzero_bytes=nonzero
+    return cfg_lcd
+end
 local function finish(reason,dependency)
     if done then return end;done=true;host=true
     if cpu and cpu.debug then manager.machine.debugger:command('trace off') end
     local trace=io.open(cfg.output..'/guest.trace','rb')
     local trace_bytes=trace and trace:seek('end') or 0;if trace then trace:close() end
+    local guest_lcd=lcd_guest_frame()
     local result={schema=e5 and 'dana-f1-e5-observation-v1' or e4 and 'dana-f1-e4-observation-v1' or 'dana-f1-observation-v1',
         status='CAPTURED',reason=reason,dependency=dependency,
         first_instruction=first,events=events,final=cpu and state() or {},
@@ -37,7 +63,8 @@ local function finish(reason,dependency)
         revision=cfg.revision,source_commit=cfg.source_commit,execution_id=cfg.execution_id,
         image_sha256=cfg.image_sha256,variant='diag',trace_bytes=trace_bytes,
         qualification_sha256=cfg.qualification_sha256,
-        event_count=#events,trace_mode='native_loop_compression_no_sampling',full_boot=false}
+        event_count=#events,trace_mode='native_loop_compression_no_sampling',
+        guest_lcd=guest_lcd,full_boot=false}
     local f=assert(io.open(cfg.output..'/observation.json','w'));f:write(encode(result),'\n');f:close()
     if space then
         local stack=cpu.state.SP.value
