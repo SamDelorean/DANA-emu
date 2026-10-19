@@ -58,6 +58,7 @@ private:
     void update_irq_lines();
     u8 irq_vector_r(offs_t offset);
     TIMER_CALLBACK_MEMBER(timer1_compare);
+    u32 guest_system_clock_hz() const;
     u32 timer1_source_hz() const;
     void timer1_schedule();
     u16 timer1_tctl_r() { return m_tctl1; }
@@ -470,8 +471,11 @@ void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
         m_pllfsr = (m_pllfsr & ~counter_mask) | (data & counter_mask);
     if (data & mem_mask & 0x4000)
         m_pllfsr |= 0x4000;
-    // Timer1 SYSCLK follows guest PLLFSR; refreshing here does not create
-    // any scheduled tick while Timer1 remains disabled.
+    // Preserve the 1 MHz no-guest diagnostic clock, which the R2.1 and
+    // register-only fixtures already qualified. Authentic RAM guest runs
+    // instead use the VZ PLL-derived M68000 clock, matching their Timer1.
+    if (m_guest_loaded)
+        m_maincpu->set_unscaled_clock(guest_system_clock_hz());
     if (m_tctl1 & 1)
         timer1_schedule();
 }
@@ -536,12 +540,16 @@ u8 alphasdana_state::irq_vector_r(offs_t offset)
     return vector;
 }
 
+u32 alphasdana_state::guest_system_clock_hz() const
+{
+    // The exact original EmuTOS-Dana clock formula applied to PLLFSR.
+    return (u32(m_pllfsr & 0xff)*14
+        + u32((m_pllfsr >> 8) & 0x3f)+15)*32768;
+}
 u32 alphasdana_state::timer1_source_hz() const
 {
-    // Guest PLLFSR formula is from EmuTOS-Dana bios/dana.c::dana_init.
-    // It is not the provisional MAME CPU execution clock.
-    u32 const guest_hz=(u32(m_pllfsr & 0xff)*14
-        + u32((m_pllfsr >> 8) & 0x3f)+15)*32768;
+    // CPU and SYSCLK-sourced Timer1 must advance in the SAME guest time.
+    u32 const guest_hz=guest_system_clock_hz();
     switch(m_tctl1 & 0x000e)
     {
     case 0x0002: return guest_hz;
@@ -663,6 +671,9 @@ QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
         m_maincpu->set_state_int(M68K_A0+r, 0);
     m_maincpu->set_state_int(M68K_SR, 0x2700);
     m_guest_loaded = true;
+    // Use actual post-bootstrap VZ SYSCLK for the authentic guest, not the
+    // 1 MHz diagnostic fixture clock. The absence-of-guest DIAG is unchanged.
+    m_maincpu->set_unscaled_clock(guest_system_clock_hz());
     m_guest_ready = 1;
     logerror("DANA_GUEST_LOAD entry=%08x stack=%08x bytes=%u sha1=%s profile=R-direct phystop=%08x\n",
         entry, stack, length, hash.as_string(), phystop);
