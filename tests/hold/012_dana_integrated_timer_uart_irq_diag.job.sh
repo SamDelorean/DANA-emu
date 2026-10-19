@@ -19,7 +19,7 @@ import sys
 import tarfile
 import tempfile
 
-SOURCE = 'b0e0c501796b0cff4d6b827e0c6b7c402aaf0e4a'
+SOURCE = 'e726cc6c0858b6122513060e22dece6adc6c5e5b'
 BUILD_SOURCE = '749517b2f48c9788e5555071561e738017ac5f7c'
 MAME_PIN = 'c4e48388ca620472643110db2941ce70aa5f3c07'
 GUEST_PIN = '9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
@@ -203,6 +203,13 @@ try:
             and not e.get('after_dependency',False)
             and e.get('address')==0xfffff800
             and (e.get('data',0)&0xff)==0xaa for e in mmio)
+        # Genuine 68000 low-byte write to UTX1D at effective F907. A
+        # generic UART register access is insufficient for TX qualification.
+        item['uart1_tx_cpu_write'] = any(
+            e.get('origin')=='cpu' and e.get('kind')=='write'
+            and e.get('after_dependency') is False
+            and e.get('address')==0xfffff906 and e.get('mask')==0x00ff
+            and e.get('byte_addresses')==[0xfffff907] for e in mmio)
         item['lcd_snapshot_class'] = (
             'UNCONFIGURED' if not lcd.get('geometry_configured') else
             'FRAME_SNAPSHOT_NONBLANK' if lcd.get('nonzero_bytes',0)>0 else
@@ -228,7 +235,23 @@ try:
     summary['timer1_programming_scoped_pass']=all(x['pass_scoped'] for x in timer_programming)
     # IRQ6 CPU-vector processing and UART receive must be independently
     # observed. Neither is inferred from enabled masks or register maps.
-    summary['timer1_irq6_delivery']='NOT_NATIVE_QUALIFIED'
+    # Real native CPU-space IACK only, not a synthetic IRQ flag, indicates
+    # CPU acknowledged Timer1. Capture independently for each original run.
+    import re
+    irq6_runs=[]
+    for which in ('run-1','run-2'):
+        console=evidence/'guest'/which/'console.log'
+        log=console.read_text(errors='replace')
+        ack=re.findall(r'DANA_VZ_IACK level=6 vector=46 pending=([0-9a-fA-F]+) imr=([0-9a-fA-F]+) ack6=([0-9]+)',log)
+        comparisons=re.findall(r'DANA_VZ_TIMER1_COMPARE count=([0-9]+) ',log)
+        ack_valid=[int(n) for pending,masked,n in ack
+            if int(pending,16)&2 and not int(masked,16)&2 and int(n)>0]
+        irq6_runs.append(dict(run=which,compare_log_entries=len(comparisons),
+                              qualifying_iacks=len(ack_valid),first_iack=ack_valid[0] if ack_valid else None))
+    summary['irq6_native_evidence']=irq6_runs
+    summary['timer1_irq6_delivery']=(
+        'IACK_CPU_SPACE_OBSERVED_SCOPED' if all(v['qualifying_iacks']>0 and v['compare_log_entries']>0 for v in irq6_runs)
+        else 'NOT_NATIVE_QUALIFIED')
     summary['uart1_serial_rx']='NOT_QUALIFIED'
     summary['integrated_observations']=integrated
     # Full system/peripheral qualification is never implied by an early
@@ -238,9 +261,9 @@ try:
         pfsel_A_B='PASS_SCOPED',
         timer1_guest_register_programming=('CPU_ORIGIN_PASS_SCOPED'
             if summary['timer1_programming_scoped_pass'] else 'NATIVE_PENDING'),
-        timer1_irq6_delivery='NOT_NATIVE_QUALIFIED',
-        uart1_tx=('CPU_ORIGIN_OBSERVED' if all(
-            r['uart1_cpu_events']>0 for r in integrated) else 'NATIVE_PENDING'),
+        timer1_irq6_delivery=summary['timer1_irq6_delivery'],
+        uart1_tx=('CPU_UTX1D_WRITE_OBSERVED' if all(
+            r['uart1_tx_cpu_write'] for r in integrated) else 'NATIVE_PENDING'),
         emutos_continuation=native['status'],
         spi2_st_greeting=('CPU_ORIGIN_OBSERVED'
                           if all(r['st_greeting_cpu_read'] for r in integrated)
@@ -255,6 +278,12 @@ try:
         touchscreen='NOT_QUALIFIED',
         full_emutos_boot='NOT_QUALIFIED')
     save()
+    # A scoped authentic EmuTOS continuation PASS requires two exact,
+    # correctly ordered PRE-BLOCK CPU Timer1 write sequences.
+    if not summary['timer1_programming_scoped_pass']:
+        raise RuntimeError('BLOCKED_NATIVE_TIMER1_CPU_PROGRAMMING_NOT_PROVED')
+    if native.get('status')=='REAL_PROGRESS_PASS_SCOPED' and native.get('raw_bus_prefix_equal') is not True:
+        raise RuntimeError('BLOCKED_NONIDENTICAL_NATIVE_BUS_PREFIX')
     summary.update(native_result=native,native_status=native['status'],reason=native['reason'])
     summary['status']='BLOCKED_TRANSPORT_PENDING' if native['status']=='REAL_PROGRESS_PASS_SCOPED' else native['status']
     exit_code=0 if native['status']=='REAL_PROGRESS_PASS_SCOPED' else 2
