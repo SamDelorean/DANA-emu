@@ -142,7 +142,7 @@ try:
     staged.update(status='BUILT_DIAG',source_commit=SOURCE,binary_sha256=new_sha)
     source_manifest.write_text(json.dumps(staged,indent=2)+'\n')
     qualification=evidence/'binary_qualification.json'
-    build=dict(schema='dana-dana-integrated-v1',source_commit=SOURCE,driver_sha256=digest(source/driver),
+    build=dict(schema='dana-d23-build-v1',source_commit=SOURCE,driver_sha256=digest(source/driver),
                mame_commit=MAME_PIN,subtarget='danadiag',variant='diag',build_exit_code=0,build_command=command,
                binary=str(binary),binary_sha256=new_sha,source_manifest_sha256=digest(stage_root/'diag/source-manifest.json'))
     qualification.write_text(json.dumps(build,indent=2)+'\n')
