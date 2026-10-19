@@ -60,12 +60,13 @@ p.pfsel_reset();assert(p.pfsel_r()==0xc5);}
         self.assertEqual(src.count('save_item(NAME(m_pfsel));'),1)
         self.assertIn('pfsel_reset();',method_body(src,r'void alphasdana_state::machine_reset\(\)\s*'))
         self.assertEqual(src.count('map(0xfffff42b, 0xfffff42b).rw(FUNC(alphasdana_state::pfsel_r), FUNC(alphasdana_state::pfsel_w));'),1)
-        self.assertNotIn('map(0xfffff42a',src);self.assertNotIn('map(0x00fff42',src)
+        self.assertIn('map(0xfffff428,0xfffff42a).rw(FUNC(alphasdana_state::pf_r),FUNC(alphasdana_state::pf_w));',src)
+        self.assertNotIn('map(0x00fff42',src)
         for start,end in re.findall(r'map\((0x[0-9a-f]+), (0x[0-9a-f]+)\)',src):
             a,b=int(start,16),int(end,16)
-            if a<=0xfffff42f and b>=0xfffff428:self.assertEqual((a,b),(0xfffff42b,0xfffff42b))
+            if a<=0xfffff42f and b>=0xfffff428:self.assertIn((a,b),((0xfffff428,0xfffff42a),(0xfffff42b,0xfffff42b)))
             self.assertFalse(0x00fff000<=a<=0x00ffffff)
-        self.assertFalse(f1.implemented_byte(0xfffff42a,'read',True))
+        self.assertTrue(f1.implemented_byte(0xfffff42a,'read',True))
         self.assertTrue(f1.implemented_byte(0xfffff42b,'write',True))
         self.assertFalse(f1.implemented_byte(0xfffff42b,'read',False))
 
@@ -88,7 +89,7 @@ p.pfsel_reset();assert(p.pfsel_r()==0xc5);}
         src=(ROOT/'tests/f1_emutos_boot.lua').read_text()
         functions=src[src.index('local function implemented_byte'):src.index('emu.register_prestart')]
         check_lua('local e5=false\n'+functions+"\nassert(first_unsupported(bus_bytes(0xfffff42a,0xff),'read')==0xfffff42b)")
-        check_lua('local e5=true\n'+functions+"\nassert(first_unsupported(bus_bytes(0xfffff42a,0xff),'read')==nil)\nassert(first_unsupported(bus_bytes(0xfffff42a,0xff00),'read')==0xfffff42a)")
+        check_lua('local e5=true\n'+functions+"\nassert(first_unsupported(bus_bytes(0xfffff42a,0xff),'read')==nil)\nassert(first_unsupported(bus_bytes(0xfffff42a,0xff00),'read')==nil)\nassert(first_unsupported(bus_bytes(0xfffffa06,0xff00),'read')==0xfffffa06)")
         for file in ('f1_emutos_boot.lua','d2_3_pfsel_boot.lua'):
             check_lua('assert(load('+json.dumps((ROOT/'tests'/file).read_text())+'))')
 
@@ -266,6 +267,61 @@ class E5(unittest.TestCase):
         with patch('f1_emutos_run.sha',side_effect=lambda p:f1.BINARY_SHA if Path(p)==self.binary else original(p)):
             with self.assertRaises(ValueError):f1.qualify_pfsel_build(self.binary,self.qualification,self.source)
 
+
+
+class IntegratedGPIOAndLCD(unittest.TestCase):
+    """Grouped source behavior; no claim that new dana-diag binary was run."""
+    def test_rdirect_eight_port_profile(self):
+        src=DRIVER.read_text()
+        match=re.search(r'static constexpr u8 profile\\[32\\] = \\{([^}]*)\\}',src,re.S)
+        self.assertIsNotNone(match)
+        profile=[int(v,16) for v in re.findall(r'0x[0-9a-f]+',match.group(1))]
+        self.assertEqual(profile,[0x60,0,0,0x60,0,0,0x1f,0x10,
+            0xc8,0x08,0x10,0xc8,0x44,0,0,0xc5,
+            0x1f,0x1d,0,0x3f,0xbf,0x40,0,0xcf,
+            0xf9,0,0,0xfd,0x20,0x20,0,0x20])
+        self.assertEqual(len(profile),32)
+        self.assertIn('gpio_bootstrap_reset();',src)
+        for port in ('pb','pd','pe','pf','pg','pj','pk','pm'):
+            self.assertIn('FUNC(alphasdana_state::'+port+'_r)',src)
+            self.assertIn('FUNC(alphasdana_state::'+port+'_w)',src)
+
+    def test_screen_reads_guest_owned_ram_only(self):
+        src=DRIVER.read_text()
+        for value in ('required_shared_ptr<u16> m_ram','u16 const word = m_ram[',
+                      'BIT(word,15-(x & 15))','m_lssa > 0x400000 - 11200',
+                      'm_lpicf != 8','m_lvpw != 35','m_lxmax != 560',
+                      'm_lymax != 159','m_lckcon & 0x80',
+                      'm_screen->set_size(560,160)',
+                      'm_screen->set_screen_update(FUNC(alphasdana_state::screen_update))'):
+            self.assertIn(value,src)
+        self.assertEqual(560*160//8,11200)
+        self.assertEqual(160*35*2,11200)
+        self.assertEqual((0x8000>>1)+(159*35)+34,(0x8000+11198)//2)
+        self.assertNotIn('m_maincpu->space(AS_PROGRAM).read_byte',src)
+
+    def test_lcd_register_width_save_restore_and_no_fake_page(self):
+        src=DRIVER.read_text()
+        for name in ('lssa','lvpw','lxmax','lymax','lpicf','lpolcf','lacdrc',
+                     'lpxcd','lckcon','lrra','lposr','lgpmr','pwmr','gpio'):
+            self.assertEqual(src.count('save_item(NAME(m_'+name+'));'),1)
+        for pair in ('0xfffffa00,0xfffffa03','0xfffffa28,0xfffffa29',
+                     '0xfffffa08,0xfffffa09','0xfffffa0a,0xfffffa0b'):
+            self.assertIn('map('+pair+')',src)
+        self.assertNotIn('map(0xfffffa29,',src)
+        self.assertIn('m_lrra=0x00ff',src)
+        self.assertIn('DANA_LCD_WORD(lrra)',src)
+        self.assertNotIn('map(0xfffffa00,0xfffffaff)',src)
+
+    def test_e5_dependency_detector_tracks_new_hardware_model(self):
+        self.assertTrue(f1.implemented_byte(0xfffffa27,'write',True))
+        self.assertTrue(f1.implemented_byte(0xfffff443,'read',True))
+        self.assertTrue(f1.implemented_byte(0xfffff42a,'read',True))
+        self.assertFalse(f1.implemented_byte(0xfffffa27,'read',False))
+        self.assertFalse(f1.implemented_byte(0xfffffa06,'read',True))
+        lua=(ROOT/'tests/f1_emutos_boot.lua').read_text()
+        self.assertIn('address>=0xfffffa27',lua)
+        self.assertIn('address<=0xfffff443',lua)
 
 if __name__=='__main__':
     result=unittest.main(exit=False)
