@@ -588,8 +588,11 @@ void alphasdana_state::timer1_schedule()
     }
     else
     {
-        remaining = m_tcn1 < m_tcmp1 ? m_tcmp1-m_tcn1 : m_tcmp1;
-        if (!remaining) remaining=m_tcmp1;
+        // In restart mode a comparator value changed to BELOW the live
+        // counter is not reached until the 16-bit counter wraps. Restart
+        // occurs at an actual compare, not at the register-write boundary.
+        remaining=(u32(m_tcmp1)-u32(m_tcn1)) & 0xffff;
+        if (!remaining) remaining=65536;
     }
     m_timer1_timer->adjust(attotime::from_ticks(
         u64(m_tprer1+1)*remaining,hz));
