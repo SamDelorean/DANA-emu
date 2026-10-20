@@ -160,13 +160,14 @@
   },
   "job": {
     "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
-    "source_commit": null,
-    "sha256": null,
+    "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8",
+    "sha256": "25d28869596ef33393ad821db265bb7a885bcf15da5f787b59b2990e980d65ff",
     "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
     "builds": 0,
     "ROM_builds": 0,
-    "max_native_processes": 2
+    "max_native_processes": 2,
+    "frozen_job_checks": "PASS: exact source tree, Bash/embedded AST, HOLD exit2, no production/overlay difference from binary build"
   },
   "workbook": {
     "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
@@ -190,5 +191,6 @@
   "ROM_builds": 0,
   "Drive_dispatch": false,
   "full_boot": false,
-  "next_action": "Fresh authorization for the single frozen 012-E existing-DIAG native HOLD job; independently audit its one evidence package and apply prepared records to the existing rector workbook."
+  "next_action": "Fresh authorization for the single frozen 012-E existing-DIAG native HOLD job; independently audit its one evidence package and apply prepared records to the existing rector workbook.",
+  "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8"
 }
