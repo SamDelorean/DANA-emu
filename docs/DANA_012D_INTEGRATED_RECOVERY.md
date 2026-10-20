@@ -158,3 +158,6 @@ is made that the workbook itself was edited or that a replacement was created.
 consume that one result bundle and apply its capability results to the existing
 rector workbook. No rebuild or per-peripheral ticket series. Reverting this harness delivery or
 leaving its job in HOLD does not alter the original driver/build/evidence.
+
+Frozen recovery harness source: `be16f21f6e1d8102a6d0b5542f720d87ecd590ee`.
+Job SHA256: `99bddd2c4494f12f498a5ffa9f0a2f5c98c86fdee9e697497ec9b556db4a8894`. Job remains local Git HOLD.

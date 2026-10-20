@@ -107,9 +107,9 @@
   },
   "job": {
     "path": "tests/hold/012_d_dana_integrated_recovery_diag.job.sh",
-    "source_commit": null,
-    "sha256": null,
-    "state": "LOCAL_GIT_HOLD_SOURCE_FREEZE_PENDING",
+    "source_commit": "be16f21f6e1d8102a6d0b5542f720d87ecd590ee",
+    "sha256": "99bddd2c4494f12f498a5ffa9f0a2f5c98c86fdee9e697497ec9b556db4a8894",
+    "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization": "DANA_012D_AUTHORIZED=YES only after separate scoped native approval",
     "builds": 0,
     "ROM_builds": 0,
