@@ -21,7 +21,7 @@ import zlib
 import tarfile
 import tempfile
 
-SOURCE = 'e726cc6c0858b6122513060e22dece6adc6c5e5b'
+SOURCE = '60e5744fffa3e946ad7dfbc12f4a457edaf47c28'
 BUILD_SOURCE = '749517b2f48c9788e5555071561e738017ac5f7c'
 MAME_PIN = 'c4e48388ca620472643110db2941ce70aa5f3c07'
 GUEST_PIN = '9c42ef0f2c2fa9d1e217fced9da68901b2326e8b'
