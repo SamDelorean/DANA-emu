@@ -1,0 +1,194 @@
+{
+  "status": "012_E_STATIC_PASS",
+  "native_runtime": "NATIVE_PENDING",
+  "reviewed_base": "d1dc3e9b3ca7b1208193c977fc64e81010aadfa8",
+  "implementation_012D": "be16f21f6e1d8102a6d0b5542f720d87ecd590ee",
+  "canonical_main_read": "e147c940741363af186dae9026d9788f0566fea9",
+  "evidence_012D": {
+    "status": "BLOCKED_RAW_EVIDENCE_HTTP_403",
+    "url": "https://drive.google.com/drive/folders/19hRLZwBGKchwdBHmJZpc8VG3_arkx9ls",
+    "reported_outcomes": [
+      "BLOCKED_TRACE_BUDGET",
+      "NO_NEW_CPU_DEPENDENCY_WITHIN_BOUND"
+    ],
+    "reported_outcomes_verified": false,
+    "raw_traces_available": false,
+    "PC_SR_SP_counts_archive_hash": "UNVERIFIED",
+    "access": "Direct read-only only; no bypass or credential change"
+  },
+  "existing_binary": {
+    "source": "581601b49acb6603af2a100817d0f06fed17ed96",
+    "sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
+    "driver_sha256": "e8211be78dfb2bf4cdc0ccabd444c97d715dc37d189d4f113f2f1cbf05b573e2",
+    "source_manifest_sha256": "504530b8ba90549fc6cfd5dc7ec7505ff013ee025daceec9c60dc26a4e4988de",
+    "qualification_sha256": "6fda7a9474c7594ae1019fea33766ad65c99d9e81a5d323ec1e1f6b5ba914131",
+    "live_T_identity": "NOT_RECHECKED_IN_CLOUD",
+    "source_compatibility": "PINNED_GIT_DRIVER_BYTES_MATCH_NO_PRODUCTION_DIFF"
+  },
+  "guest_source": "davidgiven/emutos@9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+  "capabilities": {
+    "pfsel": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "timer1_programming": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "timer1_compare": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "uart1_registers": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "uart1_tx": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "irq6": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "lcd_controller": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "lcd_frame": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "spi2_registers": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "spi2_exchange": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    },
+    "st_greeting": {
+      "status": "BLOCKED",
+      "reason": "012_E_NATIVE_PENDING_NO_RAW_QUALIFICATION"
+    }
+  },
+  "observation_limits": {
+    "profile": "012-E",
+    "max_virtual_seconds": 12,
+    "max_cycles": 400000000,
+    "max_raw_observations": 100000000,
+    "max_retained_events": 100000,
+    "max_event_bytes": 33554432,
+    "max_trace_bytes": 8388608,
+    "max_log_bytes": 8388608,
+    "max_checkpoints": 512,
+    "max_file_bytes": 67108864,
+    "host_timeout_seconds": 240,
+    "emulator_seconds_to_run": 13
+  },
+  "local_checks": {
+    "tests": 118,
+    "output": "Ran 118 tests in 9.755s; OK",
+    "skips": 0,
+    "emulator_tests": 0,
+    "command": "DANA_012C_EVIDENCE_DIR=<verified-local-subset> PYTHONPATH=tests python3 -m unittest dana_012e_test dana_012d_test f1_test_guest d2_3_test.SourceContracts d2_3_test.NativeEvidence d2_3_test.E5 d2_3_test.IntegratedGPIOAndLCD d2_3_test.IntegratedSPI2AndKeyboard d2_3_test.IntegratedTimerUARTIRQ f1_e4_test -v",
+    "synthetic_lua_measurement": {
+      "synthetic": true,
+      "emulator_execution": false,
+      "raw_poll_reads": 100000,
+      "retained_events": 1,
+      "encoded_event_bytes": 580,
+      "elapsed_seconds": 1.675358,
+      "profile": "012-E actual Lua module"
+    },
+    "syntax": "PASS: four Python ASTs, both Lua modules, job Bash and embedded Python",
+    "hold_guards": "4/4 HOLD exit2: unset, old 012-D, old timer/UART/IRQ and old D2.3 authorization",
+    "unchanged": "Production/overlays/guest/historical jobs",
+    "static_audit": {
+      "status": "PASS",
+      "python_AST": 4,
+      "job_bash_and_embedded_AST": "PASS",
+      "HOLD_guards": [
+        {
+          "flags": {},
+          "exit_code": 2,
+          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
+        },
+        {
+          "flags": {
+            "DANA_012D_AUTHORIZED": "YES"
+          },
+          "exit_code": 2,
+          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
+        },
+        {
+          "flags": {
+            "DANA_TIMER_UART_IRQ_AUTHORIZED": "YES"
+          },
+          "exit_code": 2,
+          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
+        },
+        {
+          "flags": {
+            "DANA_D2_3_AUTHORIZED": "YES",
+            "DANA_D2_3_BUILD_AUTHORIZED": "YES"
+          },
+          "exit_code": 2,
+          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
+        }
+      ],
+      "production_and_overlays": "UNCHANGED_VS_BASE_AND_COMPILED_SOURCE",
+      "historical_jobs": "UNCHANGED",
+      "CPU_name_regression_commit": "PRESERVED",
+      "native_guest_stages": 1,
+      "max_new_native_processes": 2,
+      "emulator_executions": 0
+    }
+  },
+  "source_sha256": {
+    "tests/f1_emutos_run.py": "5cf37e2d83a1878d3d72cc1de244bca396f74c738e11c2db03291df8b2670ea7",
+    "tests/f1_emutos_boot.lua": "2035c6c1c0cb448ed0da3957f1ed8091806d1d291515fedc16b0ed81a7f1797d",
+    "tests/dana_012d_verify.py": "b075a5cb1327de7e88212519c523bc4f0f6f2169c34f44a2353f39bbdd69356c",
+    "tests/dana_012e_verify.py": "e137c9ddfec0bc4d8fc9928f1b28e27534415660a63194dbfb3bfc374ade3135",
+    "tests/dana_012e_test.py": "cf4e2b7d607cd42a30fffa8c13c2126ac6ee75227bdb9324e3d7113e89ddbcfd",
+    "tests/dana_012e_observer.lua": "690c7c5fdc24ace968717da1fa978c70fc1ea3c0d7e7d6f942f6d7d1e20c305c",
+    "tests/dana_012e_limits.json": "9d72ed033cda9e251da8cd4be9d7623795c62dc25092078f8f7bde063ff6b7f2",
+    "docs/DANA_012E_OBSERVATION_CONTRACT.md": "30f34aa6dd82dd3cfb067a8ffa0dc3d285b67cb6d85a026012a2a5f46c15741b",
+    "docs/DANA_012E_RECTOR_UPDATES.csv": "8f0f0393ffc7807628d2943b0d78fc04c77bccdf8d3e254d024c54c42b29c3f4",
+    "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md": "f742ab79764d9e3cdce425850af52a8ccbd871e4640f742b644606210f3dcbaa",
+    "docs/HANDOFF.md": "a9f9308c95ded8cf269424ba0806e56e953b0af13f254d241d87c126ecc5d00a"
+  },
+  "job": {
+    "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
+    "source_commit": null,
+    "sha256": null,
+    "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+    "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
+    "builds": 0,
+    "ROM_builds": 0,
+    "max_native_processes": 2
+  },
+  "workbook": {
+    "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "path": "AS2K_TEMP/DANA_EMU/DANA_EMU_Control_Rector_Auditoria_2026-10-20.xlsx",
+    "state": "UPDATE_MATERIAL_PREPARED_WORKBOOK_NOT_MODIFIED",
+    "updates": "docs/DANA_012E_RECTOR_UPDATES.csv",
+    "existing_tabs": [
+      "CONTROL",
+      "HITOS",
+      "CAMPA\u00d1AS",
+      "CONTRATOS",
+      "RIESGOS",
+      "BITACORA",
+      "FUENTES"
+    ]
+  },
+  "Commander_calls": 0,
+  "T_execution": false,
+  "emulator_execution": false,
+  "MAME_builds": 0,
+  "ROM_builds": 0,
+  "Drive_dispatch": false,
+  "full_boot": false,
+  "next_action": "Fresh authorization for the single frozen 012-E existing-DIAG native HOLD job; independently audit its one evidence package and apply prepared records to the existing rector workbook."
+}

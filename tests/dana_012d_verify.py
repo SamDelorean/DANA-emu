@@ -53,8 +53,11 @@ def png(frame,path):
 def per_run(folder,accepted):
     """Score only an independently verified authentic run, up to its raw cutoff."""
     folder=Path(folder);obs=json.loads((folder/'observation.json').read_text())
-    if accepted.get('status')!='OBSERVED_UNQUALIFIED_SINGLE_RUN':raise ValueError('Unverified authentic run')
-    cutoff=accepted['dependency_event_seq']
+    if accepted.get('status')=='VERIFIED_012E_PREFIX':
+        cutoff=accepted['prefix_last_seq']
+    else:
+        if accepted.get('status')!='OBSERVED_UNQUALIFIED_SINGLE_RUN':raise ValueError('Unverified authentic run')
+        cutoff=accepted['dependency_event_seq']
     rows=[e for e in obs['events'] if e['seq']<=cutoff]
     bus=[e for e in rows if e['kind'] in ('read','write') and e.get('origin')=='cpu']
     def writes(address,value):return [e for e in bus if e['kind']=='write' and e['address']==address and e['mask']==65535 and e['data']==value]

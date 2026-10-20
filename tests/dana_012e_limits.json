@@ -1,0 +1,14 @@
+{
+  "profile": "012-E",
+  "max_virtual_seconds": 12,
+  "max_cycles": 400000000,
+  "max_raw_observations": 100000000,
+  "max_retained_events": 100000,
+  "max_event_bytes": 33554432,
+  "max_trace_bytes": 8388608,
+  "max_log_bytes": 8388608,
+  "max_checkpoints": 512,
+  "max_file_bytes": 67108864,
+  "host_timeout_seconds": 240,
+  "emulator_seconds_to_run": 13
+}

@@ -5,6 +5,10 @@ local cpu,space,ready,done,first=false,false,false,false,false
 local events,taps,subscriptions={}, {}, {}
 local bytes,host=0,false
 local pending,pending_dependency,initialized=nil,nil,false
+local e6=cfg.observation_profile=='012-E'
+local observer=nil
+local checkpoints,cycle_start=0,nil
+local rte_active,rte_pc=false,nil
 local e4=cfg.revision=='F1-E4'
 local e5=cfg.revision=='F1-E5' and type(cfg.qualification_sha256)=='string' and #cfg.qualification_sha256==64
 assert(cfg.revision~='F1-E5' or e5,'Missing new PFSEL build qualification')
@@ -20,9 +24,13 @@ local function encode(x)
     end
     return 'null'
 end
+if e6 then observer=dofile(assert(cfg.observer_module)).new(encode,assert(cfg.observation_limits));events=observer.events end
 local function state()
     local s={}
     for _,k in ipairs({'CURPC','PC','SR','SP','IR','D0','D1','D2','D3','A0'}) do s[k]=cpu.state[k].value end
+    if e6 then
+        for _,k in ipairs({'D4','D5','D6','D7','A1','A2','A3','A4','A5','A6','USP'}) do s[k]=cpu.state[k].value end
+    end
     return s
 end
 -- Read back only the guest-owned framebuffer configured through real MMIO.
@@ -56,7 +64,7 @@ local function finish(reason,dependency)
     local trace=io.open(cfg.output..'/guest.trace','rb')
     local trace_bytes=trace and trace:seek('end') or 0;if trace then trace:close() end
     local guest_lcd=lcd_guest_frame()
-    local result={schema=e5 and 'dana-f1-e5-observation-v1' or e4 and 'dana-f1-e4-observation-v1' or 'dana-f1-observation-v1',
+    local result={schema=e6 and 'dana-012e-observation-v1' or e5 and 'dana-f1-e5-observation-v1' or e4 and 'dana-f1-e4-observation-v1' or 'dana-f1-observation-v1',
         status='CAPTURED',reason=reason,dependency=dependency,
         first_instruction=first,events=events,final=cpu and state() or {},
         virtual_seconds=emu.time(),package_sha256=cfg.package_sha256,binary_sha256=cfg.binary_sha256,
@@ -64,7 +72,10 @@ local function finish(reason,dependency)
         image_sha256=cfg.image_sha256,variant='diag',trace_bytes=trace_bytes,
         qualification_sha256=cfg.qualification_sha256,build_source_commit=cfg.build_source_commit,
         event_count=#events,trace_mode='native_loop_compression_no_sampling',
-        guest_lcd=guest_lcd,capture_profile=cfg.integrated_recovery and '012-D' or nil,full_boot=false}
+        guest_lcd=guest_lcd,capture_profile=e6 and '012-E' or cfg.integrated_recovery and '012-D' or nil,
+        observation_profile=cfg.observation_profile,limits_sha256=cfg.limits_sha256,
+        observer_sha256=cfg.observer_sha256,boot_sha256=cfg.boot_sha256,
+        observation_limits=cfg.observation_limits,compression_stats=observer and observer:stats() or nil,full_boot=false}
     local f=assert(io.open(cfg.output..'/observation.json','w'));f:write(encode(result),'\n');f:close()
     if space then
         local stack=cpu.state.SP.value
@@ -79,6 +90,11 @@ end
 local function record(e,origin)
     if done then return end
     e.seq=#events;e.origin=origin or 'debugger_observation';e.virtual_seconds=emu.time();e.state=state()
+    if observer then
+        local result=observer:push(e)
+        if observer.overflow then pending=observer.overflow.reason end
+        return result
+    end
     local n=#encode(e)
     if #events>=20000 or bytes+n>4*1024*1024 then pending='BLOCKED_TRACE_BUDGET';return end
     events[#events+1]=e;bytes=bytes+n
@@ -152,14 +168,27 @@ emu.register_prestart(safe(function()
     for _,kind in ipairs({'read','write'}) do
         taps[#taps+1]=space['install_'..kind..'_tap'](space,0,0xffffffff,'f1_'..kind,function(address,data,mask)
             -- No finish/exit/debugger operation, even on error or budget paths.
-            if done or host or (pending and pending~='BLOCKED_HARDWARE' and pending~='BLOCKED_GUEST_ADDRESS') then return end
+            if done or host or (pending and pending~='BLOCKED_HARDWARE' and pending~='BLOCKED_GUEST_ADDRESS' and not (e6 and observer.overflow)) then return end
             local ok,err=pcall(function()
                 if manager.machine:side_effects_disabled() or not loaded() then return end
-                if address<0x800 or address>=0x400000 then
+                local role=nil
+                if e6 and kind=='read' then
+                    -- Pinned m68000 RTE updates IR during return prefetch
+                    -- while CURPC still names RTE. Keep those raw accesses;
+                    -- only a changed CURPC is a successor observation.
+                    if rte_active and cpu.state.CURPC.value~=rte_pc then
+                        role='resume';rte_active=cpu.state.IR.value==0x4e73
+                        if rte_active then rte_pc=cpu.state.CURPC.value end
+                    elseif cpu.state.IR.value==0x4e73 then
+                        role='rte';rte_active=true;rte_pc=cpu.state.CURPC.value
+                    elseif rte_active then role='rte_prefetch' end
+                end
+                if address<0x800 or address>=0x400000 or role then
+                    if e6 and observer.overflow then observer.attempted_raw=observer.attempted_raw+1;observer.dropped_raw=observer.dropped_raw+1;return end
                     local selected=bus_bytes(address,mask)
                     local width=#selected*8
                     local e=record({kind=kind,address=address,data=data,mask=mask,byte_addresses=selected,
-                        width_bits=width,tap_id='f1_'..kind,side_effects_disabled=false,
+                        width_bits=width,tap_id='f1_'..kind,side_effects_disabled=false,role=role,
                         after_dependency=pending_dependency~=nil},'cpu')
                     local missing=first_unsupported(selected,kind)
                     if missing and not pending_dependency and e then
@@ -198,19 +227,49 @@ end))
 subscriptions[#subscriptions+1]=emu.add_machine_reset_notifier(safe(function()
     if cpu then cpu.debug:go(0xffffffff) end
 end))
+local function cycle_checkpoint()
+    host=true;checkpoints=checkpoints+1
+    if checkpoints>cfg.observation_limits.max_checkpoints then host=false;return 'OBSERVATION_LIMIT_CHECKPOINTS' end
+    manager.machine.debugger:command(string.format('printf "DANA012E token=%%X cycles=%%X",0x%X,totalcycles',checkpoints))
+    local console=manager.machine.debugger.consolelog
+    local found,line=nil,nil
+    for index=#console,math.max(1,#console-4),-1 do
+        local text=console[index]
+        if text then
+            local token,value=text:match('DANA012E token=(%x+) cycles=(%x+)')
+            if token and tonumber(token,16)==checkpoints then found=tonumber(value,16);line=text;break end
+        end
+    end
+    assert(found,'Missing native totalcycles expression; no estimated fallback')
+    local captured=record({kind='progress',cycle_api='native_debugger_totalcycles',token=checkpoints,totalcycles=found})
+    if captured then local log=assert(io.open(cfg.output..'/cycles.log','a'));log:write(line,'\n');log:close() end
+    cycle_start=cycle_start or found;host=false
+    if found-cycle_start>=cfg.observation_limits.max_cycles then return 'OBSERVATION_LIMIT_CYCLES' end
+end
 emu.register_periodic(safe(function()
     if done or not cpu then return end
+    if e6 and first then
+        if not observer.overflow then
+            local reason=cycle_checkpoint()
+            if reason and not pending then pending=reason end
+        end
+        if observer.overflow then finish(observer.overflow.reason,pending_dependency);return end
+        for _,name in ipairs({'console.log','error.log'}) do
+            local log=io.open(cfg.output..'/'..name,'rb')
+            if log then local size=log:seek('end');log:close();if size>cfg.observation_limits.max_log_bytes then finish('OBSERVATION_LIMIT_LOG',pending_dependency);return end end
+        end
+    end
     -- Retain the complete native trace through capture, including any deferred
     -- tail. Never silently sample away the instruction causing a dependency.
     do
         local f=io.open(cfg.output..'/guest.trace','rb')
         if f then
             local size=f:seek('end');f:close()
-            if size>4*1024*1024 then finish('BLOCKED_TRACE_BUDGET');return end
+            if size>(e6 and cfg.observation_limits.max_trace_bytes or 4*1024*1024) then finish(e6 and 'OBSERVATION_LIMIT_TRACE' or 'BLOCKED_TRACE_BUDGET',pending_dependency);return end
         end
     end
     if pending then finish(pending,pending_dependency);return end
-    if emu.time()>5 then finish('BLOCKED_VIRTUAL_BUDGET');return end
+    if emu.time()>(e6 and cfg.observation_limits.max_virtual_seconds or 5) then finish(e6 and 'OBSERVATION_LIMIT_TIME' or 'BLOCKED_VIRTUAL_BUDGET');return end
     if manager.machine.debugger.execution_state~='stop' then return end
     host=true
     local s=state()

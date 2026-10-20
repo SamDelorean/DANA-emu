@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -16,7 +17,18 @@ HERE=Path(__file__).resolve().parent
 PROJECT=HERE.parent
 sys.path.insert(0,str(PROJECT/'tools'))
 from f1_guest import validate,validate_qualified,sha
-from d1_2_run import lua
+
+def lua(value):
+    """Serialize observer configuration without Python bool/float identifiers."""
+    if value is None:return 'nil'
+    if isinstance(value,bool):return 'true' if value else 'false'
+    if isinstance(value,(int,float)):
+        if isinstance(value,float) and not math.isfinite(value):raise ValueError('Non-finite Lua configuration value')
+        return repr(value)
+    if isinstance(value,str):return json.dumps(value)
+    if isinstance(value,list):return '{'+','.join(lua(v) for v in value)+'}'
+    if isinstance(value,dict):return '{'+','.join('['+lua(k)+']='+lua(v) for k,v in value.items())+'}'
+    raise TypeError(type(value))
 
 def save(path,data):path.write_text(json.dumps(data,indent=2)+'\n')
 
@@ -359,7 +371,11 @@ def limits():
     # Finite native trace/console artifacts, rather than unlimited trace output.
     resource.setrlimit(resource.RLIMIT_FSIZE,(5*1024*1024,5*1024*1024))
 
-def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
+def observation_limits():
+    from dana_012e_verify import LIMITS
+    resource.setrlimit(resource.RLIMIT_FSIZE,(LIMITS['max_file_bytes'],LIMITS['max_file_bytes']))
+
+def run(binary,guest,root,reject=False,post_portc=False,qualification=None,observation_012e=False):
     from d2_2_gpio_run import diag_path
     if not Path(binary).is_absolute():raise ValueError('Explicit absolute DIAG path required')
     binary=diag_path(binary)
@@ -376,6 +392,13 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
                       image_sha256=manifest['artifacts']['emutos.img']['sha256'],full_boot=False)
         if qualification:config.update(revision='F1-E5',qualification_sha256=sha(Path(qualification)),build_source_commit=build['source_commit'])
         if qualification and build['source_commit']==REUSE_012C['source_commit']:config['integrated_recovery']=True
+    if observation_012e:
+        from dana_012e_verify import LIMITS,LIMITS_SHA,OBS_SHA,BOOT_SHA
+        if not qualification or build['source_commit']!=REUSE_012C['source_commit'] or build['binary_sha256']!=REUSE_012C['binary_sha256']:
+            raise ValueError('012-E requires exact reused 012-C DIAG')
+        shutil.copyfile(HERE/'dana_012e_observer.lua',plugin/'dana_012e_observer.lua')
+        config.update(observation_profile='012-E',observer_module=str(plugin/'dana_012e_observer.lua'),
+                      observation_limits=LIMITS,limits_sha256=LIMITS_SHA,observer_sha256=OBS_SHA,boot_sha256=BOOT_SHA)
     cfg=root/'config.lua';cfg.write_text('return '+lua(config)+'\n')
     environment=dict(os.environ,DANA_F1_CONFIG=str(cfg))
     image=Path(guest).resolve()/'emutos.dana'
@@ -385,17 +408,21 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
     command=[str(binary),'asmdana','-noreadconfig','-quickload',str(image),
              '-debug','-debugger','none','-pluginspath',str(plugin),'-plugins','-video','none',
              '-sound','none','-log','-skip_gameinfo','-seconds_to_run','6']
+    if observation_012e:command[-1]=str(LIMITS['emulator_seconds_to_run'])
     record={'binary_sha256':config['binary_sha256'],'command':command,
             'driver_sha256':sha(PROJECT/'src/mame/skeleton/alphasdana.cpp') if qualification else OLD_DRIVER_SHA,
             'package_sha256':config['package_sha256'],'host_timeout_seconds':180}
     if post_portc:
         record.update({k:config[k] for k in ('revision','variant','execution_id','source_commit','image_sha256','full_boot')})
         if qualification:record.update(qualification_sha256=config['qualification_sha256'],build_source_commit=build['source_commit'])
+    if observation_012e:
+        record.update({k:config[k] for k in ('observation_profile','limits_sha256','observer_sha256','boot_sha256')})
+        record['host_timeout_seconds']=LIMITS['host_timeout_seconds']
     try:
         with (root/'console.log').open('wb') as log:
-            proc=subprocess.Popen(command,cwd=root,env=environment,stdout=log,stderr=subprocess.STDOUT,preexec_fn=limits)
+            proc=subprocess.Popen(command,cwd=root,env=environment,stdout=log,stderr=subprocess.STDOUT,preexec_fn=observation_limits if observation_012e else limits)
             record['pid']=proc.pid
-            try:record['exit_code']=proc.wait(timeout=180)
+            try:record['exit_code']=proc.wait(timeout=LIMITS['host_timeout_seconds'] if observation_012e else 180)
             except subprocess.TimeoutExpired:
                 proc.kill();proc.wait();record.update(exit_code=None,reason='HOST_TIMEOUT')
     except OSError as error:record.update(exit_code=None,reason='NATIVE_LAUNCH: '+str(error))
@@ -411,6 +438,9 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
                     'reason':'DIGEST_REJECTED_BEFORE_CPU_FETCH' if rejected else 'NATIVE_REJECTION_NOT_PROVED'}
         except (OSError,ValueError,KeyError) as error:
             result={'status':'BLOCKED','reason':str(error)}
+    elif observation_012e:
+        from dana_012e_verify import verify_run
+        result=verify_run(root,guest,qualification)
     else:result=verify_e4(root,guest,qualification=qualification) if post_portc else verify(root,guest)
     save(root/'result.json',result)
     return result
@@ -420,20 +450,25 @@ def main():
     p.add_argument('guest',type=Path);p.add_argument('evidence',type=Path)
     p.add_argument('--post-portc',action='store_true',help='F1-E4: two qualified guest runs; no native campaign replay')
     p.add_argument('--pfsel-build',type=Path,help='F1-E5 only: new DIAG build qualification JSON')
+    p.add_argument('--observation-012e',action='store_true',help='012-E bounded poll aggregation, native cycles and RTE evidence; exact 012-C reuse only')
     args=p.parse_args();root=args.evidence.resolve();root.mkdir(parents=True,exist_ok=False)
     try:
         from d2_2_gpio_run import diag_path
         if not args.diag.is_absolute():raise ValueError('Explicit absolute DIAG path required')
         binary=diag_path(args.diag)
+        if args.observation_012e and not args.pfsel_build:raise ValueError('012-E requires original build qualification')
         if args.post_portc or args.pfsel_build:
             if args.pfsel_build:qualify_pfsel_build(binary,args.pfsel_build)
             elif sha(binary)!=BINARY_SHA:raise ValueError('Qualified DIAG SHA required; no fallback')
             validate_qualified(args.guest)
-            run(binary,args.guest,root/'run-1',post_portc=True,qualification=args.pfsel_build)
-            run(binary,args.guest,root/'run-2',post_portc=True,qualification=args.pfsel_build)
-            result=verify_e4_pair(root,args.guest,qualification=args.pfsel_build)
+            run(binary,args.guest,root/'run-1',post_portc=True,qualification=args.pfsel_build,observation_012e=args.observation_012e)
+            run(binary,args.guest,root/'run-2',post_portc=True,qualification=args.pfsel_build,observation_012e=args.observation_012e)
+            if args.observation_012e:
+                from dana_012e_verify import verify_pair
+                result=verify_pair(root,args.guest,args.pfsel_build)
+            else:result=verify_e4_pair(root,args.guest,qualification=args.pfsel_build)
             save(root/'result.json',result);print(json.dumps(result,indent=2))
-            return 0 if result['status']=='REAL_PROGRESS_PASS_SCOPED' else 2
+            return 0 if result['status']=='REAL_PROGRESS_PASS_SCOPED' or args.observation_012e and result['status'] in ('PASS','PARTIAL') else 2
         validate(args.guest)
         a=run(binary,args.guest,root/'run-1');b=run(binary,args.guest,root/'run-2')
         negative=run(binary,args.guest,root/'native-rejection',reject=True)
