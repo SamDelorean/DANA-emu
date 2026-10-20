@@ -1,0 +1,10 @@
+existing_sheet,record_key,status,update_text
+CONTROL,Current increment,012-D_STATIC_PASS / NATIVE_PENDING,Integrated harness recovery; no native execution or Commander in Codex.
+HITOS,Integrated native qualification,BLOCKED,"012-C PFSEL verifier blocked; 012-D PFSEL, Timer1, UART1, IRQ6, LCD and SPI2/ST native outcomes pending as one delivery."
+CAMPAÑAS,012-C,BUILD_PASS / PFSEL_BLOCKED / GUEST_NOT_RUN,"Supplied job_result: 68 offline PASS; one updated Dana object, 1129 reused; one MAME build; zero ROM builds. Full archive SHA 1fc1d8417eea975c80f29a74aa53e6ccc8fd835b2d2cc924951afec748364a18 is supplied, not rehashed from the subset."
+CAMPAÑAS,012-D,GIT_HOLD / NOT_LAUNCHED,"One existing-binary recovery job; no compilation, installations or campaign 011 replay."
+CONTRATOS,Immutable 012-C DIAG,SOURCE_COMPATIBLE / LIVE_IDENTITY_PENDING,Build source 581601b49acb6603af2a100817d0f06fed17ed96; binary caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37; manifest 504530b8ba90549fc6cfd5dc7ec7505ff013ee025daceec9c60dc26a4e4988de; original qualification hash 6fda7a9474c7594ae1019fea33766ad65c99d9e81a5d323ec1e1f6b5ba914131.
+DIRECTRICES,Execution restrictions,ACTIVE,"Dana DIAG only; source-first; no Commander currently authorized; preserve prior evidence, source and cache; no MAME or EmuTOS rebuild for harness changes."
+RIESGOS,Historical first predicate,UNDETERMINED,All seven reproducible archived manifest content predicates agree. Supplied subset omits original run/observation records and live resolver state; do not invent a missing or corrupt manifest.
+BITACORA,2026-10-20 / 012-D,SOURCE_IMPLEMENTED,"Ordered fail-closed diagnostics, separately bound harness/build identities, native IACK tap, independent causal integrated verification and one HOLD job."
+FUENTES,User-supplied 012-C subset,7/7_SUPPLIED_INDEXED_FILES_PASS,ZIP SHA256 718abbd0253f35b052f5e52b7ae89adeecfaecbebb181ac38ef5766498790a7c; full original inventory lists 40 files. Workbook ID 1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l; no workbook bytes read or modified in Cloud.

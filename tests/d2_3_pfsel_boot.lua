@@ -54,7 +54,7 @@ local function finish(status,reason)
     local f=assert(io.open(cfg.output..'/observation.json','w'))
     f:write(json({schema='dana-pfsel-d23',status=status,reason=reason,events=events,phase=phase,trace_bytes=trace_bytes,
         revision='D2.3',execution=cfg.execution,variant='diag',execution_id=cfg.execution_id,
-        source_commit=cfg.source_commit,binary_sha256=cfg.binary_sha256,fixture_sha256=cfg.fixture_sha256,qualification_sha256=cfg.qualification_sha256}),'\n')
+        source_commit=cfg.source_commit,build_source_commit=cfg.build_source_commit,binary_sha256=cfg.binary_sha256,fixture_sha256=cfg.fixture_sha256,qualification_sha256=cfg.qualification_sha256}),'\n')
     f:close();manager.machine:exit()
 end
 local function safe(fn)

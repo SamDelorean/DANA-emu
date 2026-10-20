@@ -1,0 +1,131 @@
+{
+  "status": "012_D_STATIC_PASS",
+  "native_runtime": "NATIVE_PENDING",
+  "reviewed_base": "5bbff40bd1fd2ccb257c27ab7618706cd487db4e",
+  "canonical_main_read": "e147c940741363af186dae9026d9788f0566fea9",
+  "historical_first_predicate": "UNDETERMINED_FROM_SUPPLIED_SUBSET",
+  "actual_evidence_audit": {
+    "status": "STATIC_CONTENT_PASS_RUNTIME_STATE_UNAVAILABLE",
+    "zip_sha256": "718abbd0253f35b052f5e52b7ae89adeecfaecbebb181ac38ef5766498790a7c",
+    "verified_supplied_members": {
+      "source-manifest.json": "504530b8ba90549fc6cfd5dc7ec7505ff013ee025daceec9c60dc26a4e4988de",
+      "job_result.json": "3787614647b517f7bbbdcc03298c5d8576a0614e7642b795d5811993ceda37e0",
+      "native-pfsel.log": "7af24afc3f772bec503cfb830f43b5862b31f582c2dd837c39517b573410bda1",
+      "binary_qualification.json": "6fda7a9474c7594ae1019fea33766ad65c99d9e81a5d323ec1e1f6b5ba914131",
+      "pfsel/result.json": "7af24afc3f772bec503cfb830f43b5862b31f582c2dd837c39517b573410bda1",
+      "pfsel/reset/result.json": "c7a69abf77709a64deecaab5f309127120315ead9352f759d1dc55c141fe5cd6",
+      "pfsel/save_restore/result.json": "c7a69abf77709a64deecaab5f309127120315ead9352f759d1dc55c141fe5cd6"
+    },
+    "full_inventory_members": 40,
+    "predicates": {
+      "manifest.sha256": true,
+      "manifest.status": true,
+      "manifest.source_commit": true,
+      "manifest.mame_commit": true,
+      "manifest.variant": true,
+      "manifest.binary_sha256_recorded": true,
+      "manifest.driver_sha256": true
+    },
+    "first_content_failure": null,
+    "limits": [
+      "Actual T path state, live binary bytes, verifier-resolved PROJECT/HEAD and complete native PFSEL observations are absent from the supplied subset.",
+      "Original full tar.gz SHA is user-supplied, not independently rehashed here."
+    ]
+  },
+  "existing_binary": {
+    "source": "581601b49acb6603af2a100817d0f06fed17ed96",
+    "sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
+    "driver_sha256": "e8211be78dfb2bf4cdc0ccabd444c97d715dc37d189d4f113f2f1cbf05b573e2",
+    "source_manifest_sha256": "504530b8ba90549fc6cfd5dc7ec7505ff013ee025daceec9c60dc26a4e4988de",
+    "qualification_sha256": "6fda7a9474c7594ae1019fea33766ad65c99d9e81a5d323ec1e1f6b5ba914131",
+    "live_T_identity": "NOT_RECHECKED_IN_CLOUD",
+    "source_compatibility": "PINNED_GIT_DRIVER_BYTES_MATCH_NO_PRODUCTION_DIFF"
+  },
+  "full_original_archive": {
+    "name": "dana_timer_uart_irq_hmkem769.tar.gz",
+    "sha256": "1fc1d8417eea975c80f29a74aa53e6ccc8fd835b2d2cc924951afec748364a18",
+    "verification": "Supplied identity; full tar.gz not present in Cloud; recovery job rehashes it before native work"
+  },
+  "prior_012C": {
+    "build": "PASS_RECORDED",
+    "offline_tests": "68_PASS_RECORDED",
+    "pfsel": "BLOCKED",
+    "authentic_guest": "NOT_EXECUTED"
+  },
+  "capabilities": {
+    "pfsel_save_restore_reset": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    },
+    "authentic_guest_pair": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    },
+    "timer1_programming": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    },
+    "uart1_registers": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    },
+    "uart1_tx": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    },
+    "irq6": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    },
+    "lcd_frame": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    },
+    "spi2_st_greeting": {
+      "status": "BLOCKED",
+      "reason": "012-D_NATIVE_NOT_EXECUTED"
+    }
+  },
+  "source_sha256": {
+    "tests/f1_emutos_run.py": "3a799a55ebe8de71a5cfff95604dcd0775a88832f585805fa8969cfd5d8876a9",
+    "tests/f1_emutos_boot.lua": "ad9646fd3e498f54aaff6aa95b478b9a0630bbc4dafe6a4f11e90a45a37d52a1",
+    "tests/d2_3_pfsel_run.py": "901e8df21d6908c021f9e97a9fda9aae331ee8c34caecb610c4f190b5d30ca01",
+    "tests/d2_3_pfsel_boot.lua": "396c1a69594bd61e449d46bddf1204b7dbd4e07c5a02e8180af4a000e76259f7",
+    "tests/d2_3_test.py": "9654440cee7e4e12373dfd8d3e96605b6e5a4c8c5b446c868e71122c3d3145cb",
+    "tests/dana_012d_verify.py": "70a69f28ebee299bbee65397e20a72e7a54bef8b2022bc059e1a8215cf4492aa",
+    "tests/dana_012d_test.py": "3ff5b596e1ee76eb018075cbe0f3579ab0eca8c44356802a6c064f3a7fdc48f9"
+  },
+  "local_checks": {
+    "tests": 97,
+    "output": "Ran 97 tests in 6.228s; OK",
+    "skips": 0,
+    "emulator_tests": 0,
+    "original_subset": "7/7 included indexed files agree; 40 full index entries",
+    "syntax": "PASS",
+    "hold_guards": "3/3 HOLD exit2",
+    "unchanged": "Production/overlays/011/original012"
+  },
+  "job": {
+    "path": "tests/hold/012_d_dana_integrated_recovery_diag.job.sh",
+    "source_commit": null,
+    "sha256": null,
+    "state": "LOCAL_GIT_HOLD_SOURCE_FREEZE_PENDING",
+    "authorization": "DANA_012D_AUTHORIZED=YES only after separate scoped native approval",
+    "builds": 0,
+    "ROM_builds": 0,
+    "max_native_processes": 4
+  },
+  "workbook": {
+    "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "path": "AS2K_TEMP/DANA_EMU/DANA_EMU_Control_Rector_Auditoria_2026-10-20.xlsx",
+    "state": "UPDATE_MATERIAL_PREPARED_WORKBOOK_NOT_MODIFIED",
+    "updates": "docs/DANA_012D_RECTOR_UPDATES.csv"
+  },
+  "Commander_calls": 0,
+  "T_execution": false,
+  "MAME_builds": 0,
+  "ROM_builds": 0,
+  "Drive_dispatch": false,
+  "full_boot": false,
+  "next_action": "One separately authorized existing-binary integrated 012-D recovery; audit its one evidence package and update existing rector workbook."
+}

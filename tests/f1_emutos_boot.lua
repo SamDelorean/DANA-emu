@@ -62,9 +62,9 @@ local function finish(reason,dependency)
         virtual_seconds=emu.time(),package_sha256=cfg.package_sha256,binary_sha256=cfg.binary_sha256,
         revision=cfg.revision,source_commit=cfg.source_commit,execution_id=cfg.execution_id,
         image_sha256=cfg.image_sha256,variant='diag',trace_bytes=trace_bytes,
-        qualification_sha256=cfg.qualification_sha256,
+        qualification_sha256=cfg.qualification_sha256,build_source_commit=cfg.build_source_commit,
         event_count=#events,trace_mode='native_loop_compression_no_sampling',
-        guest_lcd=guest_lcd,full_boot=false}
+        guest_lcd=guest_lcd,capture_profile=cfg.integrated_recovery and '012-D' or nil,full_boot=false}
     local f=assert(io.open(cfg.output..'/observation.json','w'));f:write(encode(result),'\n');f:close()
     if space then
         local stack=cpu.state.SP.value
@@ -172,6 +172,23 @@ emu.register_prestart(safe(function()
             end)
             if not ok then pending='BLOCKED_TAP: '..tostring(err) end
             -- No replacement data, no PC/register/memory mutation.
+        end)
+    end
+    if e5 and cfg.integrated_recovery then
+        -- Pinned M68000 names AS_CPU_SPACE "cpu_space". Capture native IACK
+        -- on the same sequence/time axis as program-bus events; no host reads,
+        -- replacement data, debugger command or exit from this tap.
+        local iack=assert(cpu.spaces['cpu_space'],'Native CPU space required')
+        assert(iack.data_width==16,'Expected native IACK bus width')
+        taps[#taps+1]=iack:install_read_tap(0xfffffff0,0xffffffff,'f1_iack',function(address,data,mask)
+            if done or host or not loaded() or manager.machine:side_effects_disabled() then return end
+            local ok,err=pcall(function()
+                record({kind='iack',address=address,data=data,mask=mask,
+                    byte_addresses=bus_bytes(address,mask),width_bits=(mask==0xffff and 16 or 8),
+                    tap_id='f1_iack',side_effects_disabled=false,
+                    after_dependency=pending_dependency~=nil},'cpu')
+            end)
+            if not ok then pending='BLOCKED_IACK_TAP: '..tostring(err) end
         end)
     end
     manager.machine.debugger:command('trace "'..cfg.output..'/guest.trace"')

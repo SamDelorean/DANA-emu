@@ -59,8 +59,11 @@ def verify(root,binary,qualification,mode):
         q=qualify_pfsel_build(binary,qualification)
         run=json.loads((root/'run.json').read_text());obs=json.loads((root/'observation.json').read_text())
         payload,layout=fixture();digest=hashlib.sha256(payload).hexdigest()
+        harness=subprocess.check_output(['git','-C',str(HERE.parent),'rev-parse','HEAD'],text=True).strip()
+        if q['source_commit']!=harness and any(obj.get('build_source_commit')!=q['source_commit'] for obj in (run,obs)):
+            raise ValueError('Unbound immutable binary build source')
         for key,value in (('variant','diag'),('revision','D2.3'),('execution',mode),('fixture_sha256',digest),
-                          ('binary_sha256',q['binary_sha256']),('source_commit',q['source_commit']),
+                          ('binary_sha256',q['binary_sha256']),('source_commit',harness),
                           ('qualification_sha256',sha(Path(qualification)))):
             if run.get(key)!=value or obs.get(key)!=value:raise ValueError('Unbound '+key)
         if run['command'][0]!=str(binary) or run.get('exit_code')!=0 or type(run.get('pid')) is not int or run['pid']<=0:
@@ -180,12 +183,13 @@ def main():
             shutil.copyfile(HERE/'d2_3_pfsel_boot.lua',plugin/'boot.lua')
             cfg=dict(output=str(work),hex=payload.hex(),**{k:layout[k] for k in ('endpoint','post','post_read','store','stop')},
                      revision='D2.3',variant='diag',execution=mode,execution_id=uuid.uuid4().hex,
-                     source_commit=q['source_commit'],binary_sha256=q['binary_sha256'],fixture_sha256=hashlib.sha256(payload).hexdigest(),
+                     source_commit=subprocess.check_output(['git','-C',str(HERE.parent),'rev-parse','HEAD'],text=True).strip(),
+                     build_source_commit=q['source_commit'],binary_sha256=q['binary_sha256'],fixture_sha256=hashlib.sha256(payload).hexdigest(),
                      qualification_sha256=sha(args.qualification))
             config=work/'config.lua';config.write_text('return '+lua(cfg)+'\n')
             command=[str(args.binary),'asmdana','-noreadconfig','-debug','-debugger','none','-pluginspath',str(plugin),
                      '-plugins','-video','none','-sound','none','-skip_gameinfo','-seconds_to_run','2']
-            run={k:cfg[k] for k in ('revision','variant','execution','execution_id','source_commit','binary_sha256','fixture_sha256','qualification_sha256')}
+            run={k:cfg[k] for k in ('revision','variant','execution','execution_id','source_commit','build_source_commit','binary_sha256','fixture_sha256','qualification_sha256')}
             with (work/'console.log').open('wb') as log:
                 proc=subprocess.Popen(command,cwd=work,env=dict(os.environ,DANA_PFSEL_CONFIG=str(config)),stdout=log,stderr=subprocess.STDOUT,preexec_fn=limits)
                 run.update(command=command,pid=proc.pid)

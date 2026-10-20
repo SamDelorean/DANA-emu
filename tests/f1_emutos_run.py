@@ -27,31 +27,64 @@ TRACE_LIMIT=5*1024*1024
 MAME_PIN='c4e48388ca620472643110db2941ce70aa5f3c07'
 
 
+# Immutable 012-C artifact. A harness-only recovery must not relabel its build.
+REUSE_012C = dict(source_commit='581601b49acb6603af2a100817d0f06fed17ed96',
+    binary_sha256='caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37',
+    qualification_sha256='6fda7a9474c7594ae1019fea33766ad65c99d9e81a5d323ec1e1f6b5ba914131',
+    source_manifest_sha256='504530b8ba90549fc6cfd5dc7ec7505ff013ee025daceec9c60dc26a4e4988de')
+
+
 def qualify_pfsel_build(binary,qualification,expected_source=None):
-    """Require a newly compiled DIAG identity; never widen the old E4 binary."""
+    """Read-only validation, with ordered predicates and pinned 012-C reuse.
+
+    expected_source identifies the harness. The build source remains immutable.
+    No arbitrary branch or hash substitution is accepted for a reused binary.
+    """
     from d2_2_gpio_run import diag_path
-    if not Path(binary).is_absolute():raise ValueError('Explicit absolute new DIAG path required')
+    def require(predicate,condition):
+        if not condition:raise ValueError('PFSEL_QUALIFICATION:'+predicate)
+    require('binary.absolute_path',Path(binary).is_absolute())
     binary=diag_path(binary)
+    require('qualification.regular_file',Path(qualification).is_file() and not Path(qualification).is_symlink())
     q=json.loads(Path(qualification).read_text())
-    if not isinstance(q,dict):raise ValueError('Invalid build qualification object')
-    source=expected_source or subprocess.check_output(['git','-C',str(PROJECT),'rev-parse','HEAD'],text=True).strip()
+    require('qualification.object',isinstance(q,dict))
+    harness=expected_source or subprocess.check_output(['git','-C',str(PROJECT),'rev-parse','HEAD'],text=True).strip()
+    source=q.get('source_commit')
     manifest_path=binary.parent.parent/'source-manifest.json'
+    require('manifest.regular_file',manifest_path.is_file() and not manifest_path.is_symlink())
     manifest=json.loads(manifest_path.read_text())
-    if not isinstance(manifest,dict):raise ValueError('Invalid staged build manifest object')
-    if (q.get('source_manifest_sha256')!=sha(manifest_path) or manifest.get('status')!='BUILT_DIAG'
-            or manifest.get('source_commit')!=source or manifest.get('mame_commit')!=MAME_PIN
-            or manifest.get('variant')!='diag' or manifest.get('binary_sha256')!=sha(binary)
-            or manifest.get('driver_sha256')!=sha(PROJECT/'src/mame/skeleton/alphasdana.cpp')):
-        raise ValueError('Missing matching staged PFSEL build manifest')
+    require('manifest.object',isinstance(manifest,dict))
+    binary_sha=sha(binary);driver_sha=sha(PROJECT/'src/mame/skeleton/alphasdana.cpp')
+    # Retain the original content checks in their original order. Report the
+    # first failing predicate instead of the former ambiguous combined error.
+    require('manifest.sha256',q.get('source_manifest_sha256')==sha(manifest_path))
+    require('manifest.status',manifest.get('status')=='BUILT_DIAG')
+    require('manifest.source_commit',manifest.get('source_commit')==source)
+    require('manifest.mame_commit',manifest.get('mame_commit')==MAME_PIN)
+    require('manifest.variant',manifest.get('variant')=='diag')
+    require('manifest.binary_sha256',manifest.get('binary_sha256')==binary_sha)
+    require('manifest.driver_sha256',manifest.get('driver_sha256')==driver_sha)
+    require('qualification.schema',q.get('schema')=='dana-d23-build-v1')
+    if source!=harness:
+        for key,value in REUSE_012C.items():
+            actual=sha(Path(qualification)) if key=='qualification_sha256' else q.get(key)
+            require('reuse.'+key,actual==value)
+        # Verify actual pinned Git bytes, not a claimed branch/source label.
+        compiled=subprocess.check_output(['git','-C',str(PROJECT),'show',source+':src/mame/skeleton/alphasdana.cpp'])
+        require('reuse.compiled_driver_sha256',hashlib.sha256(compiled).hexdigest()==driver_sha)
+        require('reuse.production_tree',subprocess.check_output(
+            ['git','-C',str(PROJECT),'diff','--name-only',source,harness,'--','src','overlays'],text=True).strip()=='')
+    require('qualification.driver_sha256',q.get('driver_sha256')==driver_sha)
+    require('qualification.mame_commit',q.get('mame_commit')==MAME_PIN)
+    require('qualification.subtarget',q.get('subtarget')=='danadiag')
+    require('qualification.build_exit_code',type(q.get('build_exit_code')) is int and q['build_exit_code']==0)
+    require('qualification.variant',q.get('variant')=='diag')
+    require('qualification.binary_sha256',q.get('binary_sha256')==binary_sha)
+    require('qualification.new_binary',binary_sha!=BINARY_SHA)
+    require('qualification.binary_path',q.get('binary')==str(binary))
     command=q.get('build_command',[])
-    if (q.get('schema')!='dana-d23-build-v1' or q.get('source_commit')!=source
-            or q.get('driver_sha256')!=sha(PROJECT/'src/mame/skeleton/alphasdana.cpp')
-            or q.get('mame_commit')!=MAME_PIN or q.get('subtarget')!='danadiag'
-            or q.get('build_exit_code')!=0 or q.get('variant')!='diag'
-            or q.get('binary_sha256')!=sha(binary) or sha(binary)==BINARY_SHA
-            or q.get('binary')!=str(binary) or not isinstance(command,list)
-            or not {'make','-j3','SUBTARGET=danadiag','DEBUG=1','SOURCES=src/mame/skeleton/alphasdana.cpp'}.issubset(command)):
-        raise ValueError('New source-qualified PFSEL DIAG required; old E4 binary forbidden')
+    require('qualification.build_command',isinstance(command,list) and all(isinstance(v,str) for v in command)
+        and {'make','-j3','SUBTARGET=danadiag','DEBUG=1','SOURCES=src/mame/skeleton/alphasdana.cpp'}.issubset(command))
     return q
 
 
@@ -111,6 +144,9 @@ def verify_e4(root,guest,expected_source=None,qualification=None):
         if pfsel:
             build=qualify_pfsel_build(Path(run['command'][0]),qualification,expected_source)
             expected_binary=build['binary_sha256']
+            if build['source_commit']!=expected_source:
+                if any(obj.get('build_source_commit')!=build['source_commit'] for obj in (run,obs)):
+                    raise ValueError('Unbound immutable binary build source')
             if run.get('qualification_sha256')!=sha(Path(qualification)) or obs.get('qualification_sha256')!=sha(Path(qualification)):
                 raise ValueError('Unbound PFSEL build qualification')
         if run.get('exit_code')!=0 or run.get('reason')=='HOST_TIMEOUT':raise ValueError('Native process incomplete')
@@ -327,7 +363,7 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
     from d2_2_gpio_run import diag_path
     if not Path(binary).is_absolute():raise ValueError('Explicit absolute DIAG path required')
     binary=diag_path(binary)
-    if qualification:qualify_pfsel_build(binary,qualification)
+    if qualification:build=qualify_pfsel_build(binary,qualification)
     elif post_portc and sha(binary)!=BINARY_SHA:raise ValueError('Qualified DIAG SHA required; no fallback')
     manifest=(validate_qualified if post_portc else validate)(guest);syms=manifest['symbols'];root=Path(root).resolve()
     root.mkdir(parents=True,exist_ok=False)
@@ -338,7 +374,8 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
         config.update(revision='F1-E4',variant='diag',execution_id=uuid.uuid4().hex,
                       source_commit=subprocess.check_output(['git','-C',str(PROJECT),'rev-parse','HEAD'],text=True).strip(),
                       image_sha256=manifest['artifacts']['emutos.img']['sha256'],full_boot=False)
-        if qualification:config.update(revision='F1-E5',qualification_sha256=sha(Path(qualification)))
+        if qualification:config.update(revision='F1-E5',qualification_sha256=sha(Path(qualification)),build_source_commit=build['source_commit'])
+        if qualification and build['source_commit']==REUSE_012C['source_commit']:config['integrated_recovery']=True
     cfg=root/'config.lua';cfg.write_text('return '+lua(config)+'\n')
     environment=dict(os.environ,DANA_F1_CONFIG=str(cfg))
     image=Path(guest).resolve()/'emutos.dana'
@@ -353,7 +390,7 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None):
             'package_sha256':config['package_sha256'],'host_timeout_seconds':180}
     if post_portc:
         record.update({k:config[k] for k in ('revision','variant','execution_id','source_commit','image_sha256','full_boot')})
-        if qualification:record['qualification_sha256']=config['qualification_sha256']
+        if qualification:record.update(qualification_sha256=config['qualification_sha256'],build_source_commit=build['source_commit'])
     try:
         with (root/'console.log').open('wb') as log:
             proc=subprocess.Popen(command,cwd=root,env=environment,stdout=log,stderr=subprocess.STDOUT,preexec_fn=limits)
