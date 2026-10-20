@@ -235,6 +235,16 @@ class E5(unittest.TestCase):
             for obj in (run,obs):obj.update(revision='F1-E5',binary_sha256=self.q['binary_sha256'],driver_sha256=self.q['driver_sha256'],qualification_sha256=f1.sha(self.qualification))
             run['command'][0]=str(self.binary);obs['schema']='dana-f1-e5-observation-v1'
             old=obs['events'];read=copy.deepcopy(old[-1]);write=copy.deepcopy(read)
+            # E4's synthetic UART1 address F906 is now implemented in E5.
+            # Exercise the exact first UNIMPLEMENTED byte just after the
+            # UART1 register bank, without changing the E4 baseline or
+            # rewriting any native guest observation.
+            missing=old[-1]
+            assert missing['kind']=='read' and missing['address']==0xfffff906
+            assert missing['mask']==0xff00 and missing['byte_addresses']==[0xfffff906]
+            missing.update(address=0xfffff90c,byte_addresses=[0xfffff90c])
+            obs['dependency'].update(address=0xfffff90c,effective_address=0xfffff90c,
+                                     byte_addresses=[0xfffff90c])
             read.update(kind='read',address=0xfffff42a,mask=255,data=0xc5,byte_addresses=[0xfffff42b],tap_id='f1_read')
             read['state']=dict(read['state'],CURPC=0x83a2,PC=0x83a4)
             write.update(kind='write',address=0xfffff42a,mask=255,data=0xc5,byte_addresses=[0xfffff42b],tap_id='f1_write')
@@ -249,7 +259,12 @@ class E5(unittest.TestCase):
     blocked=E4Fixture.blocked
     def verify(self):
         self.flush();return f1.verify_e4_pair(self.root,self.guest,self.source,self.qualification)
-    def test_e5_requires_new_build_and_c5_native_read_write(self):self.assertEqual(self.verify()['status'],'REAL_PROGRESS_PASS_SCOPED')
+    def test_e5_requires_new_build_and_c5_native_read_write(self):
+        result=self.verify()
+        self.assertEqual(result['status'],'REAL_PROGRESS_PASS_SCOPED')
+        self.assertEqual(result['normalized_dependency']['effective_address'],0xfffff90c)
+        self.assertTrue(f1.implemented_byte(0xfffff906,'read',True))
+        self.assertFalse(f1.implemented_byte(0xfffff90c,'read',True))
     def test_e5_rejects_wrong_read_profile(self):
         self.observations[0]['events'][-3]['data']=0x87;self.blocked()
     def test_e5_rejects_unqualified_build(self):
