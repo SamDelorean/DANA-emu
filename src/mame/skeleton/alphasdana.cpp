@@ -797,7 +797,7 @@ void alphasdana_state::alphasdana(machine_config &config)
     // Placeholder CPU frequency, not a calibrated VZ PLL.
     DANA_VZ_CPU(config, m_maincpu, 1'000'000);
     m_maincpu->set_addrmap(AS_PROGRAM, &alphasdana_state::program_map);
-    m_maincpu->set_addrmap(AS_CPU_SPACE, &alphasdana_state::cpu_space_map);
+    m_maincpu->set_addrmap(m68000_base_device::AS_CPU_SPACE, &alphasdana_state::cpu_space_map);
     // Reuse MAME's LCD screen infrastructure; the only pixel source is guest RAM.
     SCREEN(config, m_screen).set_lcd();
     m_screen->set_refresh_hz(60); // Display cadence provisional; VZ PLL timing pending.
