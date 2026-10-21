@@ -17,8 +17,9 @@ import sys
 import tarfile
 import tempfile
 
-SOURCE='5264341dd22a5ee0bf21df63c033153c8c0318a8'
+SOURCE='PENDING_IMPLEMENTATION_COMMIT'
 BUILD_SOURCE='581601b49acb6603af2a100817d0f06fed17ed96'
+HISTORICAL_SOURCE='56a0a0040edfc161e45c1131692a64c3649fe3af'
 BINARY_SHA='caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37'
 MANIFEST_SHA='504530b8ba90549fc6cfd5dc7ec7505ff013ee025daceec9c60dc26a4e4988de'
 QUALIFICATION_SHA='6fda7a9474c7594ae1019fea33766ad65c99d9e81a5d323ec1e1f6b5ba914131'
@@ -53,6 +54,24 @@ def require_hash(path,expected):
 
 exit_code=2
 try:
+    source=root/'code';source.mkdir()
+    stage('git-init',['git','init',str(source)])
+    # Shallow source/build fetches do not bring the historical regression pin.
+    # Recover it explicitly; keep the original Port C / PLLFSR test unchanged.
+    for label,pin in (('harness',SOURCE),('binary-source',BUILD_SOURCE),('historical-regression',HISTORICAL_SOURCE)):
+        stage('fetch-'+label,['git','-C',str(source),'fetch','--depth=1','https://github.com/SamDelorean/DANA-emu.git',pin],timeout=400)
+    stage('checkout-harness',['git','-C',str(source),'checkout','--detach',SOURCE])
+    if subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()!=SOURCE:raise ValueError('HARNESS_SOURCE_PIN')
+    if subprocess.check_output(['git','-C',str(source),'diff','--name-only',BUILD_SOURCE,SOURCE,'--','src','overlays'],text=True).strip():raise ValueError('PRODUCTION_CHANGED_REBUILD_REQUIRES_SEPARATE_AUTHORIZATION')
+    # Audit precisely the same live selection used by the original integrity
+    # assertion. A pristine archive cannot excuse a changed selected RAM file.
+    # Run ALL offline controls even when this audit discovers an input block.
+    stage('offline-regression',['python3','tests/dana_012e_offline.py','--evidence',str(PRIOR/'evidence'),
+          '--evidence-scope','full','--archive',str(ORIGINAL_ARCHIVE),'--output',str(evidence/'offline')],
+          cwd=source,env=dict(os.environ,PYTHONPATH=str(source/'tests')),accepted=(0,1,2))
+    offline=json.loads((evidence/'offline/result.json').read_text())
+    summary['offline_result']=offline
+    if offline['status']!='PASS':raise ValueError('OFFLINE_PREPARATION_'+offline['status'])
     # Audit the original archive without extraction or alteration. No donor,
     # build-cache copy, compiler, dependency install or binary-copy fallback.
     require_hash(ORIGINAL_ARCHIVE,ARCHIVE_SHA)
@@ -71,14 +90,8 @@ try:
     for name in ('binary_qualification.json','source-manifest.json','job_result.json','native-pfsel.log'):
         (previous/name).write_bytes(contents[name])  # Exact copies into NEW evidence only.
     summary['prior_archive']=dict(sha256=ARCHIVE_SHA,verified_members=len(index),original_status=json.loads(contents['job_result.json'])['status'])
-    source=root/'code';source.mkdir()
-    stage('git-init',['git','init',str(source)])
-    for label,pin in (('harness',SOURCE),('binary-source',BUILD_SOURCE)):
-        stage('fetch-'+label,['git','-C',str(source),'fetch','--depth=1','https://github.com/SamDelorean/DANA-emu.git',pin],timeout=400)
-    stage('checkout-harness',['git','-C',str(source),'checkout','--detach',SOURCE])
-    if subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()!=SOURCE:raise ValueError('HARNESS_SOURCE_PIN')
-    if subprocess.check_output(['git','-C',str(source),'diff','--name-only',BUILD_SOURCE,SOURCE,'--','src','overlays'],text=True).strip():raise ValueError('PRODUCTION_CHANGED_REBUILD_REQUIRES_SEPARATE_AUTHORIZATION')
     sys.path.insert(0,str(source/'tests'));sys.path.insert(0,str(source/'tools'))
+    from dana_012e_prepare import preflight
     from dana_012d_verify import probe
     from dana_012e_verify import verify_pair,LIMITS
     from f1_guest import validate_qualified,QUALIFIED_ARTIFACTS
@@ -91,10 +104,6 @@ try:
         (evidence/(label+'.json')).write_text(json.dumps(result,indent=2)+'\n')
         if result['status']!='PASS':raise ValueError('FIRST_QUALIFICATION_PREDICATE:'+str(result['first_failing_predicate']))
     provenance_probe('qualification-before')
-    stage('offline-regression',['python3','-m','unittest','dana_012e_test','dana_012d_test','f1_test_guest',
-          'd2_3_test.SourceContracts','d2_3_test.NativeEvidence','d2_3_test.E5',
-          'd2_3_test.IntegratedGPIOAndLCD','d2_3_test.IntegratedSPI2AndKeyboard','d2_3_test.IntegratedTimerUARTIRQ','f1_e4_test','-v'],
-          cwd=source,env=dict(os.environ,PYTHONPATH=str(source/'tests'),DANA_012C_EVIDENCE_DIR=str(PRIOR/'evidence')))
     summary['historical_pfsel']='PRESERVED_NOT_REPLAYED; new guest C5 read/write independently scored'
     stage('authentic-integrated-guests',['python3','tests/f1_emutos_run.py','--observation-012e','--pfsel-build',str(QUALIFICATION),str(BINARY),str(GUEST),str(evidence/'guest')],
           cwd=source,timeout=LIMITS['host_timeout_seconds']*2+60,accepted=(0,2))
@@ -108,6 +117,9 @@ try:
     if guest_facts()!=original_guest:raise ValueError('GUEST_INPUT_CHANGED')
     require_hash(BINARY,BINARY_SHA);require_hash(MANIFEST,MANIFEST_SHA);require_hash(QUALIFICATION,QUALIFICATION_SHA)
     require_hash(ORIGINAL_ARCHIVE,ARCHIVE_SHA)
+    after=preflight(source,PRIOR/'evidence',archive=ORIGINAL_ARCHIVE)
+    (evidence/'preparation-after-native.json').write_text(json.dumps(after,indent=2)+'\n')
+    if after!=json.loads((evidence/'offline/preparation.json').read_text()):raise ValueError('PREPARATION_INPUT_CHANGED_DURING_NATIVE')
     exit_code=0 if result['status'] in ('PASS','PARTIAL') else 2
 except (OSError,ValueError,RuntimeError,KeyError,TypeError,subprocess.SubprocessError,tarfile.TarError) as exc:
     summary.update(status='BLOCKED',reason=str(exc));exit_code=2

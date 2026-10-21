@@ -1,7 +1,7 @@
 {
   "status": "012_E_STATIC_PASS",
   "native_runtime": "NATIVE_PENDING",
-  "reviewed_base": "d1dc3e9b3ca7b1208193c977fc64e81010aadfa8",
+  "reviewed_base": "47a054cddfef865bd5dbe2035f40a5c155d5e961",
   "implementation_012D": "be16f21f6e1d8102a6d0b5542f720d87ecd590ee",
   "canonical_main_read": "e147c940741363af186dae9026d9788f0566fea9",
   "evidence_012D": {
@@ -87,87 +87,94 @@
     "emulator_seconds_to_run": 13
   },
   "local_checks": {
-    "tests": 118,
-    "output": "Ran 118 tests in 9.755s; OK",
+    "tests": 138,
+    "output": "Ran 138 tests in 10.449s; OK",
     "skips": 0,
+    "failures": 0,
+    "errors": 0,
     "emulator_tests": 0,
-    "command": "DANA_012C_EVIDENCE_DIR=<verified-local-subset> PYTHONPATH=tests python3 -m unittest dana_012e_test dana_012d_test f1_test_guest d2_3_test.SourceContracts d2_3_test.NativeEvidence d2_3_test.E5 d2_3_test.IntegratedGPIOAndLCD d2_3_test.IntegratedSPI2AndKeyboard d2_3_test.IntegratedTimerUARTIRQ f1_e4_test -v",
-    "synthetic_lua_measurement": {
-      "synthetic": true,
-      "emulator_execution": false,
-      "raw_poll_reads": 100000,
-      "retained_events": 1,
-      "encoded_event_bytes": 580,
-      "elapsed_seconds": 1.675358,
-      "profile": "012-E actual Lua module"
+    "command": "PYTHONPATH=tests python3 tests/dana_012e_offline.py --evidence <original-selected-evidence> --evidence-scope provided-subset --output <new-results>",
+    "complete_offline_subset": {
+      "status": "PASS",
+      "preparation_status": "PASS",
+      "tests_run": 138,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "problems": [],
+      "skipped": [],
+      "evidence_scope": "provided-subset",
+      "selected_evidence": "/workspace/scratch/012d/original/evidence",
+      "preparation_report": "preparation.json",
+      "emulator_executions": 0,
+      "native_runtime": "NATIVE_PENDING",
+      "full_boot": false
     },
-    "syntax": "PASS: four Python ASTs, both Lua modules, job Bash and embedded Python",
-    "hold_guards": "4/4 HOLD exit2: unset, old 012-D, old timer/UART/IRQ and old D2.3 authorization",
-    "unchanged": "Production/overlays/guest/historical jobs",
+    "complete_offline_full_input": {
+      "status": "BLOCKED",
+      "preparation_status": "BLOCKED",
+      "tests_run": 138,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "problems": [],
+      "skipped": [],
+      "evidence_scope": "full",
+      "selected_evidence": "/workspace/scratch/012d/original/evidence",
+      "preparation_report": "preparation.json",
+      "emulator_executions": 0,
+      "native_runtime": "NATIVE_PENDING",
+      "full_boot": false
+    },
+    "full_input_run_output": "Ran 138 tests in 10.318s; OK; preparation BLOCKED (33 original members and archive absent)",
+    "negative_controls": "20 preparation controls in addition to all original 118; synthetic mutations remain only in temporary controls",
+    "syntax": "PASS: four Python ASTs; job Bash and embedded Python; unchanged Lua observer regressions included",
+    "hold_guards": "4/4 HOLD exit2; checked within complete suite; no new authorization supplied",
+    "unchanged": "Production, overlays, tools/guest, research, original source-contract assertions, entire integrated 012-E observer/verifier/runtime and limits",
     "static_audit": {
       "status": "PASS",
       "python_AST": 4,
-      "job_bash_and_embedded_AST": "PASS",
-      "HOLD_guards": [
-        {
-          "flags": {},
-          "exit_code": 2,
-          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
-        },
-        {
-          "flags": {
-            "DANA_012D_AUTHORIZED": "YES"
-          },
-          "exit_code": 2,
-          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
-        },
-        {
-          "flags": {
-            "DANA_TIMER_UART_IRQ_AUTHORIZED": "YES"
-          },
-          "exit_code": 2,
-          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
-        },
-        {
-          "flags": {
-            "DANA_D2_3_AUTHORIZED": "YES",
-            "DANA_D2_3_BUILD_AUTHORIZED": "YES"
-          },
-          "exit_code": 2,
-          "message": "HOLD: fresh scoped 012-E native authorization required; nothing executed or transported."
-        }
-      ],
-      "production_and_overlays": "UNCHANGED_VS_BASE_AND_COMPILED_SOURCE",
-      "historical_jobs": "UNCHANGED",
-      "CPU_name_regression_commit": "PRESERVED",
-      "native_guest_stages": 1,
-      "max_new_native_processes": 2,
-      "emulator_executions": 0
+      "job_Bash_embedded_Python": "PASS",
+      "original_source_assertions": "UNCHANGED",
+      "production_and_integrated_instrumentation": "UNCHANGED",
+      "original_index_sha256": "c804cbc536215a5eed3db6cf3025f64dde2ddbfce10dff5eddab3021d7ab40dd",
+      "supplied_members": 7,
+      "original_indexed_members": 40,
+      "emulator_executions": 0,
+      "Commander_calls": 0
     }
   },
   "source_sha256": {
-    "tests/f1_emutos_run.py": "5cf37e2d83a1878d3d72cc1de244bca396f74c738e11c2db03291df8b2670ea7",
-    "tests/f1_emutos_boot.lua": "2035c6c1c0cb448ed0da3957f1ed8091806d1d291515fedc16b0ed81a7f1797d",
+    "docs/DANA_012E_OBSERVATION_CONTRACT.md": "7061f3f40249ae6131fc5a03ecd2a9ba5590ab6def68d6371c916260eaa18f7e",
+    "docs/DANA_012E_PREPARATION_CORRECTION.md": "e7b9ee797041190fad8c5d19a91c168e2ca0045adb2f685fba92b4ea648a8643",
+    "docs/DANA_012E_RECTOR_UPDATES.csv": "ecf8f3ffee9c9cff06cca7720605b64c3143468eb7523242f18559732eb3c312",
+    "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md": "1c501f57a0bd513b5cbe833d940d622bbd3ff9217e5e921c510423988fb1c5dd",
+    "docs/HANDOFF.md": "16d121aad57f59832aa4e6c7a3c92a297b0c27d663c744ebf702511149909227",
+    "tests/dana_012d_test.py": "781386fafdd18d57022334c72fc3f883f6d2264a75a278d32c8fcf79dc8220b9",
     "tests/dana_012d_verify.py": "b075a5cb1327de7e88212519c523bc4f0f6f2169c34f44a2353f39bbdd69356c",
-    "tests/dana_012e_verify.py": "e137c9ddfec0bc4d8fc9928f1b28e27534415660a63194dbfb3bfc374ade3135",
-    "tests/dana_012e_test.py": "cf4e2b7d607cd42a30fffa8c13c2126ac6ee75227bdb9324e3d7113e89ddbcfd",
-    "tests/dana_012e_observer.lua": "690c7c5fdc24ace968717da1fa978c70fc1ea3c0d7e7d6f942f6d7d1e20c305c",
     "tests/dana_012e_limits.json": "9d72ed033cda9e251da8cd4be9d7623795c62dc25092078f8f7bde063ff6b7f2",
-    "docs/DANA_012E_OBSERVATION_CONTRACT.md": "30f34aa6dd82dd3cfb067a8ffa0dc3d285b67cb6d85a026012a2a5f46c15741b",
-    "docs/DANA_012E_RECTOR_UPDATES.csv": "8f0f0393ffc7807628d2943b0d78fc04c77bccdf8d3e254d024c54c42b29c3f4",
-    "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md": "f742ab79764d9e3cdce425850af52a8ccbd871e4640f742b644606210f3dcbaa",
-    "docs/HANDOFF.md": "a9f9308c95ded8cf269424ba0806e56e953b0af13f254d241d87c126ecc5d00a"
+    "tests/dana_012e_observer.lua": "690c7c5fdc24ace968717da1fa978c70fc1ea3c0d7e7d6f942f6d7d1e20c305c",
+    "tests/dana_012e_offline.py": "0fb017e3b0a285702e303cfba1da21a61e001d960687611ffcca6f6bdc07ca8e",
+    "tests/dana_012e_prepare.py": "c9e6c118a4e076e74134b999aefb514b9da63b06b5474fafa19993b63cf8f813",
+    "tests/dana_012e_prepare_test.py": "3c1ef30fad6bb73ac9af684fd7505dac8ee8ca9f54c72edc5c4f68a30c3ab926",
+    "tests/dana_012e_test.py": "cf4e2b7d607cd42a30fffa8c13c2126ac6ee75227bdb9324e3d7113e89ddbcfd",
+    "tests/dana_012e_verify.py": "e137c9ddfec0bc4d8fc9928f1b28e27534415660a63194dbfb3bfc374ade3135",
+    "tests/f1_emutos_boot.lua": "2035c6c1c0cb448ed0da3957f1ed8091806d1d291515fedc16b0ed81a7f1797d",
+    "tests/f1_emutos_run.py": "5cf37e2d83a1878d3d72cc1de244bca396f74c738e11c2db03291df8b2670ea7"
   },
   "job": {
     "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
-    "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8",
-    "sha256": "25d28869596ef33393ad821db265bb7a885bcf15da5f787b59b2990e980d65ff",
+    "source_commit": null,
+    "sha256": null,
     "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
     "builds": 0,
     "ROM_builds": 0,
     "max_native_processes": 2,
-    "frozen_job_checks": "PASS: exact source tree, Bash/embedded AST, HOLD exit2, no production/overlay difference from binary build"
+    "frozen_job_checks": "PENDING_FINAL_FREEZE",
+    "required_historical_commit": "56a0a0040edfc161e45c1131692a64c3649fe3af",
+    "required_evidence_scope": "FULL_ORIGINAL_40_FILES_AND_EXACT_ARCHIVE",
+    "preparation_blocker": "Any original index/archive/selected-file mismatch blocks before native guest execution"
   },
   "workbook": {
     "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
@@ -191,6 +198,116 @@
   "ROM_builds": 0,
   "Drive_dispatch": false,
   "full_boot": false,
-  "next_action": "Fresh authorization for the single frozen 012-E existing-DIAG native HOLD job; independently audit its one evidence package and apply prepared records to the existing rector workbook.",
-  "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8"
+  "next_action": "Independently inspect the complete authentic preparation bundle and selected RAM/index to resolve the reported checksum mismatch; keep the single corrected native job HOLD pending integrity resolution and separate execution authorization.",
+  "source_commit": null,
+  "previous_012E": {
+    "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8",
+    "job": {
+      "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
+      "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8",
+      "sha256": "25d28869596ef33393ad821db265bb7a885bcf15da5f787b59b2990e980d65ff",
+      "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+      "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
+      "builds": 0,
+      "ROM_builds": 0,
+      "max_native_processes": 2,
+      "frozen_job_checks": "PASS: exact source tree, Bash/embedded AST, HOLD exit2, no production/overlay difference from binary build"
+    },
+    "local_tests": 118,
+    "qualification_scope": "Previous Cloud 118 controls with seven supplied files only; not full original archive integrity"
+  },
+  "preparation_status": "BLOCKED_FULL_ORIGINAL_EVIDENCE",
+  "preparation_correction": {
+    "status": "STATIC_PASS_FULL_INPUT_BLOCKED",
+    "historical_source": "56a0a0040edfc161e45c1131692a64c3649fe3af",
+    "historical_driver_sha256": "6bff19e0ae1e6c7a1f99a86fcfa2fbe235ac096c6624a10f6600fbd8851ddcf0",
+    "historical_reproduction": {
+      "isolated_source": "/workspace/scratch/012e-preparation/source",
+      "reviewed_HEAD": "47a054cddfef865bd5dbe2035f40a5c155d5e961",
+      "without_historical_pin": "Original unittest ERROR; Git128; unittest exit1",
+      "after_explicit_fetch": "Same original seven method assertions PASS; unittest exit0",
+      "assertions": "UNCHANGED"
+    },
+    "original_index_sha256": "c804cbc536215a5eed3db6cf3025f64dde2ddbfce10dff5eddab3021d7ab40dd",
+    "original_archive_sha256": "1fc1d8417eea975c80f29a74aa53e6ccc8fd835b2d2cc924951afec748364a18",
+    "subset_zip_sha256": "718abbd0253f35b052f5e52b7ae89adeecfaecbebb181ac38ef5766498790a7c",
+    "selected_native_directory": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/evidence",
+    "directory_selection": "Same explicit path used by original integrity assertion and read-only preflight; no fallback or repair",
+    "supplied_members": 7,
+    "indexed_members": 40,
+    "missing_native_members": 33,
+    "reported_discrepancy": {
+      "reported_actual_sha256": "56f40dfb00b27a33fe4fdf797cdb5c16e1c1910d8c0e441302bc19c8c6156e6a",
+      "expected_sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e",
+      "attribution": "REQUIRES_ACTUAL_SELECTED_FILE; HASH_ALONE_DOES_NOT_IDENTIFY_A_PATH",
+      "candidate_keys": [
+        "pfsel/reset/final.ram",
+        "pfsel/save_restore/final.ram",
+        "pfsel/save_restore/restored.ram"
+      ]
+    },
+    "three_RAM_checks": [
+      {
+        "relative_path": "pfsel/reset/final.ram",
+        "selected_path": "/workspace/scratch/012d/original/evidence/pfsel/reset/final.ram",
+        "resolved_path": "/workspace/scratch/012d/original/evidence/pfsel/reset/final.ram",
+        "index": "/workspace/scratch/012d/original/evidence/evidence_sha256.json",
+        "expected_index_sha256": "c804cbc536215a5eed3db6cf3025f64dde2ddbfce10dff5eddab3021d7ab40dd",
+        "expected_sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e",
+        "actual_sha256": null,
+        "origin": "EXPLICIT_SELECTED_DIRECTORY",
+        "expected_origin": "PINNED_ORIGINAL_012C_INDEX",
+        "status": "BLOCKED",
+        "reason": "NOT_HASHED_OR_UNAVAILABLE; NO_PATH_ATTRIBUTION",
+        "selection_index_verified": true,
+        "archive_path": null,
+        "archive_member": "evidence/pfsel/reset/final.ram",
+        "archive_actual_sha256": null,
+        "archive_status": "BLOCKED",
+        "assessment": "BLOCKED_SELECTED_BYTES_UNAVAILABLE"
+      },
+      {
+        "relative_path": "pfsel/save_restore/final.ram",
+        "selected_path": "/workspace/scratch/012d/original/evidence/pfsel/save_restore/final.ram",
+        "resolved_path": "/workspace/scratch/012d/original/evidence/pfsel/save_restore/final.ram",
+        "index": "/workspace/scratch/012d/original/evidence/evidence_sha256.json",
+        "expected_index_sha256": "c804cbc536215a5eed3db6cf3025f64dde2ddbfce10dff5eddab3021d7ab40dd",
+        "expected_sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e",
+        "actual_sha256": null,
+        "origin": "EXPLICIT_SELECTED_DIRECTORY",
+        "expected_origin": "PINNED_ORIGINAL_012C_INDEX",
+        "status": "BLOCKED",
+        "reason": "NOT_HASHED_OR_UNAVAILABLE; NO_PATH_ATTRIBUTION",
+        "selection_index_verified": true,
+        "archive_path": null,
+        "archive_member": "evidence/pfsel/save_restore/final.ram",
+        "archive_actual_sha256": null,
+        "archive_status": "BLOCKED",
+        "assessment": "BLOCKED_SELECTED_BYTES_UNAVAILABLE"
+      },
+      {
+        "relative_path": "pfsel/save_restore/restored.ram",
+        "selected_path": "/workspace/scratch/012d/original/evidence/pfsel/save_restore/restored.ram",
+        "resolved_path": "/workspace/scratch/012d/original/evidence/pfsel/save_restore/restored.ram",
+        "index": "/workspace/scratch/012d/original/evidence/evidence_sha256.json",
+        "expected_index_sha256": "c804cbc536215a5eed3db6cf3025f64dde2ddbfce10dff5eddab3021d7ab40dd",
+        "expected_sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e",
+        "actual_sha256": null,
+        "origin": "EXPLICIT_SELECTED_DIRECTORY",
+        "expected_origin": "PINNED_ORIGINAL_012C_INDEX",
+        "status": "BLOCKED",
+        "reason": "NOT_HASHED_OR_UNAVAILABLE; NO_PATH_ATTRIBUTION",
+        "selection_index_verified": true,
+        "archive_path": null,
+        "archive_member": "evidence/pfsel/save_restore/restored.ram",
+        "archive_actual_sha256": null,
+        "archive_status": "BLOCKED",
+        "assessment": "BLOCKED_SELECTED_BYTES_UNAVAILABLE"
+      }
+    ],
+    "conclusion": "Historical shallow-fetch omission fixed and reproduced. RAM integrity block retained; no unique path or corruption/alteration/wrong-directory cause can be established without original bytes/provenance.",
+    "original_index_and_dumps_modified": false,
+    "index_regeneration": false,
+    "evidence_substitution": false
+  }
 }

@@ -71,7 +71,14 @@ class Provenance(unittest.TestCase):
         if not root:self.skipTest('Original private evidence not supplied to this offline run')
         root=Path(root);index=json.loads((root/'evidence_sha256.json').read_text())
         for p in root.rglob('*'):
-            if p.is_file() and p.name!='evidence_sha256.json':self.assertEqual(f1.sha(p),index[str(p.relative_to(root))])
+            if p.is_file() and p.name!='evidence_sha256.json':
+                actual=f1.sha(p);expected=index[str(p.relative_to(root))]
+                self.assertEqual(actual,expected,
+                    'relative_path='+str(p.relative_to(root))+' expected_sha256='+index[str(p.relative_to(root))]+
+                    ' calculated_sha256='+actual+' origin=EXPLICIT_DANA_012C_EVIDENCE_DIR'+
+                    ' selected_evidence='+str(p.absolute())+' resolved='+str(p.resolve())+
+                    ' index='+str((root/'evidence_sha256.json').absolute())+
+                    ' index_sha256='+f1.sha(root/'evidence_sha256.json'))
         q=json.loads((root/'binary_qualification.json').read_text());m=json.loads((root/'source-manifest.json').read_text())
         self.assertEqual(f1.sha(root/'binary_qualification.json'),integrated.QUALIFICATION_012C_SHA)
         self.assertEqual(f1.sha(root/'source-manifest.json'),f1.REUSE_012C['source_manifest_sha256'])

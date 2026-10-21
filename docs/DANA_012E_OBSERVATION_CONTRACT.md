@@ -1,5 +1,14 @@
 # 012-E — Integrated native observation and peripheral qualification
 
+**Current preparation correction:** [joint source/evidence correction](DANA_012E_PREPARATION_CORRECTION.md).
+The isolated job now explicitly fetches the historical Port C / PLLFSR baseline,
+binds the actual evidence selection to its original index/archive, and runs the
+complete offline battery without weakening assertions. The reported RAM hash
+mismatch remains BLOCKED pending the original selected bytes; the prior 118-test
+Cloud result below verified only the seven supplied metadata files, not all 40
+native members. Observation instrumentation, budgets and peripheral criteria
+below are unchanged. Frozen source/job hashes are in current candidate status.
+
 **012_E_STATIC_PASS / NATIVE_PENDING.** One source-only candidate on existing
 PR #7, branch `codex/dana-d1-2-ram-bus`. No production peripheral, donor, build
 overlay, ROM or historical job was changed. Exact source/job pins and hashes
