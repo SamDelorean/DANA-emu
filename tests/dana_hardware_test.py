@@ -41,6 +41,70 @@ s.spi1_ctrl_w(0,0x0700,0xff00);assert(s.m_spi1_rx==0xff);
 }
 '''.replace('#include <cassert>','#include <cassert>\n#include <initializer_list>'))
 
+    def test_actual_stylus_gpio_and_12bit_spi2_adc_path(self):
+        # Compile the actual production GPIO inline methods and ADC/SPI2
+        # functions under ASAN/UBSAN. Only documented pen transactions are
+        # accepted; the existing ST keyboard slave remains independent.
+        src=DRIVER.read_text()
+        pf=src[src.index('    u8 pf_r(offs_t reg)'):src.index('    void pf_w(offs_t reg, u8 value)')]
+        pg=src[src.index('    u8 pg_r(offs_t reg)'):src.index('    u8 pk_r(offs_t reg)')]
+        adc=method_body(src,r'u16 alphasdana_state::pen_exchange\\(unsigned width, u16 outgoing\\)\\s*')
+        spi=method_body(src,r'void alphasdana_state::spi2_ctrl_w\\(offs_t, u16 data, u16 mem_mask\\)\\s*')
+        compile_logic('''#include <cstdint>
+#include <cassert>
+using u8=std::uint8_t; using u16=std::uint16_t; using u32=std::uint32_t; using offs_t=unsigned;
+#define COMBINE_DATA(p) (*(p)=(*(p)&~mem_mask)|(data&mem_mask))
+struct Port { unsigned value=0; unsigned read() const{return value;} };
+struct alphasdana_state {
+ Port pen,p_x,p_y;
+ Port *m_pen_contact=&pen,*m_pen_x=&p_x,*m_pen_y=&p_y;
+ u8 m_gpio[32]={};u8 m_pfsel=0xc5,m_pen_command=0;
+ u16 m_pen_sample=0,m_spi2_data=0,m_spi2_ctrl=0;
+ unsigned st_calls=0, irq_calls=0;
+ u8 st_exchange(u8){++st_calls;return 0xaa;}
+ void update_irq_lines(){++irq_calls;}
+ u16 pen_exchange(unsigned,u16);
+ void spi2_ctrl_w(offs_t,u16,u16);
+'''+pf+pg+'''};
+'''+adc+spi+'''
+int main(){
+ alphasdana_state s;
+ s.m_gpio[9]=0x08;s.m_gpio[17]=0x04;
+ assert(s.pf_r(1)&2); // No synthetic touch when pen lifted.
+ s.pen.value=1;assert(!(s.pf_r(1)&2));
+ s.m_gpio[12]=0x02;s.m_gpio[13]=0x02;assert(s.pf_r(1)&2); // Output latch preserved.
+ s.m_gpio[12]=0;s.m_pfsel|=0x02;assert(s.pf_r(1)&2);
+ s.m_pfsel&=~u8(0x02);assert(!(s.pf_r(1)&2));
+ auto command=[&](u8 cmd){s.m_spi2_data=cmd;s.spi2_ctrl_w(0,0x2347,0xffff);};
+ auto sample=[&](){s.m_spi2_data=0;s.spi2_ctrl_w(0,0x234f,0xffff);return s.m_spi2_data;};
+ // PG2 is active-low; PE3 is deasserted. Two phases, X then Y.
+ s.pg_w(1,0);
+ command(0x90);assert(s.m_pen_command==0x90&&s.m_spi2_data==0xff);
+ assert(sample()==u16(290U<<4)&&!s.m_pen_command);
+ command(0xd0);assert(sample()==u16(200U<<4));
+ s.p_x.value=65535;s.p_y.value=65535;
+ command(0x90);assert(sample()==u16(3760U<<4));
+ command(0xd0);assert(sample()==u16(3650U<<4));
+ // Wrong order, unknown command or absent contact never creates a sample.
+ assert(sample()==0xffff);
+ command(0x55);assert(sample()==0xffff);
+ command(0x90);s.pg_w(1,4);assert(!s.m_pen_command&&!s.m_pen_sample);
+ s.pg_w(1,0);assert(sample()==0xffff);
+ s.pen.value=0;command(0x90);assert(sample()==0xffff);
+ s.pen.value=1;command(0x90);s.pen.value=0;assert(sample()==0xffff);
+ // ST select still transfers the original keyboard response.
+ s.pen.value=1;s.pg_w(1,4);s.m_gpio[9]=0;
+ unsigned prev=s.st_calls;command(0x00);assert(s.st_calls==prev+1&&s.m_spi2_data==0xaa);
+ // Overlapping chip selects are not an invented ADC or ST conversion.
+ s.pg_w(1,0);prev=s.st_calls;command(0x90);
+ assert(s.st_calls==prev&&s.m_spi2_data==0xff);
+ assert(s.irq_calls>0);
+}
+''')
+        for required in ('PORT_START("PEN")','PORT_START("PENX")','PORT_START("PENY")',
+                         'save_item(NAME(m_pen_command));','save_item(NAME(m_pen_sample));'):
+            self.assertIn(required,src)
+
     def test_actual_lcd_renderer_ram_pan_power_polarity_stride_and_bounds(self):
         src=DRIVER.read_text()
         method=method_body(src,r'u32 alphasdana_state::screen_update\(screen_device &, bitmap_rgb32 &bitmap, const rectangle &cliprect\)\s*')
