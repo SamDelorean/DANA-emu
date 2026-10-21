@@ -311,9 +311,9 @@ class IntegratedGPIOAndLCD(unittest.TestCase):
     def test_screen_reads_guest_owned_ram_only(self):
         src=DRIVER.read_text()
         for value in ('required_shared_ptr<u16> m_ram','u16 const word = m_ram[',
-                      'BIT(word,15-(x & 15))','m_lssa > 0x400000 - 11200',
-                      'm_lpicf != 8','m_lvpw != 35','m_lxmax != 560',
-                      'm_lymax != 159','m_lckcon & 0x80',
+                      'BIT(word,15-(pixel & 15))','u64(m_lssa)+u64(height)*stride>0x400000',
+                      'pan+width>stride*8','m_lposr & 0x0f','m_lpolcf,0',
+                      'm_gpio[6*4+1] & 0x80','m_lckcon & 0x80',
                       'm_screen->set_size(560,160)',
                       'm_screen->set_screen_update(FUNC(alphasdana_state::screen_update))'):
             self.assertIn(value,src)
@@ -351,19 +351,27 @@ class IntegratedSPI2AndKeyboard(unittest.TestCase):
     def test_native_cpp_st_reset_spi2_and_key_events(self):
         src=DRIVER.read_text()
         start=src.index('void alphasdana_state::st_input_reset()')
-        end=src.index('void alphasdana_state::lcd_bootstrap_reset()',start)
+        end=src.index('void alphasdana_state::spi1_ctrl_w(',start)
         methods=src[start:end]
         code=r"""
 #include <cstdint>
 #include <cassert>
+#include <algorithm>
+#include <iterator>
 using u8=std::uint8_t;
 using u16=std::uint16_t;
+using u32=std::uint32_t;
 using offs_t=unsigned;
 #define BIT(value, index) (((value) >> (index)) & 1)
 #define COMBINE_DATA(dst) (*(dst)=(*(dst)&~mem_mask)|(data&mem_mask))
 struct Keys { unsigned value=0; unsigned read() const { return value; } };
 struct alphasdana_state {
     Keys *m_keys;
+    Keys extra[3];
+    Keys *m_extra_keys[3]={&extra[0],&extra[1],&extra[2]};
+    u32 m_st_old_extra[3]={};
+    u8 m_st_queue[8]={},m_st_queue_pos=0;
+    void update_irq_lines() {}
     u8 m_gpio[32]{};
     u16 m_spi2_data=0, m_spi2_ctrl=0;
     bool m_st_ready=false, m_st_hello=false, m_st_reset_held=false;
@@ -414,6 +422,26 @@ int main() {
     t.m_spi2_data=0;
     t.spi2_ctrl_w(0,0x234f,0xffff);
     assert(t.m_spi2_data==0xffff);
+    // Every divider must respect ENABLE bit9, not the unrelated rate bit13.
+    for(unsigned rate=0;rate<8;++rate) {
+        t.m_spi2_data=0x5a;
+        t.spi2_ctrl_w(0,(rate<<13)|0x0107,0xffff);
+        assert(t.m_spi2_data==0x5a && (t.m_spi2_ctrl&0x100));
+        t.spi2_ctrl_w(0,(rate<<13)|0x0307,0xffff);
+        assert(!(t.m_spi2_ctrl&0x100) && (t.m_spi2_ctrl&0x80));
+    }
+    t.st_input_reset();t.pk_w(0,0xf9);t.pk_w(0,0xfd);t.pk_w(0,0xf9);
+    assert(t.st_exchange(0)==0xaa);
+    k.value=1;t.extra[1].value=1<<4; // A plus physical left shift.
+    assert(t.st_exchange(0)==0x42);
+    k.value=0;t.extra[1].value=0; // Changes cannot rewrite an in-flight packet.
+    assert(t.st_exchange(0)==0x2b && t.st_exchange(0)==0x09);
+    assert(t.st_exchange(0)==0x40);
+    t.extra[0].value=0xffffffff;
+    assert(t.st_exchange(0)==0x48); // Guest receive buffer is eight entries.
+    for(unsigned i=0;i<8;++i) assert(t.st_exchange(0)!=0);
+    assert(t.st_exchange(0)==0);
+
 }
 """
         with tempfile.TemporaryDirectory(prefix='dana-spi2-cpp-') as tmp:
@@ -440,7 +468,7 @@ int main() {
         self.assertIn('value |= 0x02;',src)
         self.assertIn('m_st_ready=true;',src)
         self.assertIn('m_st_hello=true;',src)
-        self.assertIn('(m_spi2_ctrl & 0x2100)!=0x2100',src)
+        self.assertIn('(m_spi2_ctrl & 0x0300)!=0x0300',src)
         self.assertIn('m_spi2_ctrl=(m_spi2_ctrl & ~0x0100) | 0x0080;',src)
         self.assertFalse(f1.implemented_byte(0xfffff800,'read',False))
         self.assertTrue(f1.implemented_byte(0xfffff802,'read',True))
@@ -451,8 +479,8 @@ class IntegratedTimerUARTIRQ(unittest.TestCase):
     def test_production_cpp_timer_uart_irq_in_isolation(self):
         src=DRIVER.read_text()
         a=src.index('void alphasdana_state::update_irq_lines()')
-        b=src.index('QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)',a)
-        production=src[a:b]
+        b=src.index("// Reuse MAME's native asynchronous serial engine:",a)
+        production=src[a:b]+method_body(src,r'void alphasdana_state::uart1_utx_w\(offs_t, u16 data, u16 mem_mask\)\s*')
         code=r"""
 #include <cassert>
 #include <cmath>
@@ -496,7 +524,10 @@ struct alphasdana_state {
     u16 m_pllfsr=0x0347,m_tctl1=0,m_tprer1=0,m_tcmp1=0xffff;
     u16 m_tcr1=0,m_tcn1=0,m_tstat1=0,m_tstat_clear1=0;
     u32 m_timer1_compares=0,m_timer1_iacks=0;
-    u16 m_utx1=0;
+    u16 m_utx1=0,m_spi2_ctrl=0,m_ustcnt1=0;
+    u8 m_uart_tx_fifo[8]={},m_uart_tx_count=0,m_uart_tx_head=0;
+    void uart1_start_tx() {} // UART engine has separate production extraction tests.
+    void uart1_update_irq() {}
     u32 m_pending=0,m_imr=0x00ffffff;
     u8 m_ivr=0x40;
     void update_irq_lines();
@@ -537,6 +568,9 @@ int main() {
     assert(cpu.irq6==1);
     assert(m.irq_vector_r(6)==0x46 && m.m_timer1_iacks==1);
     assert(m.timer1_tstat_r()==1);
+    m.timer1_tstat_w(0,1,0xffff); // Writing ONE cannot acknowledge compare.
+    assert(m.m_tstat1==1 && cpu.irq6==1);
+    m.timer1_tstat_r();
     m.timer1_tstat_w(0,0,0xffff); // MAME donor read-then-write clear
     assert(m.m_tstat1==0 && (m.m_pending&2)==0 && cpu.irq6==0);
     // UART1 Tx-empty/Tx-ready, no unsolicited RX IRQ.
@@ -551,6 +585,12 @@ int main() {
     m.m_pending &= ~u32(4);
     m.update_irq_lines();
     assert(cpu.irq4==0);
+    // Pending compare must follow IRQEN, even without a new comparator event.
+    m.m_tstat1=1;m.timer1_tctl_w(0,0x0023,0xffff);assert(cpu.irq6==0);
+    m.timer1_tctl_w(0,0x0033,0xffff);assert(cpu.irq6==1);
+    m.timer1_tstat_r();m.timer1_tstat_w(0,0,0xffff);assert(cpu.irq6==0);
+    m.m_spi2_ctrl=0xc0;m.m_imr &= ~1u;m.update_irq_lines();assert(cpu.irq4==1);
+    m.m_spi2_ctrl=0x80;m.update_irq_lines();assert(cpu.irq4==0);
     m.timer1_tctl_w(0,0,0xffff);
     assert(timer.delay.seconds<0);
 
@@ -572,6 +612,10 @@ int main() {
     m.timer1_tctl_w(0,0,0xffff);
 
     // Genuine free-run: next comparator match is one 16-bit wrap away.
+    m.timer1_tcmp_w(0,150,0xffff);
+    m.timer1_tctl_w(0,0x0033,0xffff);
+    m.timer1_tcmp_w(0,0,0xffff);
+    assert(timer.delay.seconds>0); // Zero compares on 16-bit wrap; not disabled.
     m.timer1_tcmp_w(0,150,0xffff);
     m.timer1_tctl_w(0,0x0133,0xffff);
     m.timer1_compare();
@@ -621,7 +665,7 @@ int main() {
         self.assertIn('if (m_timer1_compares<=16)',src)
         self.assertIn('if ((offset & 7)==6 && (m_pending & ~m_imr & 2))',src)
         self.assertIn('(active & 0x00000002)',src)
-        self.assertIn('(active & 0x00000004)',src)
+        self.assertIn('(active & 0x00000005)',src)
         self.assertNotIn('map(0xfffff600,0xfffff6ff)',src)
         self.assertTrue(f1.implemented_byte(0xfffff602,'write',True))
         self.assertTrue(f1.implemented_byte(0xfffff900,'read',True))

@@ -5,6 +5,7 @@
 #include "cpu/m68000/m68000.h"
 #include "imagedev/snapquik.h"
 #include "screen.h"
+#include "diserial.h"
 #include "util/hashing.h"
 
 // Minimal VZ-aware M68000 address-width carrier. The stock M68000 exposes
@@ -32,17 +33,20 @@ DEFINE_DEVICE_TYPE(DANA_VZ_CPU, dana_vz_cpu_device, "dana_vz_cpu", "Dana VZ 32-b
 
 namespace {
 
-class alphasdana_state : public driver_device
+class alphasdana_state : public driver_device, public device_serial_interface
 {
 public:
     alphasdana_state(const machine_config &mconfig, device_type type, const char *tag)
         : driver_device(mconfig, type, tag)
+        , device_serial_interface(mconfig, *this)
         , m_maincpu(*this, "maincpu")
         , m_guest(*this, "guest")
         , m_guest_ready(*this, "dana_guest_loaded")
         , m_screen(*this, "screen")
         , m_ram(*this, "ram")
         , m_keys(*this, "KEYS")
+        , m_extra_keys(*this, "KEYS%u", 1U)
+        , m_uart_txd(*this, "dana_uart1_txd")
     {
     }
 
@@ -72,16 +76,22 @@ private:
     u16 timer1_tstat_r();
     void timer1_tstat_w(offs_t, u16 data, u16 mem_mask);
     u16 uart1_ustcnt_r() { return m_ustcnt1; }
-    void uart1_ustcnt_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_ustcnt1); }
+    void uart1_ustcnt_w(offs_t, u16 data, u16 mem_mask);
     u16 uart1_ubaud_r() { return m_ubaud1; }
-    void uart1_ubaud_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_ubaud1); }
-    u16 uart1_urx_r() { return m_urx1; }
-    u16 uart1_utx_r() { return (m_utx1 & 0x1fff) | 0xe000; }
+    void uart1_ubaud_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_ubaud1); uart1_configure(); }
+    u16 uart1_urx_r(offs_t, u16 mem_mask);
+    u16 uart1_utx_r();
     void uart1_utx_w(offs_t, u16 data, u16 mem_mask);
     u16 uart1_umisc_r() { return m_umisc1; }
-    void uart1_umisc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_umisc1); }
+    void uart1_umisc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_umisc1); uart1_configure(); }
     u16 uart1_prescaler_r() { return m_uart_prescaler1; }
     void uart1_prescaler_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_uart_prescaler1); }
+    void uart1_configure();
+    void uart1_start_tx();
+    void uart1_update_irq();
+    virtual void tra_callback() override;
+    virtual void tra_complete() override;
+    virtual void rcv_complete() override;
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
@@ -109,7 +119,7 @@ private:
 
     // Post-bootstrap GPIO output/configuration latches. The initial values
     // come from pinned dbztool/danainit.sh, NOT MC68VZ328 silicon reset.
-    // External GPIO pin inputs (ST, pen, card detect) remain unimplemented.
+    // ST ready and idle pen are external inputs; card detect is unconnected.
     // Port order B, D, E, F, G, J, K, M; DIR/DATA/PUEN/SEL columns.
     void gpio_bootstrap_reset();
 #define DANA_GPIO_PORT(NAME, INDEX) \
@@ -136,6 +146,26 @@ private:
     void pk_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pm, 7)
 #undef DANA_GPIO_PORT
+
+    // SPI1 master, no SD card attached. The guest probes an electrically idle
+    // MISO line; this is not a fabricated card command response. Exchanges
+    // complete atomically, as with SPI2; FIFO/bus timing is not cycle-qualified.
+    u16 spi1_rx_r() { return m_spi1_rx; }
+    void spi1_tx_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_spi1_tx); }
+    u16 spi1_ctrl_r() { return m_spi1_ctrl; }
+    void spi1_ctrl_w(offs_t, u16 data, u16 mem_mask);
+    u16 spi1_intcs_r() { return m_spi1_intcs; }
+    void spi1_intcs_w(offs_t, u16 data, u16 mem_mask)
+    {
+        // Only interrupt enable bits are writable. Busy never remains set
+        // after the atomic empty-bus transaction. No interrupt is invented.
+        mem_mask &= 0xff00;
+        COMBINE_DATA(&m_spi1_intcs);
+    }
+    u16 spi1_test_r() { return m_spi1_test; }
+    void spi1_test_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_spi1_test); }
+    u16 spi1_spc_r() { return m_spi1_spc; }
+    void spi1_spc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_spi1_spc); }
 
     // Genuine guest-visible SPI2 (VZ 0xF800 DATA / 0xF802 CTRL).
     // The controller models byte exchange with Dana's ST keyboard, not
@@ -186,6 +216,13 @@ private:
     required_device<screen_device> m_screen;
     required_shared_ptr<u16> m_ram;
     required_ioport m_keys;
+    required_ioport_array<3> m_extra_keys;
+    output_finder<> m_uart_txd;
+    u8 m_uart_tx_fifo[8]={}, m_uart_tx_head=0, m_uart_tx_count=0;
+    u16 m_uart_rx_fifo[12]={};
+    u8 m_uart_rx_head=0, m_uart_rx_count=0, m_uart_shift_byte=0;
+    bool m_uart_tx_busy=false;
+    u32 m_uart_completed=0;
     emu_timer *m_clk32_timer = nullptr;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
@@ -205,8 +242,12 @@ private:
     u8 m_pfsel = 0xc5;
     u8 m_gpio[32] = {};
     u16 m_spi2_data = 0, m_spi2_ctrl = 0;
+    u16 m_spi1_rx=0, m_spi1_tx=0, m_spi1_ctrl=0;
+    u16 m_spi1_intcs=0, m_spi1_test=0, m_spi1_spc=0;
     bool m_st_ready = false, m_st_hello = false, m_st_reset_held = false;
     u8 m_st_old_keys = 0, m_st_pending_keys = 0, m_st_queue_left = 0;
+    u32 m_st_old_extra[3] = {};
+    u8 m_st_queue[8] = {}, m_st_queue_pos = 0;
     u32 m_lssa = 0;
     u8 m_lvpw = 0xff;
     u16 m_lxmax = 0x03f0;
@@ -240,6 +281,9 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pcsel));
     save_item(NAME(m_pfsel));
     save_item(NAME(m_gpio));
+    save_item(NAME(m_spi1_rx)); save_item(NAME(m_spi1_tx));
+    save_item(NAME(m_spi1_ctrl)); save_item(NAME(m_spi1_intcs));
+    save_item(NAME(m_spi1_test)); save_item(NAME(m_spi1_spc));
     save_item(NAME(m_spi2_data));
     save_item(NAME(m_spi2_ctrl));
     save_item(NAME(m_st_ready));
@@ -248,6 +292,9 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_st_old_keys));
     save_item(NAME(m_st_pending_keys));
     save_item(NAME(m_st_queue_left));
+    save_item(NAME(m_st_old_extra));
+    save_item(NAME(m_st_queue));
+    save_item(NAME(m_st_queue_pos));
     save_item(NAME(m_lssa));
     save_item(NAME(m_lvpw));
     save_item(NAME(m_lxmax));
@@ -261,6 +308,11 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_lgpmr));
     save_item(NAME(m_lrra));
     save_item(NAME(m_pwmr));
+    save_item(NAME(m_uart_tx_fifo)); save_item(NAME(m_uart_tx_head));
+    save_item(NAME(m_uart_tx_count)); save_item(NAME(m_uart_rx_fifo));
+    save_item(NAME(m_uart_rx_head)); save_item(NAME(m_uart_rx_count));
+    save_item(NAME(m_uart_shift_byte)); save_item(NAME(m_uart_tx_busy));
+    save_item(NAME(m_uart_completed));
     m_guest_ready = 0;
 }
 
@@ -283,6 +335,12 @@ void alphasdana_state::machine_reset()
     m_timer1_timer->adjust(attotime::never);
     m_ustcnt1=0; m_ubaud1=0x0002; m_urx1=0;
     m_utx1=0; m_umisc1=0; m_uart_prescaler1=0;
+    m_uart_tx_head=0; m_uart_tx_count=0; m_uart_rx_head=0; m_uart_rx_count=0;
+    m_uart_shift_byte=0; m_uart_tx_busy=false; m_uart_completed=0;
+    std::fill(std::begin(m_uart_tx_fifo),std::end(m_uart_tx_fifo),0);
+    std::fill(std::begin(m_uart_rx_fifo),std::end(m_uart_rx_fifo),0);
+    transmit_register_reset(); receive_register_reset(); set_rate(0);
+    m_uart_txd=1;
     update_irq_lines();
     // dbztool@d327023 danainit.sh configures PCPDEN=PCSEL=0 before RAM
     // entry. This machine implements that synthetic post-bootstrap profile.
@@ -291,6 +349,8 @@ void alphasdana_state::machine_reset()
     pfsel_reset();
     gpio_bootstrap_reset();
     st_input_reset();
+    m_spi1_rx=0; m_spi1_tx=0; m_spi1_ctrl=0;
+    m_spi1_intcs=0; m_spi1_test=0; m_spi1_spc=0;
     lcd_bootstrap_reset();
     // Quickload is timer-driven. Suppress *all* CPU fetches until validation
     // and the complete RAM/bootstrap seed have succeeded. No-image tests keep
@@ -321,6 +381,9 @@ void alphasdana_state::st_input_reset()
     // interface to unready, not a permanently asserted input pin.
     m_st_ready=false; m_st_hello=false; m_st_reset_held=false;
     m_st_old_keys=0; m_st_pending_keys=0; m_st_queue_left=0;
+    m_st_queue_pos=0;
+    std::fill(std::begin(m_st_old_extra),std::end(m_st_old_extra),0);
+    std::fill(std::begin(m_st_queue),std::end(m_st_queue),0);
     m_spi2_data=0; m_spi2_ctrl=0;
 }
 
@@ -388,24 +451,30 @@ u8 alphasdana_state::st_exchange(u8 command)
         return 0;
     if (m_st_queue_left)
     {
-        u8 const bits=m_st_pending_keys;
         --m_st_queue_left;
-        // Four bounded host keys: A, B, Return, Space. In real Dana protocol
-        // these are ST scan bytes, not Atari/Amiga key codes.
-        static constexpr u8 st_scan[4]={0x2b,0x7a,0x2e,0x7e};
-        for(unsigned i=0;i<4;++i)
-            if (bits & (1<<i)) { m_st_pending_keys &= ~(1<<i); return st_scan[i]; }
-        return 0;
+        return m_st_queue[m_st_queue_pos++];
     }
-    u8 const keys=m_keys->read() & 0x0f;
-    if (keys!=m_st_old_keys)
+    // The ST sends a snapshot of held physical scan codes, not make/break
+    // Atari codes. EmuTOS compares successive snapshots itself. Freeze the
+    // complete response until consumed, including simultaneous modifiers.
+    u32 keys[4]={m_keys->read() & 0x0f, m_extra_keys[0]->read(),
+        m_extra_keys[1]->read(), m_extra_keys[2]->read()};
+    bool changed=keys[0]!=m_st_old_keys;
+    for (unsigned i=0;i<3;++i) changed |= keys[i+1]!=m_st_old_extra[i];
+    if (changed)
     {
-        m_st_old_keys=keys;
-        m_st_pending_keys=keys;
+        m_st_old_keys=keys[0];
+        for (unsigned i=0;i<3;++i) m_st_old_extra[i]=keys[i+1];
+        // Physical scan-code facts from pinned Dana sources. No guest keymap
+        // or GPL implementation is embedded here. Preserve the original four
+        // input bits; unused slots in the three additional ports read zero.
+        static constexpr u8 scans[128]={0x2b,0x7a,0x2e,0x7e,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x2c,0x2d,0x2a,0x1a,0x18,0x28,0x27,0x25,0x3b,0x3c,0x3d,0x3a,0x0a,0x08,0x38,0x37,0x35,0x34,0x6b,0x6c,0x6d,0x6a,0x78,0x68,0x5b,0x5c,0x5d,0x5a,0x4a,0x48,0x58,0x57,0x55,0x54,0x0e,0x0b,0x09,0x69,0x7b,0x46,0x72,0x70,0x71,0x12,0x73,0x66,0x4c,0x4d,0x0d,0x1d,0x1e,0x17,0x05,0x45,0x4e,0x5e,0x60,0x53,0x04,0x07,0x24,0x14,0x29,0x44,0x47,0x67,0x65,0x74,0x4b,0x41,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
         unsigned count=0;
-        for(unsigned i=0;i<4;++i) count+=BIT(keys,i);
+        for (unsigned i=0;i<128 && count<8;++i)
+            if (scans[i] && BIT(keys[i/32],i%32)) m_st_queue[count++]=scans[i];
+        m_st_queue_pos=0;
         m_st_queue_left=count;
-        return u8(0x40 | count);
+        return u8(0x40 | count); // Includes the all-released snapshot (0x40).
     }
     return 0;
 }
@@ -413,17 +482,34 @@ u8 alphasdana_state::st_exchange(u8 command)
 void alphasdana_state::spi2_ctrl_w(offs_t, u16 data, u16 mem_mask)
 {
     COMBINE_DATA(&m_spi2_ctrl);
-    // Motorola VZ SPI2: enable=0x2000, exchange=0x0100,
+    // Motorola VZ SPI2: enable=0x0200, exchange=0x0100,
     // interrupt-status/completion=0x0080; 0x2307 is guest's 8-bit xfer.
-    if ((m_spi2_ctrl & 0x2100)!=0x2100)
+    if ((m_spi2_ctrl & 0x0300)!=0x0300)
+    {
+        update_irq_lines();
         return;
+    }
     unsigned const width=(m_spi2_ctrl & 0x000f)+1;
     // Guest's ST transactions use 8-bit. Preserve the 16-bit data path for
     // ADC wiring later; never invent valid pen conversion data.
     u16 const in = width==8 ? st_exchange(u8(m_spi2_data)) : 0xffff;
     m_spi2_data = width==8 ? (m_spi2_data & 0xff00) | (in & 0xff) : in;
     m_spi2_ctrl=(m_spi2_ctrl & ~0x0100) | 0x0080;
-    // IRQ synthesis is intentionally deferred: EmuTOS polls bit7.
+    // SPI2 completion is a level source (IPR bit0 -> IRQ4), shared with
+    // UART1. Deassert it when software clears SPIM IRQ or its enable.
+    update_irq_lines();
+}
+
+void alphasdana_state::spi1_ctrl_w(offs_t, u16 data, u16 mem_mask)
+{
+    COMBINE_DATA(&m_spi1_ctrl);
+    // EmuTOS dana.c: master bit10, enable bit9, exchange bit8,
+    // bit count [3:0]+1. With no card, every shifted input bit is high.
+    if ((m_spi1_ctrl & 0x0700)!=0x0700)
+        return;
+    unsigned const width=(m_spi1_ctrl & 15)+1;
+    m_spi1_rx=u16((u32(1)<<width)-1);
+    m_spi1_ctrl &= ~u16(0x0100);
 }
 
 void alphasdana_state::lcd_bootstrap_reset()
@@ -442,17 +528,27 @@ u32 alphasdana_state::screen_update(screen_device &, bitmap_rgb32 &bitmap, const
     // debugger memory taps falsely classifying video reads as 68000 traffic.
     rgb_t const off(0xbd, 0xbd, 0xaa), on(0x40, 0x40, 0x40);
     bitmap.fill(off, cliprect);
-    if (!(m_lckcon & 0x80) || m_lpicf != 8 || m_lvpw != 35
-        || m_lxmax != 560 || m_lymax != 159 || (m_lssa & 1)
-        || m_lssa > 0x400000 - 11200)
+    // Dana PK7 is physical LCD power. This renderer supports the authentic
+    // monochrome panel mode; bus width does not change the RAM pixel layout.
+    if (!(m_lckcon & 0x80) || !(m_gpio[6*4+1] & 0x80)
+        || (m_lpicf & 3) || (m_lssa & 1) || !m_lvpw)
         return 0;
-    for (int y=std::max(cliprect.top(),0); y<=std::min(cliprect.bottom(),159); ++y)
+    unsigned const width=std::min<unsigned>(m_lxmax & 0x03ff,560);
+    unsigned const height=std::min<unsigned>((m_lymax & 0x01ff)+1,160);
+    unsigned const pan=m_lposr & 0x0f, stride=unsigned(m_lvpw)*2;
+    // Validate the whole DMA range and scanline BEFORE touching the RAM share.
+    if (!width || pan+width>stride*8 || m_lssa>=0x400000
+        || u64(m_lssa)+u64(height)*stride>0x400000)
+        return 0;
+    for (int y=std::max(cliprect.top(),0); y<=std::min(cliprect.bottom(),int(height)-1); ++y)
     {
-        u32 const line = m_lssa + u32(y)*70;
-        for (int x=std::max(cliprect.left(),0); x<=std::min(cliprect.right(),559); ++x)
+        u32 const line=m_lssa+u32(y)*stride;
+        for (int x=std::max(cliprect.left(),0); x<=std::min(cliprect.right(),int(width)-1); ++x)
         {
-            u16 const word = m_ram[(line >> 1) + u32(x >> 4)];
-            bitmap.pix(y,x) = BIT(word,15-(x & 15)) ? on : off;
+            unsigned const pixel=unsigned(x)+pan;
+            u16 const word = m_ram[(line >> 1)+(pixel >> 4)];
+            bool const dark=BIT(word,15-(pixel & 15)) ^ BIT(m_lpolcf,0);
+            bitmap.pix(y,x)=dark ? on : off;
         }
     }
     return 0;
@@ -530,11 +626,13 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
 
 void alphasdana_state::update_irq_lines()
 {
-    // VZ IPR/IMR masks proven by pinned EmuTOS: bit1 Timer1 -> level6,
-    // bit2 UART1 -> level4. UART1 RX is unconnected, so never assert it.
+    // VZ: Timer1 -> IRQ6; SPI2 and UART1 share IRQ4. Each producer
+    // maintains its own pending source, so acknowledging one cannot lose another.
+    if ((m_spi2_ctrl & 0x00c0)==0x00c0) m_pending |= 1;
+    else m_pending &= ~u32(1);
     u32 const active=m_pending & ~m_imr;
     m_maincpu->set_input_line(6,(active & 0x00000002) ? ASSERT_LINE : CLEAR_LINE);
-    m_maincpu->set_input_line(4,(active & 0x00000004) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(4,(active & 0x00000005) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 u8 alphasdana_state::irq_vector_r(offs_t offset)
@@ -575,7 +673,7 @@ u32 alphasdana_state::timer1_source_hz() const
 void alphasdana_state::timer1_schedule()
 {
     u32 const hz=timer1_source_hz();
-    if (!(m_tctl1 & 1) || !hz || !m_tcmp1)
+    if (!(m_tctl1 & 1) || !hz)
     {
         m_timer1_timer->adjust(attotime::never);
         return;
@@ -611,6 +709,9 @@ void alphasdana_state::timer1_tctl_w(offs_t, u16 data, u16 mem_mask)
     if (enabled) m_tcn1=timer1_tcn_r();
     COMBINE_DATA(&m_tctl1);
     if (!enabled && (m_tctl1 & 1)) m_tcn1=0;
+    if ((m_tstat1 & 1) && (m_tctl1 & 0x0010)) m_pending |= 2;
+    else m_pending &= ~u32(2);
+    update_irq_lines();
     timer1_schedule();
 }
 void alphasdana_state::timer1_tprer_w(offs_t, u16 data, u16 mem_mask)
@@ -628,7 +729,7 @@ void alphasdana_state::timer1_tcmp_w(offs_t, u16 data, u16 mem_mask)
 u16 alphasdana_state::timer1_tcn_r()
 {
     u32 const hz=timer1_source_hz();
-    if (!(m_tctl1 & 1) || !hz || !m_tcmp1) return m_tcn1;
+    if (!(m_tctl1 & 1) || !hz) return m_tcn1;
     u64 const delta=m_timer1_timer->elapsed().as_ticks(hz)/u64(m_tprer1+1);
     return u16((u64(m_tcn1)+delta)&0xffff);
 }
@@ -638,22 +739,142 @@ u16 alphasdana_state::timer1_tstat_r()
     m_tstat_clear1 |= m_tstat1;
     return m_tstat1;
 }
-void alphasdana_state::timer1_tstat_w(offs_t, u16, u16 mem_mask)
+void alphasdana_state::timer1_tstat_w(offs_t, u16 data, u16 mem_mask)
 {
-    m_tstat1 &= ~(m_tstat_clear1 & mem_mask);
+    // VZ read-before-write-ZERO-to-clear; writing one preserves the flag.
+    m_tstat1 &= ~(m_tstat_clear1 & mem_mask & ~data);
     m_tstat_clear1 &= ~mem_mask;
     if (!(m_tstat1 & 1)) m_pending &= ~u32(0x00000002);
     update_irq_lines();
 }
+// Reuse MAME's native asynchronous serial engine: data framing, baud timers,
+// bit shifting, loopback RX and save-state restoration are not host shortcuts.
+void alphasdana_state::uart1_configure()
+{
+    set_data_frame(1,(m_ustcnt1 & 0x0100) ? 8 : 7,
+        !(m_ustcnt1 & 0x0800) ? PARITY_NONE : (m_ustcnt1 & 0x0400) ? PARITY_ODD : PARITY_EVEN,
+        (m_ustcnt1 & 0x0200) ? STOP_BITS_2 : STOP_BITS_1);
+    // VZ internal BRG: SYSCLK / (65-PRESCALER) / 2^DIVIDE / 16.
+    // An unconnected UCLK must not generate fabricated serial clocks.
+    bool const internal=!(m_ubaud1 & 0x0800) && !(m_umisc1 & 0x4000);
+    u32 const divisor=(65-(m_ubaud1 & 0x003f))*(1U<<((m_ubaud1>>8)&7))*16;
+    set_rate(internal && (m_ustcnt1 & 0x8000) ? int(guest_system_clock_hz()/divisor) : 0);
+    uart1_start_tx();
+    uart1_update_irq();
+}
+
+void alphasdana_state::uart1_ustcnt_w(offs_t, u16 data, u16 mem_mask)
+{
+    COMBINE_DATA(&m_ustcnt1);
+    if ((m_ustcnt1 & 0xa000)!=0xa000)
+    {
+        m_uart_tx_head=0; m_uart_tx_count=0; m_uart_tx_busy=false;
+        transmit_register_reset(); m_uart_txd=1;
+    }
+    if ((m_ustcnt1 & 0xc000)!=0xc000)
+    {
+        m_uart_rx_head=0; m_uart_rx_count=0; m_urx1=0;
+        receive_register_reset();
+    }
+    uart1_configure();
+    uart1_update_irq();
+}
+
+u16 alphasdana_state::uart1_utx_r()
+{
+    return (m_utx1 & 0x1bff) | (m_uart_tx_count<8 ? 0x2000 : 0)
+        | (m_uart_tx_count<4 ? 0x4000 : 0) | (!m_uart_tx_count ? 0x8000 : 0)
+        | (m_uart_tx_busy ? 0x0400 : 0);
+}
+
+u16 alphasdana_state::uart1_urx_r(offs_t, u16 mem_mask)
+{
+    u16 const value=(m_uart_rx_count ? m_uart_rx_fifo[m_uart_rx_head] : m_urx1 & 0x00ff)
+        | (m_uart_rx_count ? 0x2000 : 0) | (m_uart_rx_count>=8 ? 0x4000 : 0)
+        | (m_uart_rx_count==12 ? 0x8000 : 0);
+    // High-byte status reads cannot consume the data byte. Debugger peeks
+    // must neither drain RX nor acknowledge an interrupt.
+    if ((mem_mask & 0xff) && !machine().side_effects_disabled() && m_uart_rx_count)
+    {
+        m_urx1=value & 0xff;
+        m_uart_rx_head=(m_uart_rx_head+1)%12;
+        --m_uart_rx_count;
+        uart1_update_irq();
+    }
+    return value;
+}
+
+void alphasdana_state::uart1_update_irq()
+{
+    u16 const rx=(m_uart_rx_count ? 8 : 0) | (m_uart_rx_count>=8 ? 0x10 : 0)
+        | (m_uart_rx_count==12 ? 0x20 : 0);
+    u16 const tx=(m_uart_tx_count<8 ? 1 : 0) | (m_uart_tx_count<4 ? 2 : 0)
+        | (!m_uart_tx_count ? 4 : 0);
+    bool const pending=(m_ustcnt1 & 0x8000) &&
+        (((m_ustcnt1 & 0x4000) && (rx & m_ustcnt1)) ||
+         ((m_ustcnt1 & 0x2000) && (tx & m_ustcnt1)));
+    if (pending) m_pending |= 4;
+    else m_pending &= ~u32(4);
+    update_irq_lines();
+}
+
+void alphasdana_state::uart1_start_tx()
+{
+    if (m_uart_tx_busy || !m_uart_tx_count || (m_ustcnt1 & 0xa000)!=0xa000)
+        return;
+    // CTS is unconnected. Software may explicitly choose IGNORE_CTS;
+    // internal loopback also permits a transaction without an external peer.
+    if (!(m_utx1 & 0x0800) && !(m_umisc1 & 0x1000)) return;
+    m_uart_shift_byte=m_uart_tx_fifo[m_uart_tx_head];
+    m_uart_tx_head=(m_uart_tx_head+1)%8;
+    --m_uart_tx_count;
+    m_uart_tx_busy=true;
+    transmit_register_setup(m_uart_shift_byte);
+}
+
 void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
 {
-    // Source-backed ready/empty UART transmitter. No unsolicited RX IRQ.
-    m_utx1=(m_utx1 & ~mem_mask) | (data & mem_mask & 0x1fff);
-    if (mem_mask & 0x00ff)
-        logerror("DANA_VZ_UART1_TX data=%02x char=%c\n",
-            unsigned(data & 0xff),
-            (data & 0xff)>=32 && (data & 0xff)<=126
-                ? char(data & 0xff) : '.');
+    m_utx1=(m_utx1 & ~mem_mask) | (data & mem_mask & 0x1bff);
+    if ((mem_mask & 0x00ff) && (m_ustcnt1 & 0xa000)==0xa000 && m_uart_tx_count<8)
+    {
+        m_uart_tx_fifo[(m_uart_tx_head+m_uart_tx_count)%8]=data;
+        ++m_uart_tx_count;
+        uart1_start_tx();
+    }
+    uart1_update_irq();
+}
+
+void alphasdana_state::tra_callback()
+{
+    int const bit=transmit_register_get_data_bit();
+    m_uart_txd=bit;
+    if ((m_umisc1 & 0x1000) && (m_ustcnt1 & 0xc000)==0xc000) rx_w(bit);
+}
+
+void alphasdana_state::tra_complete()
+{
+    m_uart_tx_busy=false;
+    ++m_uart_completed;
+    if (m_uart_completed<=256)
+        logerror("DANA_VZ_UART1_SERIAL_TX count=%u data=%02x time=%.9f\n",
+            m_uart_completed,m_uart_shift_byte,machine().time().as_double());
+    uart1_start_tx();
+    uart1_update_irq();
+}
+
+void alphasdana_state::rcv_complete()
+{
+    receive_register_extract();
+    if ((m_ustcnt1 & 0xc000)!=0xc000) return;
+    if (m_uart_rx_count==12)
+        m_uart_rx_fifo[m_uart_rx_head] |= 0x0800;
+    else
+    {
+        m_uart_rx_fifo[(m_uart_rx_head+m_uart_rx_count)%12]=get_received_char()
+            | (is_receive_parity_error() ? 0x0100 : 0) | (is_receive_framing_error() ? 0x0400 : 0);
+        ++m_uart_rx_count;
+    }
+    uart1_update_irq();
 }
 
 QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
@@ -769,6 +990,14 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff440,0xfffff443).rw(FUNC(alphasdana_state::pk_r),FUNC(alphasdana_state::pk_w));
     map(0xfffff448,0xfffff44b).rw(FUNC(alphasdana_state::pm_r),FUNC(alphasdana_state::pm_w));
 
+    // SPI1 SD interface with an empty slot. Individual VZ bus lanes only.
+    map(0xfffff700,0xfffff701).r(FUNC(alphasdana_state::spi1_rx_r));
+    map(0xfffff702,0xfffff703).w(FUNC(alphasdana_state::spi1_tx_w));
+    map(0xfffff704,0xfffff705).rw(FUNC(alphasdana_state::spi1_ctrl_r),FUNC(alphasdana_state::spi1_ctrl_w));
+    map(0xfffff706,0xfffff707).rw(FUNC(alphasdana_state::spi1_intcs_r),FUNC(alphasdana_state::spi1_intcs_w));
+    map(0xfffff708,0xfffff709).rw(FUNC(alphasdana_state::spi1_test_r),FUNC(alphasdana_state::spi1_test_w));
+    map(0xfffff70a,0xfffff70b).rw(FUNC(alphasdana_state::spi1_spc_r),FUNC(alphasdana_state::spi1_spc_w));
+
     // Dana SPI2 register pair (ST keyboard and pen bus).
     map(0xfffff800,0xfffff801).rw(FUNC(alphasdana_state::spi2_data_r),FUNC(alphasdana_state::spi2_data_w));
     map(0xfffff802,0xfffff803).rw(FUNC(alphasdana_state::spi2_ctrl_r),FUNC(alphasdana_state::spi2_ctrl_w));
@@ -807,13 +1036,87 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
-    // Small, independently visible ST scan-code subset; no key matrix spoof.
+    // Dana physical ST scan codes; host events traverse native SPI2.
     PORT_START("KEYS")
     PORT_BIT(0x01,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("A") PORT_CODE(KEYCODE_A) PORT_CHAR('a')
     PORT_BIT(0x02,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("B") PORT_CODE(KEYCODE_B) PORT_CHAR('b')
     PORT_BIT(0x04,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Return") PORT_CODE(KEYCODE_ENTER) PORT_CHAR(13)
     PORT_BIT(0x08,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Space") PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
-    PORT_BIT(0xf0,IP_ACTIVE_HIGH,IPT_UNUSED)
+    PORT_BIT(0xfffffff0,IP_ACTIVE_HIGH,IPT_UNUSED)
+    PORT_START("KEYS1")
+    PORT_BIT(0x00000001,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("S") PORT_CODE(KEYCODE_S)
+    PORT_BIT(0x00000002,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("D") PORT_CODE(KEYCODE_D)
+    PORT_BIT(0x00000004,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F") PORT_CODE(KEYCODE_F)
+    PORT_BIT(0x00000008,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("G") PORT_CODE(KEYCODE_G)
+    PORT_BIT(0x00000010,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("H") PORT_CODE(KEYCODE_H)
+    PORT_BIT(0x00000020,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("J") PORT_CODE(KEYCODE_J)
+    PORT_BIT(0x00000040,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("K") PORT_CODE(KEYCODE_K)
+    PORT_BIT(0x00000080,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("L") PORT_CODE(KEYCODE_L)
+    PORT_BIT(0x00000100,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Q") PORT_CODE(KEYCODE_Q)
+    PORT_BIT(0x00000200,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("W") PORT_CODE(KEYCODE_W)
+    PORT_BIT(0x00000400,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("E") PORT_CODE(KEYCODE_E)
+    PORT_BIT(0x00000800,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("R") PORT_CODE(KEYCODE_R)
+    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("T") PORT_CODE(KEYCODE_T)
+    PORT_BIT(0x00002000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Y") PORT_CODE(KEYCODE_Y)
+    PORT_BIT(0x00004000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("U") PORT_CODE(KEYCODE_U)
+    PORT_BIT(0x00008000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("I") PORT_CODE(KEYCODE_I)
+    PORT_BIT(0x00010000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("O") PORT_CODE(KEYCODE_O)
+    PORT_BIT(0x00020000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("P") PORT_CODE(KEYCODE_P)
+    PORT_BIT(0x00040000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Z") PORT_CODE(KEYCODE_Z)
+    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("X") PORT_CODE(KEYCODE_X)
+    PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("C") PORT_CODE(KEYCODE_C)
+    PORT_BIT(0x00200000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("V") PORT_CODE(KEYCODE_V)
+    PORT_BIT(0x00400000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("N") PORT_CODE(KEYCODE_N)
+    PORT_BIT(0x00800000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("M") PORT_CODE(KEYCODE_M)
+    PORT_BIT(0x01000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("1") PORT_CODE(KEYCODE_1)
+    PORT_BIT(0x02000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("2") PORT_CODE(KEYCODE_2)
+    PORT_BIT(0x04000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("3") PORT_CODE(KEYCODE_3)
+    PORT_BIT(0x08000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("4") PORT_CODE(KEYCODE_4)
+    PORT_BIT(0x10000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("5") PORT_CODE(KEYCODE_5)
+    PORT_BIT(0x20000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("6") PORT_CODE(KEYCODE_6)
+    PORT_BIT(0x40000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("7") PORT_CODE(KEYCODE_7)
+    PORT_BIT(0x80000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("8") PORT_CODE(KEYCODE_8)
+    PORT_START("KEYS2")
+    PORT_BIT(0x00000001,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("9") PORT_CODE(KEYCODE_9)
+    PORT_BIT(0x00000002,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("0") PORT_CODE(KEYCODE_0)
+    PORT_BIT(0x00000004,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("BACKSPACE") PORT_CODE(KEYCODE_BACKSPACE)
+    PORT_BIT(0x00000008,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("TAB") PORT_CODE(KEYCODE_TAB)
+    PORT_BIT(0x00000010,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("LSHIFT") PORT_CODE(KEYCODE_LSHIFT)
+    PORT_BIT(0x00000020,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("RSHIFT") PORT_CODE(KEYCODE_RSHIFT)
+    PORT_BIT(0x00000040,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("LCONTROL") PORT_CODE(KEYCODE_LCONTROL)
+    PORT_BIT(0x00000080,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("LALT") PORT_CODE(KEYCODE_LALT)
+    PORT_BIT(0x00000100,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("LEFT") PORT_CODE(KEYCODE_LEFT)
+    PORT_BIT(0x00000200,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("UP") PORT_CODE(KEYCODE_UP)
+    PORT_BIT(0x00000400,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("RIGHT") PORT_CODE(KEYCODE_RIGHT)
+    PORT_BIT(0x00000800,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("DOWN") PORT_CODE(KEYCODE_DOWN)
+    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("ESC") PORT_CODE(KEYCODE_ESC)
+    PORT_BIT(0x00002000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("DEL") PORT_CODE(KEYCODE_DEL)
+    PORT_BIT(0x00004000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F1") PORT_CODE(KEYCODE_F1)
+    PORT_BIT(0x00008000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F2") PORT_CODE(KEYCODE_F2)
+    PORT_BIT(0x00010000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F3") PORT_CODE(KEYCODE_F3)
+    PORT_BIT(0x00020000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F4") PORT_CODE(KEYCODE_F4)
+    PORT_BIT(0x00040000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F5") PORT_CODE(KEYCODE_F5)
+    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F6") PORT_CODE(KEYCODE_F6)
+    PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F7") PORT_CODE(KEYCODE_F7)
+    PORT_BIT(0x00200000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F8") PORT_CODE(KEYCODE_F8)
+    PORT_BIT(0x00400000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F9") PORT_CODE(KEYCODE_F9)
+    PORT_BIT(0x00800000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F10") PORT_CODE(KEYCODE_F10)
+    PORT_BIT(0x01000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F11") PORT_CODE(KEYCODE_F11)
+    PORT_BIT(0x02000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F12") PORT_CODE(KEYCODE_F12)
+    PORT_BIT(0x04000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("OPENBRACE") PORT_CODE(KEYCODE_OPENBRACE)
+    PORT_BIT(0x08000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("CLOSEBRACE") PORT_CODE(KEYCODE_CLOSEBRACE)
+    PORT_BIT(0x10000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("COLON") PORT_CODE(KEYCODE_COLON)
+    PORT_BIT(0x20000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("QUOTE") PORT_CODE(KEYCODE_QUOTE)
+    PORT_BIT(0x40000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("BACKSLASH") PORT_CODE(KEYCODE_BACKSLASH)
+    PORT_BIT(0x80000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("MINUS") PORT_CODE(KEYCODE_MINUS)
+    PORT_START("KEYS3")
+    PORT_BIT(0x00000001,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("EQUALS") PORT_CODE(KEYCODE_EQUALS)
+    PORT_BIT(0x00000002,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("COMMA") PORT_CODE(KEYCODE_COMMA)
+    PORT_BIT(0x00000004,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("STOP") PORT_CODE(KEYCODE_STOP)
+    PORT_BIT(0x00000008,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("SLASH") PORT_CODE(KEYCODE_SLASH)
+    PORT_BIT(0x00000010,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("TILDE") PORT_CODE(KEYCODE_TILDE)
+    PORT_BIT(0x00000020,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("HOME") PORT_CODE(KEYCODE_HOME)
+    PORT_BIT(0xffffffc0,IP_ACTIVE_HIGH,IPT_UNUSED)
 INPUT_PORTS_END
 
 ROM_START(asmdana)
@@ -822,4 +1125,4 @@ ROM_END
 } // anonymous namespace
 
 COMP(2002, asmdana, 0, 0, alphasdana, alphasdana, alphasdana_state, empty_init,
-    "AlphaSmart, Inc.", "AlphaSmart Dana (D1.1 skeleton)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+    "AlphaSmart, Inc.", "AlphaSmart Dana (R-direct DIAG)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)

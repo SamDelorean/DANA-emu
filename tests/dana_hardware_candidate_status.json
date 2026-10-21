@@ -1,0 +1,12 @@
+{
+  "status": "SOURCE_IMPLEMENTED_STATIC_VALIDATION_IN_PROGRESS",
+  "base_commit": "0aa20345bd70b58a48134e4f8f889e559181e108",
+  "native_status": "NATIVE_PENDING",
+  "Commander_calls": 0,
+  "emulator_executions": 0,
+  "MAME_builds_executed": 0,
+  "ROM_builds": 0,
+  "job": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
+  "job_status": "HOLD_PENDING_SOURCE_FREEZE",
+  "full_boot": false
+}

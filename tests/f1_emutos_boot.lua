@@ -7,6 +7,7 @@ local bytes,host=0,false
 local pending,pending_dependency,initialized=nil,nil,false
 local e6=cfg.observation_profile=='012-E'
 local observer=nil
+local key_phase=0
 local checkpoints,cycle_start=0,nil
 local rte_active,rte_pc=false,nil
 local e4=cfg.revision=='F1-E4'
@@ -63,7 +64,18 @@ local function finish(reason,dependency)
     if cpu and cpu.debug then manager.machine.debugger:command('trace off') end
     local trace=io.open(cfg.output..'/guest.trace','rb')
     local trace_bytes=trace and trace:seek('end') or 0;if trace then trace:close() end
+    if cfg.integrated_hardware and key_phase==1 then manager.machine.ioport.ports[':KEYS'].fields['A']:clear_value() end
     local guest_lcd=lcd_guest_frame()
+    if cfg.integrated_hardware and guest_lcd and guest_lcd.geometry_configured then
+        local screen=manager.machine.screens[':screen']
+        local pixels,w,h=screen:pixels()
+        local f=assert(io.open(cfg.output..'/lcd-native-pixels.bin','wb'));f:write(pixels);f:close()
+        guest_lcd.native_pixels={width=w,height=h,bytes=#pixels,
+            byte_order=string.byte(string.pack('I4',1))==1 and 'little' or 'big'}
+        guest_lcd.pkdata=space:read_u8(0xfffff441)
+        guest_lcd.lpolcf=space:read_u8(0xfffffa21);guest_lcd.lposr=space:read_u8(0xfffffa2d)
+        assert(screen:snapshot(cfg.output..'/lcd-native.png')==nil)
+    end
     local result={schema=e6 and 'dana-012e-observation-v1' or e5 and 'dana-f1-e5-observation-v1' or e4 and 'dana-f1-e4-observation-v1' or 'dana-f1-observation-v1',
         status='CAPTURED',reason=reason,dependency=dependency,
         first_instruction=first,events=events,final=cpu and state() or {},
@@ -73,7 +85,7 @@ local function finish(reason,dependency)
         qualification_sha256=cfg.qualification_sha256,build_source_commit=cfg.build_source_commit,
         event_count=#events,trace_mode='native_loop_compression_no_sampling',
         guest_lcd=guest_lcd,capture_profile=e6 and '012-E' or cfg.integrated_recovery and '012-D' or nil,
-        observation_profile=cfg.observation_profile,limits_sha256=cfg.limits_sha256,
+        integrated_hardware=cfg.integrated_hardware,observation_profile=cfg.observation_profile,limits_sha256=cfg.limits_sha256,
         observer_sha256=cfg.observer_sha256,boot_sha256=cfg.boot_sha256,
         observation_limits=cfg.observation_limits,compression_stats=observer and observer:stats() or nil,full_boot=false}
     local f=assert(io.open(cfg.output..'/observation.json','w'));f:write(encode(result),'\n');f:close()
@@ -113,7 +125,10 @@ local function implemented_byte(address,kind)
     -- The VZ-specific PLLFSR word is now genuinely decoded in the driver.
     -- Do not mistake this register for a missing peripheral. Other 0xF2xx
     -- addresses (including PLLCR) remain real dependencies if accessed.
-    return (address>=0xfffff202 and address<=0xfffff203)
+    return (cfg and cfg.integrated_hardware==true and ((address>=0xfffff704 and address<=0xfffff70b)
+        or (kind=='read' and address>=0xfffff700 and address<=0xfffff701)
+        or (kind=='write' and address>=0xfffff702 and address<=0xfffff703)))
+        or (address>=0xfffff202 and address<=0xfffff203)
         or address==0xfffff300 or (address>=0xfffff302 and address<=0xfffff307)
         or (address>=0xfffff30c and address<=0xfffff30f)
         or (kind=='read' and address>=0xfffff310 and address<=0xfffff313)
@@ -248,6 +263,16 @@ local function cycle_checkpoint()
 end
 emu.register_periodic(safe(function()
     if done or not cpu then return end
+    if cfg.integrated_hardware and first and not pending then
+        local now=emu.time()
+        if key_phase==0 and now>=4 then
+            manager.machine.ioport.ports[':KEYS'].fields['A']:set_value(1)
+            record({kind='host_input',field='A',value=1},'host_request');key_phase=1
+        elseif key_phase==1 and now>=4.25 then
+            manager.machine.ioport.ports[':KEYS'].fields['A']:clear_value()
+            record({kind='host_input',field='A',value=0},'host_request');key_phase=2
+        end
+    end
     if e6 and first then
         if not observer.overflow then
             local reason=cycle_checkpoint()

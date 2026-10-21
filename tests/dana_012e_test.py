@@ -90,14 +90,11 @@ class NativePrefix(unittest.TestCase):
     def setUp(self):
         self.case=fixtures.E5();self.case.setUp();self.addCleanup(self.case.doCleanups)
         c=self.case;self.root=c.root;self.guest=c.guest;self.qualification=c.qualification
-        c.q['source_commit']='581601b49acb6603af2a100817d0f06fed17ed96'
-        manifest=c.binary.parent.parent/'source-manifest.json';m=json.loads(manifest.read_text());m['source_commit']=c.q['source_commit'];manifest.write_text(json.dumps(m))
-        c.q['source_manifest_sha256']=f1.sha(manifest);self.qualification.write_text(json.dumps(c.q))
-        constants={k:c.q[k] for k in ('source_commit','binary_sha256','source_manifest_sha256')};constants['qualification_sha256']=f1.sha(self.qualification)
-        patcher=patch.object(f1,'REUSE_012C',constants);patcher.start();self.addCleanup(patcher.stop)
+        # New functional candidate uses a same-source build. Historical reuse
+        # positive controls remain executable in the frozen 0aa2034 baseline.
         self.raw=[]
         for i,(run,obs) in enumerate(zip(c.runs,c.observations)):
-            run.update(observation_profile='012-E',build_source_commit=c.q['source_commit'],qualification_sha256=f1.sha(self.qualification),
+            run.update(integrated_hardware=True,observation_profile='012-E',build_source_commit=c.q['source_commit'],qualification_sha256=f1.sha(self.qualification),
                        limits_sha256=v.LIMITS_SHA,observer_sha256=v.OBS_SHA,boot_sha256=v.BOOT_SHA)
             obs.update(run,schema='dana-012e-observation-v1',observation_limits=v.LIMITS,virtual_seconds=12.01)
             rows=copy.deepcopy(obs['events'])
@@ -151,7 +148,8 @@ class NativePrefix(unittest.TestCase):
                 e=poll(pc=pc,time=.02+len(additions)/10000);e.update(kind=kind,address=a,data=value,mask=mask,
                     tap_id='f1_'+kind,byte_addresses=f1.selected_bytes(dict(address=a,mask=mask)),width_bits=16 if mask==65535 else 8)
                 additions.append(e)
-            bus('read',0xfffff906,0x2000);bus('write',0xfffff906,0x41,255)
+            bus('write',0xfffff900,0xa100);bus('write',0xfffff906,0x0800,0xff00)
+            bus('read',0xfffff906,0x2800);bus('write',0xfffff906,0x41,255)
             bus('read',0xfffff440,4,255);bus('write',0xfffff420,0,255)
             bus('write',0xfffff800,0);bus('write',0xfffff802,0x2307);bus('read',0xfffff802,0x2087)
             bus('write',0xfffff420,8,255);bus('read',0xfffff800,0xaa)
@@ -160,7 +158,7 @@ class NativePrefix(unittest.TestCase):
                 bus('write',a,value,mask)
             rows[-2:-2]=additions
             folder=self.root/f'run-{i+1}';p=folder/'guest.trace';p.write_text(p.read_text()+''.join(f"{e['state']['CURPC']:08x}: synthetic peripheral instruction\n" for e in additions))
-            (folder/'error.log').write_text('DANA_VZ_UART1_TX data=41 char=A\n')
+            (folder/'error.log').write_text('DANA_VZ_UART1_SERIAL_TX count=1 data=41 time=0.030000000\n')
             self.case.observations[i]['guest_lcd']=dict(geometry_configured=True,lssa=0x3fd440,lvpw=35,lxmax=560,lymax=159,lpicf=8,lckcon=0x80,frame_bytes=11200,nonzero_bytes=1)
             (folder/'lcd-frame.bin').write_bytes(bytes([0x80])+bytes(11199))
         self.flush();r=self.result()

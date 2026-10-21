@@ -108,9 +108,12 @@ def selected_bytes(event):
     return [address+i for i,lane in enumerate((0xff00,0xff)) if mask & lane]
 
 
-def implemented_byte(address,kind,pfsel=False):
+def implemented_byte(address,kind,pfsel=False,integrated_hardware=False):
     # Match only the individually decoded production addresses; no new device.
-    return (0xfffff202<=address<=0xfffff203 or address==0xfffff300
+    return ((integrated_hardware and (0xfffff704<=address<=0xfffff70b
+        or (kind=='read' and 0xfffff700<=address<=0xfffff701)
+        or (kind=='write' and 0xfffff702<=address<=0xfffff703)))
+        or 0xfffff202<=address<=0xfffff203 or address==0xfffff300
         or 0xfffff302<=address<=0xfffff307 or 0xfffff30c<=address<=0xfffff30f
         or (kind=='read' and 0xfffff310<=address<=0xfffff313)
         or address in (0xfffff412,0xfffff413) or (pfsel and address==0xfffff42b)
@@ -375,7 +378,7 @@ def observation_limits():
     from dana_012e_verify import LIMITS
     resource.setrlimit(resource.RLIMIT_FSIZE,(LIMITS['max_file_bytes'],LIMITS['max_file_bytes']))
 
-def run(binary,guest,root,reject=False,post_portc=False,qualification=None,observation_012e=False):
+def run(binary,guest,root,reject=False,post_portc=False,qualification=None,observation_012e=False,integrated_hardware=False):
     from d2_2_gpio_run import diag_path
     if not Path(binary).is_absolute():raise ValueError('Explicit absolute DIAG path required')
     binary=diag_path(binary)
@@ -394,11 +397,15 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None,obser
         if qualification and build['source_commit']==REUSE_012C['source_commit']:config['integrated_recovery']=True
     if observation_012e:
         from dana_012e_verify import LIMITS,LIMITS_SHA,OBS_SHA,BOOT_SHA
-        if not qualification or build['source_commit']!=REUSE_012C['source_commit'] or build['binary_sha256']!=REUSE_012C['binary_sha256']:
+        if not qualification or (not integrated_hardware and (build['source_commit']!=REUSE_012C['source_commit'] or build['binary_sha256']!=REUSE_012C['binary_sha256'])):
             raise ValueError('012-E requires exact reused 012-C DIAG')
         shutil.copyfile(HERE/'dana_012e_observer.lua',plugin/'dana_012e_observer.lua')
         config.update(observation_profile='012-E',observer_module=str(plugin/'dana_012e_observer.lua'),
                       observation_limits=LIMITS,limits_sha256=LIMITS_SHA,observer_sha256=OBS_SHA,boot_sha256=BOOT_SHA)
+    if integrated_hardware:
+        if not observation_012e or build['source_commit']!=config['source_commit'] or sha(binary)==REUSE_012C['binary_sha256']:
+            raise ValueError('Integrated hardware requires a NEW same-source DIAG build')
+        config['integrated_hardware']=True
     cfg=root/'config.lua';cfg.write_text('return '+lua(config)+'\n')
     environment=dict(os.environ,DANA_F1_CONFIG=str(cfg))
     image=Path(guest).resolve()/'emutos.dana'
@@ -415,6 +422,7 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None,obser
     if post_portc:
         record.update({k:config[k] for k in ('revision','variant','execution_id','source_commit','image_sha256','full_boot')})
         if qualification:record.update(qualification_sha256=config['qualification_sha256'],build_source_commit=build['source_commit'])
+    if integrated_hardware:record['integrated_hardware']=True
     if observation_012e:
         record.update({k:config[k] for k in ('observation_profile','limits_sha256','observer_sha256','boot_sha256')})
         record['host_timeout_seconds']=LIMITS['host_timeout_seconds']
@@ -451,18 +459,20 @@ def main():
     p.add_argument('--post-portc',action='store_true',help='F1-E4: two qualified guest runs; no native campaign replay')
     p.add_argument('--pfsel-build',type=Path,help='F1-E5 only: new DIAG build qualification JSON')
     p.add_argument('--observation-012e',action='store_true',help='012-E bounded poll aggregation, native cycles and RTE evidence; exact 012-C reuse only')
+    p.add_argument('--integrated-hardware',action='store_true',help='New same-source DIAG hardware build; preserve immutable 012-C reuse mode')
     args=p.parse_args();root=args.evidence.resolve();root.mkdir(parents=True,exist_ok=False)
     try:
         from d2_2_gpio_run import diag_path
         if not args.diag.is_absolute():raise ValueError('Explicit absolute DIAG path required')
         binary=diag_path(args.diag)
+        if args.integrated_hardware and not (args.observation_012e and args.pfsel_build):raise ValueError('Integrated hardware requires bounded observation and build qualification')
         if args.observation_012e and not args.pfsel_build:raise ValueError('012-E requires original build qualification')
         if args.post_portc or args.pfsel_build:
             if args.pfsel_build:qualify_pfsel_build(binary,args.pfsel_build)
             elif sha(binary)!=BINARY_SHA:raise ValueError('Qualified DIAG SHA required; no fallback')
             validate_qualified(args.guest)
-            run(binary,args.guest,root/'run-1',post_portc=True,qualification=args.pfsel_build,observation_012e=args.observation_012e)
-            run(binary,args.guest,root/'run-2',post_portc=True,qualification=args.pfsel_build,observation_012e=args.observation_012e)
+            run(binary,args.guest,root/'run-1',post_portc=True,qualification=args.pfsel_build,observation_012e=args.observation_012e,integrated_hardware=args.integrated_hardware)
+            run(binary,args.guest,root/'run-2',post_portc=True,qualification=args.pfsel_build,observation_012e=args.observation_012e,integrated_hardware=args.integrated_hardware)
             if args.observation_012e:
                 from dana_012e_verify import verify_pair
                 result=verify_pair(root,args.guest,args.pfsel_build)

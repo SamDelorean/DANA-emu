@@ -22,7 +22,8 @@ PROJECT=Path(__file__).resolve().parents[1]
 class HistoricalSource(unittest.TestCase):
     def test_real_historical_and_compiled_pins_are_available(self):
         report=prep.source_report(PROJECT)
-        self.assertEqual(report['status'],'PASS',report)
+        self.assertEqual(report['status'],'BLOCKED',report)
+        self.assertIn('CURRENT_DRIVER_SHA256',report['errors'])
         self.assertEqual([r['actual_sha256'] for r in report['pins']],
                          [prep.HISTORICAL_DRIVER_SHA,prep.DRIVER_SHA])
 
@@ -40,7 +41,11 @@ class HistoricalSource(unittest.TestCase):
             self.assertEqual(before['pins'][0]['status'],'BLOCKED')
             self.assertEqual(before['pins'][1]['status'],'PASS')
             git('fetch','--depth=1',PROJECT.as_uri(),prep.HISTORICAL_SOURCE)
-            self.assertEqual(prep.source_report(path)['status'],'PASS')
+            after=prep.source_report(path)
+            self.assertTrue(all(r['status']=='PASS' for r in after['pins']))
+            # The old reuse preflight must still reject a new hardware driver.
+            self.assertEqual(after['status'],'BLOCKED')
+            self.assertIn('CURRENT_DRIVER_SHA256',after['errors'])
             # Run the unchanged original seven-method equality assertions too.
             output=subprocess.run(['python3','-m','unittest',
                 'd2_3_test.SourceContracts.test_preserved_qualified_portc_and_pllfsr_methods'],
@@ -77,11 +82,14 @@ class Procedure(unittest.TestCase):
         code=text.split("<<'PY_JOB'\n",1)[1].rsplit('\nPY_JOB',1)[0];ast.parse(code)
         self.assertIn("HISTORICAL_SOURCE='"+prep.HISTORICAL_SOURCE+"'",code)
         self.assertIn("('historical-regression',HISTORICAL_SOURCE)",code)
-        self.assertIn("'tests/dana_012e_offline.py','--evidence',str(PRIOR/'evidence')",code)
-        self.assertIn("'--evidence-scope','full','--archive',str(ORIGINAL_ARCHIVE)",code)
-        self.assertIn("'--output',str(evidence/'offline'),'--preserve-selection'",code)
-        self.assertIn("if offline['status']!='PASS':raise",code)
-        self.assertNotIn("'--evidence-scope','provided-subset'",code)
+        self.assertIn("'tests/dana_hardware_offline.py','--evidence',str(original)",code)
+        self.assertIn("'--output',str(evidence/'offline.json')",code)
+        self.assertIn("'--observation-012e','--integrated-hardware'",code)
+        self.assertIn("['cp','-a','--reflink=auto'",code)
+        self.assertIn("summary['MAME_builds']=1",code)
+        self.assertIn("if len(touched)>16:",code)
+        self.assertNotIn('rclone',code)
+        self.assertIn('ARCHIVE_CONTENT_MISMATCH',code)
 
     def test_old_authorization_flags_never_launch_the_corrected_job(self):
         job=PROJECT/'tests/hold/012_e_dana_integrated_observation_diag.job.sh'

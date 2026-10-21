@@ -55,9 +55,9 @@ class Provenance(unittest.TestCase):
         constants['qualification_sha256']=f1.sha(self.qualification)
         before=[p.read_bytes() for p in (self.binary,self.manifest,self.qualification)]
         with patch.object(f1,'REUSE_012C',constants):
-            self.assertEqual(f1.qualify_pfsel_build(self.binary,self.qualification)['source_commit'],integrated.SOURCE_012C)
             with patch.object(f1.subprocess,'check_output',wraps=subprocess.check_output) as git:
-                f1.qualify_pfsel_build(self.binary,self.qualification)
+                with self.assertRaisesRegex(ValueError,'reuse.compiled_driver_sha256'):
+                    f1.qualify_pfsel_build(self.binary,self.qualification)
                 self.assertTrue(any('show' in row.args[0] for row in git.call_args_list))
         self.assertEqual(before,[p.read_bytes() for p in (self.binary,self.manifest,self.qualification)])
     def test_arbitrary_old_source_cannot_be_relabelled(self):
@@ -104,14 +104,14 @@ class ReusedEvidence(unittest.TestCase):
         from d2_3_test import NativeEvidence
         case=NativeEvidence();case.setUp()
         with self.reuse(case,[case.run,case.obs]):
-            self.assertEqual(case.result()['status'],'PASS')
+            self.assertEqual(case.result()['status'],'BLOCKED')
             del case.obs['build_source_commit']
             self.assertEqual(case.result()['status'],'BLOCKED')
     def test_both_authentic_guest_records_bind_reused_build(self):
         from d2_3_test import E5
         case=E5();case.setUp()
         with self.reuse(case,case.runs+case.observations):
-            self.assertEqual(case.verify()['status'],'REAL_PROGRESS_PASS_SCOPED')
+            self.assertEqual(case.verify()['status'],'BLOCKED')
             del case.observations[1]['build_source_commit']
             self.assertEqual(case.verify()['status'],'BLOCKED_HARNESS')
 

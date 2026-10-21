@@ -141,7 +141,15 @@ def verify_run(folder,guest,qualification,expected_source=None):
         run=json.loads((folder/'run.json').read_text());obs=json.loads((folder/'observation.json').read_text())
         staged_identity(run);source=expected_source or subprocess.check_output(['git','-C',str(f1.PROJECT),'rev-parse','HEAD'],text=True).strip()
         build=f1.qualify_pfsel_build(Path(run['command'][0]),qualification,source)
-        check(build['source_commit']==f1.REUSE_012C['source_commit'] and build['binary_sha256']==f1.REUSE_012C['binary_sha256'],'012-C runtime required')
+        hardware=run.get('integrated_hardware')
+        if hardware is not None:
+            check(hardware is True and obs.get('integrated_hardware') is True,'Unbound hardware profile')
+            check(build['source_commit']==source and build['binary_sha256']!=f1.REUSE_012C['binary_sha256'],'New same-source hardware build required')
+            compiled=subprocess.check_output(['git','-C',str(f1.PROJECT),'show',source+':src/mame/skeleton/alphasdana.cpp'])
+            check(hashlib.sha256(compiled).hexdigest()==build['driver_sha256'],'Build differs from frozen Git hardware')
+        else:
+            check(obs.get('integrated_hardware') is None,'Unbound hardware profile')
+            check(build['source_commit']==f1.REUSE_012C['source_commit'] and build['binary_sha256']==f1.REUSE_012C['binary_sha256'],'012-C runtime required')
         identities=dict(observation_profile='012-E',revision='F1-E5',variant='diag',source_commit=source,
             build_source_commit=build['source_commit'],binary_sha256=build['binary_sha256'],
             qualification_sha256=f1.sha(Path(qualification)),package_sha256=manifest['package']['sha256'],
@@ -202,7 +210,7 @@ def verify_run(folder,guest,qualification,expected_source=None):
         for e in bus:
             if e['kind']=='iack':continue
             for address in f1.selected_bytes(e):
-                if address>=0x400000 and not f1.implemented_byte(address,'read' if e['kind']=='poll_span' else e['kind'],True):missing.append((e,address))
+                if address>=0x400000 and not f1.implemented_byte(address,'read' if e['kind']=='poll_span' else e['kind'],True,hardware is True):missing.append((e,address))
         dep=None;instruction=None
         if missing:
             event,effective=missing[0];dep=obs.get('dependency')
@@ -256,7 +264,7 @@ def verify_run(folder,guest,qualification,expected_source=None):
         exchanges=[]
         previous_control=-1
         for control in prefix:
-            if not (control['kind']=='write' and control['address']==0xfffff802 and control['mask']==65535 and control['data']&0x210f==0x2107):continue
+            if not (control['kind']=='write' and control['address']==0xfffff802 and control['mask']==65535 and control['data']&(0x030f if hardware else 0x210f)==(0x0307 if hardware else 0x2107)):continue
             next_control=next((e['seq'] for e in prefix if e['kind']=='write' and e['address']==0xfffff802 and e['data']&0x100 and e['seq']>control['seq']),len(obs['events']))
             data=[e for e in prefix if e['kind']=='write' and e['address']==0xfffff800 and e['mask']&255 and previous_control<e['seq']<control['seq']]
             done=[e for e in prefix if e['kind']=='read' and e['address']==0xfffff802 and e['mask']&255 and e['data']&0x80 and control['seq']<e['seq']<next_control]
@@ -268,6 +276,56 @@ def verify_run(folder,guest,qualification,expected_source=None):
         if components['st_greeting']['status']=='PASS' and not any(e['value']==0xaa for e in exchanges):components['st_greeting']['status']='PARTIAL'
         if components['lcd_frame']['status']=='PASS' and (dep or obs['compression_stats']['dropped_raw']):components['lcd_frame']['status']='PARTIAL'
         if components['lcd_frame']['status']=='BLOCKED' and not any(0xfffffa00<=e['address']<=0xfffffa37 for e in prefix):components['lcd_frame']['status']='NOT_REACHED'
+        if hardware:
+            # Register acceptance and completed native MAME serial frames are
+            # distinct. Old immediate-TX logs cannot qualify the new engine.
+            tx=[e for e in prefix if e['kind']=='write' and e['address']==0xfffff906 and e['mask']&255]
+            emitted=[(int(n),int(b,16),float(t)) for n,b,t in re.findall(
+                r'DANA_VZ_UART1_SERIAL_TX count=([0-9]+) data=([0-9a-fA-F]{2}) time=([0-9.]+)',log)]
+            check([n for n,_,_ in emitted]==list(range(1,len(emitted)+1)),'Replayed serial completions')
+            completed=[(b,t) for _,b,t in emitted if t<=prefix[-1]['virtual_seconds']]
+            enabled=0;tx_control=0;misc=0;eligible=[]
+            for e in prefix:
+                if e['kind']=='write' and e['address']==0xfffff900:enabled=(enabled & ~e['mask']) | (e['data'] & e['mask'])
+                if e['kind']=='write' and e['address']==0xfffff908:misc=(misc & ~e['mask']) | (e['data'] & e['mask'])
+                if e['kind']=='write' and e['address']==0xfffff906:tx_control=(tx_control & ~e['mask']) | (e['data'] & e['mask'])
+                if e in tx and enabled&0xa000==0xa000 and (tx_control&0x800 or misc&0x1000):eligible.append(e)
+            exact=bool(eligible and len(eligible)==len(tx)==len(completed) and
+                all(e['data']&255==b and e['virtual_seconds']<=t and any(
+                    r['kind']=='read' and r['address']==0xfffff906 and r['mask']&0x2000 and r['data']&0x2000 and r['seq']<e['seq']
+                    for r in prefix) for e,(b,t) in zip(eligible,completed)))
+            components['uart1_tx']=cap('PASS' if exact and not dep else 'PARTIAL' if tx else 'NOT_REACHED',
+                'CPU_ENABLED_TX_AND_TIME_BOUND_NATIVE_SERIAL_COMPLETION',completed_frames=len(completed))
+            # A saved MAME screen is separate evidence from a host-decoded RAM
+            # illustration. Compare every native pixel to the captured RAM;
+            # frame-update skew remains PARTIAL, never a fabricated match.
+            rendered=lcd.get('native_pixels');frame=folder/'lcd-frame.bin';pixels=folder/'lcd-native-pixels.bin'
+            components['lcd_presentation']=cap('NOT_REACHED','NATIVE_MAME_PIXELS_VS_GUEST_RAM')
+            if rendered:
+                check(rendered.get('width')==560 and rendered.get('height')==160 and rendered.get('bytes')==358400,'Native LCD dimensions')
+                check(rendered.get('byte_order') in ('little','big'),'Native LCD byte order')
+                raw=pixels.read_bytes();fb=frame.read_bytes()
+                check(len(raw)==358400 and len(fb)==11200,'Native LCD payload bounds')
+                check((folder/'lcd-native.png').is_file(),'Missing native screen snapshot')
+                powered=bool(lcd.get('pkdata',0)&0x80)
+                expected=[0x404040 if powered and bool((b>>bit)&1)^bool(lcd.get('lpolcf',0)&1) else 0xbdbdaa
+                    for b in fb for bit in range(7,-1,-1)]
+                actual=[int.from_bytes(raw[i:i+4],rendered['byte_order'])&0xffffff for i in range(0,len(raw),4)]
+                exact=not lcd.get('lposr') and actual==expected
+                components['lcd_presentation']=cap('PASS' if exact and powered and controller and not dep else 'PARTIAL',
+                    'NATIVE_MAME_PIXELS_VS_GUEST_RAM',all_pixels_match=exact,powered=powered,
+                    pixel_sha256=f1.sha(pixels),png_sha256=f1.sha(folder/'lcd-native.png'))
+            requests=[e for e in obs['events'] if e['kind']=='host_input']
+            for e in requests:check(e.get('origin')=='host_request' and e.get('field')=='A' and e.get('value') in (0,1),'Forged input request')
+            check([e['value'] for e in requests] in ([],[1],[1,0]),'Replayed input requests')
+            values=[(e['received'],e['value']) for e in exchanges]
+            press=requests[0]['seq'] if requests else len(obs['events'])
+            release=requests[1]['seq'] if len(requests)==2 else len(obs['events'])
+            down=any(press<h<k<release and a==0x41 and b==0x2b for (h,a),(k,b) in zip(values,values[1:]))
+            up=any(s>release and value==0x40 for s,value in values)
+            components['st_keyboard']=cap('PASS' if down and up and not dep else 'PARTIAL' if requests else 'NOT_REACHED',
+                'HOST_INPUT_THROUGH_CPU_SPI2_ST_PRESS_RELEASE',press_snapshot=down,release_snapshot=up,
+                os_consumption_proven=False)
         active=cycles[-1]>cycles[0]
         edges=sum(bool((a['data']^b['data'])&0x8000) for a,b in zip(polls,polls[1:]) if a['epoch']==b['epoch'])
         activity=dict(native_cycle_delta=cycles[-1]-cycles[0],native_bus_reads=counts['native_reads'],poll_reads=counts['poll_reads'],clock_value_transitions=edges,
