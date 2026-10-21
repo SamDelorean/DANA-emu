@@ -176,8 +176,14 @@ try:
             raise RuntimeError('BLOCKED_PRIOR_012C_PROVENANCE_MISMATCH:'+key)
     if digest(old_source/driver)!=PRIOR_012C_DRIVER_SHA or digest(old_diag)!=PRIOR_012C_DIAG_SHA:
         raise RuntimeError('BLOCKED_PRIOR_012C_SOURCE_OR_BINARY_CHANGED')
-    if digest(old_source/'danadiagd')!=PRIOR_012C_DIAG_SHA:
-        raise RuntimeError('BLOCKED_PRIOR_012C_BUILD_OUTPUT_CHANGED')
+    # The published 012-C DIAG under bin/ is the SHA-qualified artifact.
+    # The original source-tree linker output may differ and is NOT a second
+    # qualified executable. Preserve its actual identity without rejecting
+    # a valid, read-only incremental object cache.
+    prior_internal_output=old_source/'danadiagd'
+    if not prior_internal_output.is_file() or prior_internal_output.is_symlink():
+        raise RuntimeError('BLOCKED_PRIOR_012C_INTERNAL_OUTPUT_MISSING')
+    prior_internal_output_sha=digest(prior_internal_output)
     old_list=old_source/'src/mame/mame.lst'
     if digest(old_list)!=old_manifest.get('list_sha256'):
         raise RuntimeError('BLOCKED_PRIOR_012C_DRIVER_LIST_CHANGED')
@@ -193,6 +199,7 @@ try:
     summary['incremental_build']=dict(
         mode='COPY_ON_WRITE_REUSE_012C_THEN_DRIVER_ONLY_INCREMENTAL_MAKE',
         prior_source_commit=PRIOR_012C_SOURCE,prior_binary_sha256=PRIOR_012C_DIAG_SHA,
+        prior_internal_unqualified_output_sha256=prior_internal_output_sha,
         donor_commit=MAME_PIN,cached_object_count=old_object_count,
         prior_stage=str(PRIOR_012C_STAGE),full_donor_reextraction=False,
         full_mame_rebuild_fallback=False,only_modified_production_file=driver)
@@ -203,8 +210,13 @@ try:
           ['cp','-a','--reflink=auto',str(old_source),str(staged_diag/'source')],
           timeout=1200)
     mame=staged_diag/'source'
-    if digest(mame/driver)!=PRIOR_012C_DRIVER_SHA or digest(mame/'danadiagd')!=PRIOR_012C_DIAG_SHA:
+    # Verify the cache copy against BOTH original byte identities before
+    # aligning only the NEW staged output with the published qualified DIAG.
+    if digest(mame/driver)!=PRIOR_012C_DRIVER_SHA or digest(mame/'danadiagd')!=prior_internal_output_sha:
         raise RuntimeError('BLOCKED_INCREMENTAL_CACHE_COPY_CHANGED')
+    shutil.copy2(old_diag,mame/'danadiagd')
+    if digest(mame/'danadiagd')!=PRIOR_012C_DIAG_SHA:
+        raise RuntimeError('BLOCKED_INCREMENTAL_QUALIFIED_OUTPUT_COPY')
     if digest(mame/'src/mame/mame.lst')!=old_manifest['list_sha256']:
         raise RuntimeError('BLOCKED_INCREMENTAL_DRIVER_LIST_CHANGED')
     shutil.copy2(old_manifest_file,staged_diag/'source-manifest.json')
@@ -290,7 +302,7 @@ try:
     # catches accidental writes through a symlink or an unsafe clone.
     if (digest(old_source/driver)!=PRIOR_012C_DRIVER_SHA
             or digest(old_diag)!=PRIOR_012C_DIAG_SHA
-            or digest(old_source/'danadiagd')!=PRIOR_012C_DIAG_SHA
+            or digest(old_source/'danadiagd')!=prior_internal_output_sha
             or json.loads(old_manifest_file.read_text())!=old_manifest):
         raise RuntimeError('BLOCKED_PRIOR_012C_BUILD_EVIDENCE_MUTATED')
     built=mame/'danadiagd'
