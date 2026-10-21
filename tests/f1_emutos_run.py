@@ -416,6 +416,7 @@ def run(binary,guest,root,reject=False,post_portc=False,qualification=None,obser
              '-debug','-debugger','none','-pluginspath',str(plugin),'-plugins','-video','none',
              '-sound','none','-log','-skip_gameinfo','-seconds_to_run','6']
     if observation_012e:command[-1]=str(LIMITS['emulator_seconds_to_run'])
+    if integrated_hardware:command.extend(['-snapview','native'])
     record={'binary_sha256':config['binary_sha256'],'command':command,
             'driver_sha256':sha(PROJECT/'src/mame/skeleton/alphasdana.cpp') if qualification else OLD_DRIVER_SHA,
             'package_sha256':config['package_sha256'],'host_timeout_seconds':180}

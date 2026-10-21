@@ -111,7 +111,7 @@ class ReusedEvidence(unittest.TestCase):
         from d2_3_test import E5
         case=E5();case.setUp()
         with self.reuse(case,case.runs+case.observations):
-            self.assertEqual(case.verify()['status'],'BLOCKED')
+            self.assertEqual(case.verify()['status'],'BLOCKED_HARNESS')
             del case.observations[1]['build_source_commit']
             self.assertEqual(case.verify()['status'],'BLOCKED_HARNESS')
 

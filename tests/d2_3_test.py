@@ -521,6 +521,9 @@ struct FakeTimer {
 struct alphasdana_state {
     FakeCPU *m_maincpu;
     FakeTimer *m_timer1_timer;
+    bool peek=false;
+    auto &machine(){return *this;}
+    bool side_effects_disabled() const{return peek;}
     u16 m_pllfsr=0x0347,m_tctl1=0,m_tprer1=0,m_tcmp1=0xffff;
     u16 m_tcr1=0,m_tcn1=0,m_tstat1=0,m_tstat_clear1=0;
     u32 m_timer1_compares=0,m_timer1_iacks=0;
@@ -567,6 +570,7 @@ int main() {
     m.update_irq_lines();
     assert(cpu.irq6==1);
     assert(m.irq_vector_r(6)==0x46 && m.m_timer1_iacks==1);
+    m.peek=true;m.timer1_tstat_r();assert(m.m_tstat_clear1==0);m.peek=false;
     assert(m.timer1_tstat_r()==1);
     m.timer1_tstat_w(0,1,0xffff); // Writing ONE cannot acknowledge compare.
     assert(m.m_tstat1==1 && cpu.irq6==1);

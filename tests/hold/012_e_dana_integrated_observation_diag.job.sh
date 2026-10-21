@@ -179,6 +179,9 @@ try:
     old_list=old_source/'src/mame/mame.lst'
     if digest(old_list)!=old_manifest.get('list_sha256'):
         raise RuntimeError('BLOCKED_PRIOR_012C_DRIVER_LIST_CHANGED')
+    if any(p.is_symlink() and (p.readlink().is_absolute() or not p.resolve().is_relative_to(old_source.resolve()))
+           for p in old_source.rglob('*')):
+        raise RuntimeError('BLOCKED_SYMLINKED_CACHE_NO_WRITES_ALLOWED')
     objects=old_source/'build/dana-diag'
     if not objects.is_dir() or objects.is_symlink():
         raise RuntimeError('BLOCKED_PRIOR_012C_OBJECT_CACHE_MISSING')

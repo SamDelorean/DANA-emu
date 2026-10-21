@@ -283,7 +283,7 @@ def verify_run(folder,guest,qualification,expected_source=None):
             emitted=[(int(n),int(b,16),float(t)) for n,b,t in re.findall(
                 r'DANA_VZ_UART1_SERIAL_TX count=([0-9]+) data=([0-9a-fA-F]{2}) time=([0-9.]+)',log)]
             check([n for n,_,_ in emitted]==list(range(1,len(emitted)+1)),'Replayed serial completions')
-            completed=[(b,t) for _,b,t in emitted if t<=prefix[-1]['virtual_seconds']]
+            completed=[(b,t) for _,b,t in emitted if t<=(prefix[-1]['virtual_seconds'] if dep else obs['virtual_seconds'])]
             enabled=0;tx_control=0;misc=0;eligible=[]
             for e in prefix:
                 if e['kind']=='write' and e['address']==0xfffff900:enabled=(enabled & ~e['mask']) | (e['data'] & e['mask'])
@@ -306,7 +306,9 @@ def verify_run(folder,guest,qualification,expected_source=None):
                 check(rendered.get('byte_order') in ('little','big'),'Native LCD byte order')
                 raw=pixels.read_bytes();fb=frame.read_bytes()
                 check(len(raw)==358400 and len(fb)==11200,'Native LCD payload bounds')
-                check((folder/'lcd-native.png').is_file(),'Missing native screen snapshot')
+                png=(folder/'lcd-native.png').read_bytes()
+                check(png[:8]==b'\x89PNG\r\n\x1a\n' and len(png)>=24 and png[12:16]==b'IHDR'
+                    and int.from_bytes(png[16:20],'big')==560 and int.from_bytes(png[20:24],'big')==160,'Invalid native screen snapshot')
                 powered=bool(lcd.get('pkdata',0)&0x80)
                 expected=[0x404040 if powered and bool((b>>bit)&1)^bool(lcd.get('lpolcf',0)&1) else 0xbdbdaa
                     for b in fb for bit in range(7,-1,-1)]
@@ -318,6 +320,9 @@ def verify_run(folder,guest,qualification,expected_source=None):
             requests=[e for e in obs['events'] if e['kind']=='host_input']
             for e in requests:check(e.get('origin')=='host_request' and e.get('field')=='A' and e.get('value') in (0,1),'Forged input request')
             check([e['value'] for e in requests] in ([],[1],[1,0]),'Replayed input requests')
+            for e in requests:
+                target=4 if e['value'] else 4.25
+                check(target<=e['virtual_seconds']<=target+0.25,'Unbound input schedule')
             values=[(e['received'],e['value']) for e in exchanges]
             press=requests[0]['seq'] if requests else len(obs['events'])
             release=requests[1]['seq'] if len(requests)==2 else len(obs['events'])

@@ -163,12 +163,46 @@ class NativePrefix(unittest.TestCase):
             (folder/'lcd-frame.bin').write_bytes(bytes([0x80])+bytes(11199))
         self.flush();r=self.result()
         for name in ('uart1_tx','st_greeting','spi2_exchange','lcd_controller','lcd_frame'):self.assertEqual(r['components'][name]['status'],'PASS',(name,r))
+        # Synthetic anti-fabrication controls: a CPU write or old immediate
+        # log must never qualify a completed native serial frame.
+        for bad in ('DANA_VZ_UART1_TX data=41 char=A\n',
+                    'DANA_VZ_UART1_SERIAL_TX count=1 data=42 time=0.030000000\n',
+                    'DANA_VZ_UART1_SERIAL_TX count=1 data=41 time=99.000000000\n'):
+            (self.root/'run-1/error.log').write_text(bad)
+            self.assertEqual(self.result()['components']['uart1_tx']['status'],'PARTIAL')
+        duplicate='DANA_VZ_UART1_SERIAL_TX count=1 data=41 time=0.030000000\n'*2
+        (self.root/'run-1/error.log').write_text(duplicate)
+        self.assertEqual(self.result()['status'],'BLOCKED')
+        (self.root/'run-1/error.log').write_text('DANA_VZ_UART1_SERIAL_TX count=1 data=41 time=0.030000000\n')
+        # Native pixels must agree with real guest RAM; blank/changed output
+        # and a substituted PNG cannot be promoted to display PASS.
+        folder=self.root/'run-1';lcd=self.case.observations[0]['guest_lcd']
+        lcd.update(pkdata=0x80,lpolcf=0,lposr=0,native_pixels=dict(width=560,height=160,bytes=358400,byte_order='little'))
+        native=bytes.fromhex('40404000')+bytes.fromhex('aabdbd00')*(560*160-1)
+        (folder/'lcd-native-pixels.bin').write_bytes(native)
+        # Explicit SYNTHETIC minimal PNG-header control, never a native image.
+        (folder/'lcd-native.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'\0\0\0\rIHDR'+(560).to_bytes(4,'big')+(160).to_bytes(4,'big'))
+        self.flush();one=v.verify_run(folder,self.guest,self.qualification)
+        self.assertEqual(one['components']['lcd_presentation']['status'],'PASS')
+        (folder/'lcd-native-pixels.bin').write_bytes(bytes(len(native)))
+        self.assertEqual(v.verify_run(folder,self.guest,self.qualification)['components']['lcd_presentation']['status'],'PARTIAL')
+        (folder/'lcd-native.png').write_bytes(b'SYNTHETIC FORGED PNG')
+        self.assertEqual(v.verify_run(folder,self.guest,self.qualification)['status'],'BLOCKED')
+        del lcd['native_pixels'];self.flush()
         next(e for e in self.raw[0] if e.get('address')==0xfffff440)['data']=0
         next(e for e in self.raw[0] if e.get('address')==0xfffff906 and e['kind']=='read')['data']=0
         self.flush();r=self.result();self.assertEqual(r['components']['st_greeting']['status'],'PARTIAL');self.assertEqual(r['components']['uart1_tx']['status'],'PARTIAL')
         self.assertEqual(r['components']['spi2_exchange']['status'],'PASS')
         next(e for e in self.raw[0] if e.get('address')==0xfffff802 and e['kind']=='read')['data']=0
         self.flush();self.assertEqual(self.result()['components']['spi2_exchange']['status'],'PARTIAL')
+    def test_new_hardware_profile_cannot_be_relabelled_as_old_reuse(self):
+        self.case.runs[0]['integrated_hardware']=False
+        self.flush();self.assertEqual(self.result()['status'],'BLOCKED')
+        self.case.runs[0]['integrated_hardware']=True
+        self.case.observations[0]['integrated_hardware']=False
+        p=self.root/'run-1/observation.json';p.write_text(json.dumps(self.case.observations[0]))
+        self.assertEqual(self.result()['status'],'BLOCKED')
+
     def test_forged_cycle_output_is_blocked(self):
         (self.root/'run-1/cycles.log').write_text('DANA012E token=1 cycles=64\nDANA012E token=2 cycles=F4241\n')
         self.assertEqual(self.result()['status'],'BLOCKED')
