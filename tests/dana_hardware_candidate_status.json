@@ -1,12 +1,112 @@
 {
-  "status": "SOURCE_IMPLEMENTED_STATIC_VALIDATION_IN_PROGRESS",
+  "status": "INTEGRATED_HARDWARE_STATIC_PASS",
+  "source_commit": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
   "base_commit": "0aa20345bd70b58a48134e4f8f889e559181e108",
+  "driver_sha256": "17632b59f19b640f34101836d285b0e377325df2779cbffc77944bd4bd657196",
+  "job": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
+  "job_sha256": "3e4455d29052864966b93771f138abbe52af65c607f12db5b62c709f8d9d8eb4",
+  "job_status": "LOCAL_GIT_HOLD_NOT_EXECUTED",
+  "static_tests": {
+    "status": "PASS",
+    "tests_run": 152,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "result_sha256": "7f10caee4e8bb76bc87f6ea5eaed4279d255c5feca1f2c0fad58df5ce2f402bc",
+    "log_sha256": "30eb1faf94e37c944b8891c6d54fda201d06960f542d4a78efd3a4706ccf35b9",
+    "command": "PYTHONPATH=tests:tools python3 tests/dana_hardware_offline.py --evidence /workspace/scratch/012d/original/evidence --output /tmp/dana-hardware-qualified-source.json"
+  },
+  "historical_regressions": {
+    "source": "0aa20345bd70b58a48134e4f8f889e559181e108",
+    "tests_run": 146,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "log_sha256": "20b18aafc5234d85747ec07a139ef43f00e763df2fec387e1a53a83ef82e3a7d"
+  },
+  "native_driver_header_syntax": "PASS: c++ -std=c++20 -fsyntax-only -Werror against pinned MAME headers; no emulator compilation",
+  "Python_syntax": "PASS",
+  "Lua_syntax_and_mock_callbacks": "PASS in complete battery",
+  "shell_and_embedded_job_Python": "PASS",
+  "HOLD_guard": "4/4 PASS; no body execution",
+  "donor_mame": {
+    "commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+    "worktree": "CLEAN_UNMODIFIED"
+  },
+  "original_evidence": {
+    "selected_files": 7,
+    "full_index_members": 40,
+    "all_supplied_hashes": "PASS",
+    "missing_full_members": 33,
+    "original_archive_integrity": "ACCREDITED_USER_REVIEW_40_PASS_NOT_REHASHED_IN_CLOUD",
+    "full_selected_directory_status": "BLOCKED",
+    "selected_directory_changed": false,
+    "preservation_status": "PRESERVED",
+    "selection_archive_sha256": "13b599d9b5a210caeaff46bbb2ce044f1f42d5fe2d61e75bc0f021d046ac039b",
+    "T_working_directory_discrepancy": "UNRESOLVED_NO_T_ACCESS"
+  },
   "native_status": "NATIVE_PENDING",
   "Commander_calls": 0,
   "emulator_executions": 0,
   "MAME_builds_executed": 0,
   "ROM_builds": 0,
-  "job": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
-  "job_status": "HOLD_PENDING_SOURCE_FREEZE",
-  "full_boot": false
+  "qualified_old_binary_sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
+  "old_binary_role": "IMMUTABLE_INCREMENTAL_CACHE_BASELINE_ONLY_NEW_DRIVER_REQUIRES_NEW_BINARY",
+  "measured_runtime_limits": {
+    "profile": "012-E",
+    "max_virtual_seconds": 12,
+    "max_cycles": 400000000,
+    "max_raw_observations": 100000000,
+    "max_retained_events": 100000,
+    "max_event_bytes": 33554432,
+    "max_trace_bytes": 8388608,
+    "max_log_bytes": 8388608,
+    "max_checkpoints": 512,
+    "max_file_bytes": 67108864,
+    "host_timeout_seconds": 240,
+    "emulator_seconds_to_run": 13
+  },
+  "capabilities": {
+    "PFSEL": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    },
+    "Timer1": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    },
+    "UART1": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    },
+    "IRQ6": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    },
+    "LCD": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    },
+    "SPI2": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    },
+    "ST_keyboard": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    },
+    "SPI1_empty_slot": {
+      "status": "BLOCKED",
+      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    }
+  },
+  "workbook": {
+    "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "path": "AS2K_TEMP/DANA_EMU/DANA_EMU_Control_Rector_Auditoria_2026-10-20.xlsx",
+    "status": "UPDATE_RECORDS_PREPARED_EXISTING_WORKBOOK_NOT_MODIFIED",
+    "records": "docs/DANA_012E_RECTOR_UPDATES.csv"
+  },
+  "GitHub_API": "BLOCKED_HTTP_403_BY_ENVIRONMENT_NETWORK_POLICY_NO_BYPASS",
+  "full_boot": false,
+  "next_action": "Independently review and authorize the single frozen incremental dana-diag build/native HOLD job."
 }

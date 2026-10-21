@@ -21,7 +21,8 @@ import zlib
 import tarfile
 import tempfile
 
-SOURCE = 'HOLD_UNFROZEN'
+SOURCE = '80cbfecab4df3c4412e370974295ac8a2f336fc1'
+DRIVER_SHA='17632b59f19b640f34101836d285b0e377325df2779cbffc77944bd4bd657196'
 BUILD_SOURCE = '581601b49acb6603af2a100817d0f06fed17ed96'
 HISTORICAL_SOURCE='56a0a0040edfc161e45c1131692a64c3649fe3af'
 MAME_PIN = 'c4e48388ca620472643110db2941ce70aa5f3c07'
@@ -120,6 +121,7 @@ try:
         raise RuntimeError('BLOCKED_SOURCE_PIN')
     changed=subprocess.check_output(['git','-C',str(source),'diff','--name-only',BUILD_SOURCE,SOURCE,'--','src'],text=True).splitlines()
     if changed!=['src/mame/skeleton/alphasdana.cpp']:raise RuntimeError('BLOCKED_UNEXPECTED_PRODUCTION_SCOPE')
+    if digest(source/'src/mame/skeleton/alphasdana.cpp')!=DRIVER_SHA:raise RuntimeError('BLOCKED_FROZEN_DRIVER_SHA')
     for path in ('overlays','tests/d1_1_diag_smoke.sh'):
         pair=[subprocess.check_output(['git','-C',str(source),'rev-parse',pin+':'+path],text=True).strip() for pin in (BUILD_SOURCE,SOURCE)]
         if pair[0]!=pair[1]:raise RuntimeError('BLOCKED_UNEXPECTED_BUILD_INPUT_CHANGE:'+path)
@@ -252,9 +254,16 @@ try:
     # forces full project regeneration. Omit this variable to retain
     # 012C generated projects and their incremental object/dependency cache.
     summary['incremental_build']['regenie_forced']=False
-    summary['MAME_builds']=1;save()
     build_env=dict(os.environ,CC=cc,CXX=cxx,LD=cxx)
     build_env.pop('REGENIE',None)
+    stage('plan-diag',['make','-n']+command[1:],cwd=mame,timeout=300,env=build_env)
+    plan=evidence/'plan-diag.log'
+    if plan.stat().st_size>33554432:raise RuntimeError('BLOCKED_BUILD_PLAN_BOUND')
+    planned=[line for line in plan.read_text(errors='replace').splitlines() if re.search(r'(?:^|\s)-c(?:\s|$)',line)]
+    summary['incremental_build']['planned_compilation_units']=len(planned)
+    if not 1<=len(planned)<=16 or not any('alphasdana.cpp' in line for line in planned):
+        raise RuntimeError('BLOCKED_NOT_A_DRIVER_INCREMENTAL_BUILD')
+    summary['MAME_builds']=1;save()
     stage('build-diag',command,cwd=mame,timeout=7200,env=build_env)
     # Record objective reused-versus-touched object metadata, not an
     # unsupported assertion that a full MAME rebuild did not happen.
