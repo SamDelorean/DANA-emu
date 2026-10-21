@@ -76,6 +76,31 @@ assert(#observer.events==1 and observer.events[1].count==100000)
         self.assertEqual(d['compression_stats']['overflow']['first_unrecorded']['raw_first'],1)
         obs=dict(d,event_count=1,virtual_seconds=.3,reason='OBSERVATION_LIMIT_EVENTS')
         v.rows_info(obs)
+    def test_integrated_host_key_edges_are_not_native_bus_evidence(self):
+        state=copy.deepcopy(poll()['state'])
+        a=dict(kind='host_input',origin='host_request',field='A',value=1,
+               state=state,virtual_seconds=4.0)
+        b=dict(kind='host_input',origin='host_request',field='A',value=0,
+               state=copy.deepcopy(state),virtual_seconds=4.25)
+        d=compressed([poll(),a,b])
+        obs=dict(d,event_count=3,virtual_seconds=5.0,
+                 reason='OBSERVATION_LIMIT_TIME',integrated_hardware=True)
+        bus,progress,spans,counts=v.rows_info(obs)
+        self.assertEqual((len(bus),len(progress),len(spans)),(1,0,0))
+        self.assertEqual((counts['native_reads'],d['compression_stats']['accepted_raw']),(1,3))
+        for change in (
+            lambda z:z['events'][1].update(origin='cpu'),
+            lambda z:z['events'][1].update(field='B'),
+            lambda z:z['events'][1].update(value=True),
+            lambda z:z['events'][1].update(value=0),
+            lambda z:z['events'][2].update(value=1),
+            lambda z:z['events'][2].update(virtual_seconds=4.1),
+            lambda z:z.update(integrated_hardware=False),
+        ):
+            bad=copy.deepcopy(obs);change(bad)
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                v.rows_info(bad)
+
     def test_forged_count_lane_pc_origin_and_epoch_are_blocked(self):
         baseline=compressed([poll(),poll(time=.1)])
         mutations=[lambda d:d['events'][0].update(raw_last=8),lambda d:d['events'][0].update(address=0xfffff800),
