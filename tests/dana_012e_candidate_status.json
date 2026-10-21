@@ -142,6 +142,32 @@
       "original_indexed_members": 40,
       "emulator_executions": 0,
       "Commander_calls": 0
+    },
+    "isolated_frozen_source": {
+      "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
+      "shallow_boundaries": [
+        "096099119eef630651c6b242ae873ebd0ab3f26e",
+        "56a0a0040edfc161e45c1131692a64c3649fe3af",
+        "581601b49acb6603af2a100817d0f06fed17ed96"
+      ],
+      "result": {
+        "status": "PASS",
+        "preparation_status": "PASS",
+        "tests_run": 138,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "problems": [],
+        "skipped": [],
+        "evidence_scope": "provided-subset",
+        "selected_evidence": "/workspace/scratch/012d/original/evidence",
+        "preparation_report": "preparation.json",
+        "emulator_executions": 0,
+        "native_runtime": "NATIVE_PENDING",
+        "full_boot": false
+      },
+      "output": "Ran 138 tests in 9.770s; OK",
+      "source_assertions": "Original unchanged Port C/PLLFSR assertions included"
     }
   },
   "source_sha256": {
@@ -164,14 +190,14 @@
   },
   "job": {
     "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
-    "source_commit": null,
-    "sha256": null,
+    "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
+    "sha256": "cbbc737934284b46811c1faec46e6b830d2ad506394d5dab70d32005517e6eac",
     "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
     "builds": 0,
     "ROM_builds": 0,
     "max_native_processes": 2,
-    "frozen_job_checks": "PENDING_FINAL_FREEZE",
+    "frozen_job_checks": "PASS: exact correction source commit, Bash/embedded AST, HOLD exit2 and no production/overlay difference",
     "required_historical_commit": "56a0a0040edfc161e45c1131692a64c3649fe3af",
     "required_evidence_scope": "FULL_ORIGINAL_40_FILES_AND_EXACT_ARCHIVE",
     "preparation_blocker": "Any original index/archive/selected-file mismatch blocks before native guest execution"
@@ -199,7 +225,7 @@
   "Drive_dispatch": false,
   "full_boot": false,
   "next_action": "Independently inspect the complete authentic preparation bundle and selected RAM/index to resolve the reported checksum mismatch; keep the single corrected native job HOLD pending integrity resolution and separate execution authorization.",
-  "source_commit": null,
+  "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
   "previous_012E": {
     "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8",
     "job": {
