@@ -143,7 +143,7 @@
   "workbook": {
     "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
     "path": "AS2K_TEMP/DANA_EMU/DANA_EMU_Control_Rector_Auditoria_2026-10-20.xlsx",
-    "status": "READY_TO_SYNC_SAME_ORIGINAL_XLSX_WITH_NATIVE_AUDIT",
+    "status": "SYNCED_VERIFIED_IN_DRIVE_V2.0_BYTES_75497",
     "records": "docs/DANA_012E_RECTOR_UPDATES.csv"
   },
   "GitHub_API": "BLOCKED_HTTP_403_BY_ENVIRONMENT_NETWORK_POLICY_NO_BYPASS",
@@ -236,5 +236,15 @@
     "st_press_release_both": true,
     "serial_completed_frames_both": 0,
     "irq6_acknowledgements_both": 0
+  },
+  "post_run_integrity_policy": {
+    "executed_job_sha256": "9dcdedeff02923298e17cafe0226cf3feeed7fd2946e1031439aa04cd13d1713",
+    "executed_job_integrity_behavior": "POLICY_VIOLATION: source-only regression FAIL gate let original-input BLOCKED continue to build/native",
+    "executed_result_preserved": true,
+    "future_hold_job_sha256": "7575878a5241daf58759b7beac8db180f3c011a7e73fcedd79380a3f09d11102",
+    "future_hold_job_change_commit": "d7d982b50ced5684026c8ec9d50899c652bdd697",
+    "future_job_guard": "REQUIRE offline.status=PASS before compilation or emulator; no auto correction or repeat",
+    "native_execution_after_fix": 0,
+    "next_native_requires_fresh_user_approval": true
   }
 }
