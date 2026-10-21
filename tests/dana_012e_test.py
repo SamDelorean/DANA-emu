@@ -86,7 +86,7 @@ assert(#observer.events==1 and observer.events[1].count==100000)
         obs=dict(d,event_count=3,virtual_seconds=5.0,
                  reason='OBSERVATION_LIMIT_TIME',integrated_hardware=True)
         bus,progress,spans,counts=v.rows_info(obs)
-        self.assertEqual((len(bus),len(progress),len(spans)),(1,0,0))
+        self.assertEqual((len(bus),len(progress),len(spans)),(1,0,1))
         self.assertEqual((counts['native_reads'],d['compression_stats']['accepted_raw']),(1,3))
         for change in (
             lambda z:z['events'][1].update(origin='cpu'),
