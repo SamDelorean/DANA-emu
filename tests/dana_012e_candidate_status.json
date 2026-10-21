@@ -159,7 +159,29 @@
       "emulator_executions": 0
     },
     "hold_guards": "4/4 HOLD exit2 within full suite",
-    "syntax": "PASS: three Python ASTs, job Bash and embedded Python, unchanged Lua instrumentation regressions included"
+    "syntax": "PASS: three Python ASTs, job Bash and embedded Python, unchanged Lua instrumentation regressions included",
+    "isolated_frozen_source": {
+      "source_commit": "6686e151ef535de6af4bc9acd3825b19f8168932",
+      "shallow_boundaries": [
+        "56a0a0040edfc161e45c1131692a64c3649fe3af",
+        "581601b49acb6603af2a100817d0f06fed17ed96",
+        "6686e151ef535de6af4bc9acd3825b19f8168932"
+      ],
+      "tests_run": 146,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "status": "PASS_OFFLINE_PROVIDED_SUBSET_ONLY",
+      "output": "Ran 146 tests in 9.643s; OK",
+      "forensic_Cloud_snapshot": {
+        "status": "PRESERVED",
+        "archive_sha256": "13b599d9b5a210caeaff46bbb2ce044f1f42d5fe2d61e75bc0f021d046ac039b",
+        "archive_bytes": 51200,
+        "copied_regular_files_including_original_index": 8,
+        "byte_equality_independently_checked": true
+      },
+      "T_RAM_capture": false
+    }
   },
   "source_sha256": {
     "docs/DANA_012E_OBSERVATION_CONTRACT.md": "439b1a1dc4556c7ad1447780b43bcacd0966d9c1b924537c9ecb6887cb2d0328",
@@ -181,14 +203,14 @@
   },
   "job": {
     "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
-    "source_commit": null,
-    "sha256": null,
+    "source_commit": "6686e151ef535de6af4bc9acd3825b19f8168932",
+    "sha256": "89e20aaf12dfb490663b19641f15bd4396077b4df5840bde9072d00cbba142c2",
     "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
     "builds": 0,
     "ROM_builds": 0,
     "max_native_processes": 2,
-    "frozen_job_checks": "PENDING_FINAL_FREEZE",
+    "frozen_job_checks": "PASS: exact source commit, Bash/embedded AST, HOLD exit2, preservation required, no production/overlay difference",
     "required_historical_commit": "56a0a0040edfc161e45c1131692a64c3649fe3af",
     "required_evidence_scope": "FULL_ORIGINAL_40_FILES_AND_EXACT_ARCHIVE",
     "preparation_blocker": "Any archive/index/selected-file mismatch or failed preservation blocks native guests; preserve actual mismatching bytes in new private artifacts first",
@@ -217,7 +239,7 @@
   "Drive_dispatch": false,
   "full_boot": false,
   "next_action": "Inspect and preserve the actual test-selected working directory with the corrected diagnostic to identify its differing path; keep the single integrated native job HOLD until separately authorized access/execution.",
-  "source_commit": null,
+  "source_commit": "6686e151ef535de6af4bc9acd3825b19f8168932",
   "previous_012E": {
     "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8",
     "job": {
