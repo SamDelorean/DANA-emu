@@ -47,9 +47,9 @@ s.spi1_ctrl_w(0,0x0700,0xff00);assert(s.m_spi1_rx==0xff);
         # accepted; the existing ST keyboard slave remains independent.
         src=DRIVER.read_text()
         pf=src[src.index('    u8 pf_r(offs_t reg)'):src.index('    void pf_w(offs_t reg, u8 value)')]
-        pg=src[src.index('    u8 pg_r(offs_t reg)'):src.index('    u8 pk_r(offs_t reg)')]
-        adc=method_body(src,r'u16 alphasdana_state::pen_exchange\\(unsigned width, u16 outgoing\\)\\s*')
-        spi=method_body(src,r'void alphasdana_state::spi2_ctrl_w\\(offs_t, u16 data, u16 mem_mask\\)\\s*')
+        pg=src[src.index('    u8 pg_r(offs_t reg)'):src.index('    DANA_GPIO_PORT(pj, 5)')]
+        adc=method_body(src,r'u16 alphasdana_state::pen_exchange\(unsigned width, u16 outgoing\)\s*')
+        spi=method_body(src,r'void alphasdana_state::spi2_ctrl_w\(offs_t, u16 data, u16 mem_mask\)\s*')
         compile_logic('''#include <cstdint>
 #include <cassert>
 using u8=std::uint8_t; using u16=std::uint16_t; using u32=std::uint32_t; using offs_t=unsigned;
