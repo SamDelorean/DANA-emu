@@ -1,0 +1,32 @@
+{
+  "schema": "dana-f2-product-v1",
+  "branch": "codex/dana-d1-2-ram-bus",
+  "product_driver_commit": "9e870229afe6eff4b18eba7bf849fb3bb740cc84",
+  "regression_commit": "f0a1c1890e4297b2ba3649ad755f8b0e8a0bdc9a",
+  "documentation": "docs/F2_STYLUS_PRODUCT_INCREMENT.md",
+  "previous_native_source_commit": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
+  "previous_native_scoped_pass_capabilities": 10,
+  "status": "PRODUCT_SOURCE_IMPLEMENTED_STANDALONE_LOGIC_PASS_NATIVE_PENDING",
+  "feature": "SPI2 PEN_ADC_PF1_PG2_HOST_STYLUS",
+  "native_boot_full": false,
+  "built_MAME_DIAG_new_source": false,
+  "native_guest_runs_new_source": 0,
+  "commander_calls": 0,
+  "new_native_attempts": 0,
+  "compile_validation": {
+    "equivalent_focused_cpp20_logic_smoke": "PASS",
+    "options": "-Wall -Wextra -Werror -fsanitize=address,undefined",
+    "production_extracted_test_committed": "tests/dana_hardware_test.py::Hardware::test_actual_stylus_gpio_and_12bit_spi2_adc_path",
+    "production_extracted_test_executed": false,
+    "full_MAME_driver_compilation": "NOT_RUN"
+  },
+  "constraints": {
+    "real_guest_EmuTOS_fixed": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+    "pen_calibration": "PROVISIONAL_NOT_DANA_FACTORY_MEASUREMENT",
+    "saved_original_012C_evidence": "UNCHANGED",
+    "st_keyboard_path": "PRESERVED_IN_SOURCE",
+    "source_contract": "8bit 0x90/0xd0 + 16bit sample >>4",
+    "full_boot": "NOT_CLAIMED"
+  },
+  "next": "Additional documented product development; one separately authorized DIAG incremental build and host-pen-through-SPI2-guest acceptance later, no fourth native run now."
+}
