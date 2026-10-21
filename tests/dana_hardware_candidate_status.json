@@ -4,8 +4,8 @@
   "base_commit": "0aa20345bd70b58a48134e4f8f889e559181e108",
   "driver_sha256": "17632b59f19b640f34101836d285b0e377325df2779cbffc77944bd4bd657196",
   "job": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
-  "job_sha256": "3e4455d29052864966b93771f138abbe52af65c607f12db5b62c709f8d9d8eb4",
-  "job_status": "LOCAL_GIT_HOLD_NOT_EXECUTED",
+  "job_sha256": "9dcdedeff02923298e17cafe0226cf3feeed7fd2946e1031439aa04cd13d1713",
+  "job_status": "GIT_HOLD_NOT_EXECUTED_POSTREVIEW_PREBUILD_GATE_CORRECTED",
   "static_tests": {
     "status": "PASS",
     "tests_run": 152,
@@ -108,5 +108,15 @@
   },
   "GitHub_API": "BLOCKED_HTTP_403_BY_ENVIRONMENT_NETWORK_POLICY_NO_BYPASS",
   "full_boot": false,
-  "next_action": "Independently review and authorize the single frozen incremental dana-diag build/native HOLD job."
+  "next_action": "Independently review and authorize the single frozen incremental dana-diag build/native HOLD job.",
+  "postreview_012c_cache_gate": {
+    "status": "SOURCE_FIX_PUBLISHED_NATIVE_NOT_RUN",
+    "fix_commit": "0699251c92159c5c3a46cfcd2caf4572543eb48e",
+    "issue": "Original 012-C staging/source/danadiagd was recorded SHA c69b8c99... while staging/bin/dana-diag was independently recovered to qualified caad0206...; requiring both to be caad caused a deterministic false gate",
+    "remedy": "Bind immutable cache-internal output to its own original SHA; compare cloned cache before any staging changes; seed only new cloned working tree with the SHA-qualified bin/dana-diag; verify original source/binary and both independent hashes after the build",
+    "original_source_and_cache": "UNCHANGED",
+    "new_binary": "NOT_BUILT",
+    "native_tests": "NOT_RUN",
+    "verification": "STATIC_CONTRACT_AND_SOURCE_REVIEW_ONLY"
+  }
 }
