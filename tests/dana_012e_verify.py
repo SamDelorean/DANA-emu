@@ -58,7 +58,7 @@ def rows_info(obs):
     check(len(json.dumps(rows,separators=(',',':')).encode())<=LIMITS['max_event_bytes'],'Event byte bound')
     check(stats.get('compression')=='exact_full_state_F202_RLE_v1','Unknown compression contract')
     cursor=0;last_time=0;epoch=0;counts=dict(native_reads=0,native_writes=0,native_iacks=0,poll_reads=0)
-    bus=[];progress=[];polls=[]
+    bus=[];progress=[];polls=[];host_edges=[]
     for seq,e in enumerate(rows):
         check(type(e.get('seq')) is int and type(e.get('raw_first')) is int and e['seq']==seq and e['raw_first']==cursor,'Missing/replayed compressed sequence')
         state=e['state'];check(all(type(state.get(k)) is int for k in STATE_FIELDS),'CPU state missing')
@@ -88,6 +88,20 @@ def rows_info(obs):
             else:check(n==1,'Causal event compressed')
             counts['native_iacks' if kind=='iack' else 'native_writes' if kind=='write' else 'native_reads']+=n
             bus.append(e)
+        elif kind=='host_input':
+            # Integrated hardware requests two actual MAME input-field edges.
+            # These are host actions, never CPU bus transactions or proof that
+            # the guest consumed a key. Keep them in the exact raw accounting.
+            check(n==1 and obs.get('integrated_hardware') is True,
+                  'Unbound host input profile')
+            check(e.get('origin')=='host_request','Forged host input origin')
+            check(e.get('field')=='A' and type(e.get('value')) is int
+                  and e['value'] in (0,1),'Unexpected host key field/value')
+            check(len(host_edges)<2 and e['value']==(1 if not host_edges else 0),
+                  'Host key edge order or excess event')
+            check(e['virtual_seconds']>=(4 if not host_edges else 4.25),
+                  'Host key edge precedes request window')
+            host_edges.append(e)
         else:
             check(n==1 and kind in ('first_instruction','milestone','progress'),'Unknown observation kind')
             check(e.get('origin')=='debugger_observation','Forged instruction/progress observation')
