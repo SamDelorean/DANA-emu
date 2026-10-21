@@ -1,5 +1,5 @@
 {
-  "status": "INTEGRATED_HARDWARE_STATIC_PASS",
+  "status": "INTEGRATED_HARDWARE_NATIVE_PARTIAL",
   "source_commit": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
   "base_commit": "0aa20345bd70b58a48134e4f8f889e559181e108",
   "driver_sha256": "17632b59f19b640f34101836d285b0e377325df2779cbffc77944bd4bd657196",
@@ -45,10 +45,10 @@
     "selection_archive_sha256": "13b599d9b5a210caeaff46bbb2ce044f1f42d5fe2d61e75bc0f021d046ac039b",
     "T_working_directory_discrepancy": "UNRESOLVED_NO_T_ACCESS"
   },
-  "native_status": "NATIVE_PENDING",
+  "native_status": "PARTIAL_TWO_AUTHENTIC_PREFIXES_VERIFIED_OFFLINE_POST_RUN",
   "Commander_calls": 0,
-  "emulator_executions": 0,
-  "MAME_builds_executed": 0,
+  "emulator_executions": 2,
+  "MAME_builds_executed": 1,
   "ROM_builds": 0,
   "qualified_old_binary_sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
   "old_binary_role": "IMMUTABLE_INCREMENTAL_CACHE_BASELINE_ONLY_NEW_DRIVER_REQUIRES_NEW_BINARY",
@@ -67,48 +67,88 @@
     "emulator_seconds_to_run": 13
   },
   "capabilities": {
-    "PFSEL": {
-      "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    "uart1_registers": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     },
-    "Timer1": {
-      "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    "spi2_registers": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     },
-    "UART1": {
-      "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    "uart1_tx": {
+      "status": "PARTIAL",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     },
-    "IRQ6": {
-      "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    "irq6": {
+      "status": "NOT_REACHED",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     },
-    "LCD": {
+    "irq_other": {
       "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     },
-    "SPI2": {
-      "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+    "st_greeting": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     },
-    "ST_keyboard": {
+    "lcd_frame": {
       "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     },
-    "SPI1_empty_slot": {
+    "uart1_rx": {
       "status": "BLOCKED",
-      "reason": "NEW_HARDWARE_NATIVE_PENDING"
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "keyboard_interaction": {
+      "status": "BLOCKED",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "full_boot": {
+      "status": "BLOCKED",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "lcd_window": {
+      "status": "BLOCKED",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "pfsel": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "timer1_compare": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "lcd_controller": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "spi2_exchange": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "lcd_presentation": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "st_keyboard": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
+    },
+    "timer1_programming": {
+      "status": "PASS",
+      "scope": "TWO_NATIVE_RUNS_VERIFIED_OFFLINE"
     }
   },
   "workbook": {
     "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
     "path": "AS2K_TEMP/DANA_EMU/DANA_EMU_Control_Rector_Auditoria_2026-10-20.xlsx",
-    "status": "UPDATE_RECORDS_PREPARED_EXISTING_WORKBOOK_NOT_MODIFIED",
+    "status": "READY_TO_SYNC_SAME_ORIGINAL_XLSX_WITH_NATIVE_AUDIT",
     "records": "docs/DANA_012E_RECTOR_UPDATES.csv"
   },
   "GitHub_API": "BLOCKED_HTTP_403_BY_ENVIRONMENT_NETWORK_POLICY_NO_BYPASS",
   "full_boot": false,
-  "next_action": "Independently review and authorize the single frozen incremental dana-diag build/native HOLD job.",
+  "next_action": "No fourth native attempt authorized. Investigate unobserved IRQ6/UART1 frame completion and observation-byte bound from preserved two-run evidence; independently resolve unchanged 012-C restored.ram mismatch; seek fresh user approval before any further MAME invocation.",
   "postreview_012c_cache_gate": {
     "status": "SOURCE_FIX_PUBLISHED_NATIVE_NOT_RUN",
     "fix_commit": "0699251c92159c5c3a46cfcd2caf4572543eb48e",
@@ -118,5 +158,83 @@
     "new_binary": "NOT_BUILT",
     "native_tests": "NOT_RUN",
     "verification": "STATIC_CONTRACT_AND_SOURCE_REVIEW_ONLY"
+  },
+  "native_campaign": {
+    "location": "T: /home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_12ou2176/",
+    "archived_result": "/home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_12ou2176/dana_integrated_hardware_12ou2176.tar.gz",
+    "archive_sha256": "e2af3311b55bfa764f4f88025804872649ccfc67b6273ea558b1bcddd91f3865",
+    "authorized_attempt": 3,
+    "job_sha256": "9dcdedeff02923298e17cafe0226cf3feeed7fd2946e1031439aa04cd13d1713",
+    "job_exit_code": 2,
+    "job_initial_status": "BLOCKED_UNKNOWN_OBSERVATION_KIND",
+    "job_initial_reason": "BOUNDED_GENUINE_GUEST_RESULTS_NOT_FULL_BOOT",
+    "verifier_fix_commits": [
+      "b6040fd5cced3d55e6f89a1542791ea519423bdb",
+      "610f758289894c9737fbdc1db4bcbe11782b7350"
+    ],
+    "verifier_run": "T: /home/spc/DANA_EMU_ISOLATED/verify_existing_012e_jidApi/reverify_existing_native.json",
+    "reverify_mode": "OFFLINE_ONLY_ON_ORIGINAL_TWO_RUNS_NO_NEW_MAME_OR_ROM",
+    "reverify_status": "PARTIAL",
+    "unit_tests": "6 PASS",
+    "program_driver_source": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
+    "new_diag_sha256": "0b33c949d439d66bb86ba1eedf3659b6c7356b84b8fce2d62086e8a986efb0e8",
+    "build": {
+      "exit_code": 0,
+      "driver_objects_recompiled": 1,
+      "cached_objects_reused": 1129,
+      "rom_builds": 0
+    },
+    "two_native_processes": [
+      {
+        "pid": 56981,
+        "exit_code": 0,
+        "execution_id": "bdd9237670b34d28b602ecd449dd53f4",
+        "accepted_raw": 64128,
+        "retained_events": 51936,
+        "termination": "OBSERVATION_LIMIT_EVENT_BYTES"
+      },
+      {
+        "pid": 57441,
+        "exit_code": 0,
+        "execution_id": "72fc2884d3594187af1c251df835b51f",
+        "accepted_raw": 64128,
+        "retained_events": 51936,
+        "termination": "OBSERVATION_LIMIT_EVENT_BYTES"
+      }
+    ],
+    "original_evidence_integrity": {
+      "status": "BLOCKED",
+      "path": "pfsel/save_restore/restored.ram",
+      "expected_sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e",
+      "working_sha256": "56f40dfb00b27a33fe4fdf797cdb5c16e1c1910d8c0e441302bc19c8c6156e6a",
+      "original_archive": "PRESERVED_UNCHANGED"
+    },
+    "full_boot": false,
+    "forward_progress": "NO_FULL_BOOT_CLAIM",
+    "os_key_consumption_proven": false,
+    "components": {
+      "uart1_registers": "PASS",
+      "spi2_registers": "PASS",
+      "uart1_tx": "PARTIAL",
+      "irq6": "NOT_REACHED",
+      "irq_other": "BLOCKED",
+      "st_greeting": "PASS",
+      "lcd_frame": "BLOCKED",
+      "uart1_rx": "BLOCKED",
+      "keyboard_interaction": "BLOCKED",
+      "full_boot": "BLOCKED",
+      "lcd_window": "BLOCKED",
+      "pfsel": "PASS",
+      "timer1_compare": "PASS",
+      "lcd_controller": "PASS",
+      "spi2_exchange": "PASS",
+      "lcd_presentation": "PASS",
+      "st_keyboard": "PASS",
+      "timer1_programming": "PASS"
+    },
+    "lcd_native_pixels_match_guest_ram_both": true,
+    "st_press_release_both": true,
+    "serial_completed_frames_both": 0,
+    "irq6_acknowledgements_both": 0
   }
 }
