@@ -146,6 +146,11 @@ try:
     offline=json.loads((evidence/'offline.json').read_text())
     summary['offline_status']=offline['status']
     if offline['source_regressions']:raise RuntimeError('FAIL_OFFLINE_SOURCE_REGRESSION')
+    # User's strict input-integrity rule: an independently accredited archive
+    # never licenses a mismatching mutable test-selected directory. Preserve
+    # the forensics and STOP before any build or native guest execution.
+    if offline['status']!='PASS':
+        raise RuntimeError('BLOCKED_ORIGINAL_EVIDENCE_INTEGRITY_NO_BUILD_NO_NATIVE')
     donor=Path('/home/spc/Projects/alphasmart/as2k-stable-eeepc900-local/mame-as3k-donor')
     stage('donor-pin',['git','-C',str(donor),'cat-file','-e',MAME_PIN+'^{commit}'])
     # Incremental Dana-only build: reuse the qualified 012C object tree,
