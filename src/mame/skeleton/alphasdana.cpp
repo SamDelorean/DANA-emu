@@ -329,6 +329,7 @@ void alphasdana_state::machine_reset()
     m_icr = 0;
     m_imr = 0x00ffffff;
     m_pending = 0;
+    m_spi2_data=0; m_spi2_ctrl=0;
     m_tctl1=0; m_tprer1=0; m_tcmp1=0xffff;
     m_tcr1=0; m_tcn1=0; m_tstat1=0; m_tstat_clear1=0;
     m_timer1_compares=0; m_timer1_iacks=0;
@@ -384,7 +385,7 @@ void alphasdana_state::st_input_reset()
     m_st_queue_pos=0;
     std::fill(std::begin(m_st_old_extra),std::end(m_st_old_extra),0);
     std::fill(std::begin(m_st_queue),std::end(m_st_queue),0);
-    m_spi2_data=0; m_spi2_ctrl=0;
+    // Resetting the external ST must not reset the VZ SPI2 controller.
 }
 
 void alphasdana_state::pb_w(offs_t reg, u8 value)

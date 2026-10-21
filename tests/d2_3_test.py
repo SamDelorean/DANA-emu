@@ -410,7 +410,9 @@ int main() {
     assert(t.st_exchange(0)==0);
     k.value=0;
     assert(t.st_exchange(0)==0x40); // all released.
+    u16 const before_st_reset=t.m_spi2_ctrl;
     t.pb_w(1,0x40); // ST hardware reset high.
+    assert(t.m_spi2_ctrl==before_st_reset); // External MCU reset is not a VZ reset.
     assert(!t.m_st_ready && !(t.pk_r(1)&4));
     t.pb_w(1,0); // release reset.
     assert(t.m_st_ready && t.m_st_hello);
