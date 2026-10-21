@@ -143,11 +143,15 @@
   "workbook": {
     "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
     "path": "AS2K_TEMP/DANA_EMU/DANA_EMU_Control_Rector_Auditoria_2026-10-20.xlsx",
-    "status": "SYNCED_VERIFIED_IN_DRIVE_V2.1_BYTES_76623",
+    "status": "SYNCED_VERIFIED_IN_DRIVE_V2.2_BYTES_77499",
     "records": "docs/DANA_012E_RECTOR_UPDATES.csv",
     "synced_file_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
     "capabilities_sheet": "18_CAPABILITIES_10_PASS",
-    "attempt_gate": "3_RECORDED_ERROR_DE_SUPERVISION_NO_FOURTH_APPROVED"
+    "attempt_gate": "3_RECORDED_ERROR_DE_SUPERVISION_NO_FOURTH_APPROVED",
+    "commander_supervisory_calls": 29,
+    "commander_call_count_scope": "25 T device calls + 1 list_devices + 3 history queries; includes all read/process calls",
+    "capability_pass_count": 10,
+    "number_of_controlled_native_attempts": 3
   },
   "GitHub_API": "BLOCKED_HTTP_403_BY_ENVIRONMENT_NETWORK_POLICY_NO_BYPASS",
   "full_boot": false,
