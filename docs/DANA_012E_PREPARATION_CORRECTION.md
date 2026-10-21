@@ -1,5 +1,56 @@
 # 012-E — Joint preparation correction
 
+## Current archive audit and effective-directory preservation
+
+The user has now directly audited all three disputed RAM members inside the
+complete original archive: **PASS**, each SHA256
+`6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e`.
+The user also reviewed the complete 012-E log/package and confirmed that all
+40 indexed archive members passed before offline regressions began. These are
+accredited **user-audited archive results**; Cloud has not independently rehashed
+the unavailable complete archive. They supersede the earlier uncertainty about
+that backup. The remaining reported divergence concerns the **effective working
+directory selected by the test**. Its exact differing path and alteration cause
+remain unproven. No archived member is blamed or replaced.
+
+That T directory is not mounted in Cloud. Neither its files nor a copy of its
+reported failing state are available here, so no current T snapshot, offending
+filename, byte difference or historical modification time is invented. The old
+traceback lacks the route of `p`; it cannot identify one of three identical
+expected hashes. The expanded original assertion and independent audit already
+report all relative/selected/resolved paths, expected/calculated SHA and origin.
+The audit now also records device, inode, link count, mode, owner, mtime/ctime
+nanoseconds, root identity, current directory and actual selection environment.
+These facts can reveal aliases or changes between observations; timestamps alone
+do not establish why a past change happened.
+
+The corrected **same single HOLD job** now adds `--preserve-selection` to the
+complete offline runner. Before any unittest starts, it preserves the actual
+selected directory into NEW private `selected-directory-before.tar` and
+`preservation-before.json`, even if its hashes disagree with the original index.
+Every copied regular file retains its actual bytes, a captured SHA and source
+metadata; the original index is copied verbatim. The tar has its own SHA. The
+test continues to read the original explicit directory, never this snapshot.
+If the before/after prerequisite reports differ, a separate after snapshot is
+retained. A snapshot/input mutation cannot hide a genuine regression FAIL.
+
+Preservation uses exclusive output creation outside the input tree, no source
+chmod/move/delete/repair, no archive extraction and no input reindexing. Symlinks
+are retained as links without reading targets. File identity and metadata are
+checked around reads, and captured hashes are compared with the prior audit.
+Limits are 256 selected entries and 128 MiB regular-file payload per snapshot;
+over-bound, failed or partial capture is explicitly BLOCKED, with originals left
+in place. Native execution requires both the unchanged integrity checks and
+successful preservation. Raw snapshots remain private job evidence, excluded
+from Git. They do not establish a native peripheral PASS.
+
+The historical source omission is still fixed: the job explicitly fetches
+`56a0a0040edfc161e45c1131692a64c3649fe3af` alongside harness/build pins. Original
+Port C and PLLFSR method assertions and all integrated 012-E instrumentation
+remain unchanged. Current executed results and frozen source/job hashes are in
+candidate status. The sections below preserve the earlier investigation history;
+their archive-availability statements refer to Cloud, not a failed backup audit.
+
 Source-only continuation of PR #7 from
 `47a054cddfef865bd5dbe2035f40a5c155d5e961`. No peripheral increment, production
 change, emulator execution, MAME/ROM build, Commander call, T access or dispatch.

@@ -1,7 +1,7 @@
 {
   "status": "012_E_STATIC_PASS",
   "native_runtime": "NATIVE_PENDING",
-  "reviewed_base": "47a054cddfef865bd5dbe2035f40a5c155d5e961",
+  "reviewed_base": "07678d15fc441fef2c9f623154a0e54ac7c32b4c",
   "implementation_012D": "be16f21f6e1d8102a6d0b5542f720d87ecd590ee",
   "canonical_main_read": "e147c940741363af186dae9026d9788f0566fea9",
   "evidence_012D": {
@@ -87,17 +87,17 @@
     "emulator_seconds_to_run": 13
   },
   "local_checks": {
-    "tests": 138,
-    "output": "Ran 138 tests in 10.449s; OK",
-    "skips": 0,
+    "tests": 146,
+    "output": "Ran 146 tests in 11.125s; OK",
     "failures": 0,
     "errors": 0,
+    "skips": 0,
     "emulator_tests": 0,
-    "command": "PYTHONPATH=tests python3 tests/dana_012e_offline.py --evidence <original-selected-evidence> --evidence-scope provided-subset --output <new-results>",
+    "command": "PYTHONPATH=tests python3 tests/dana_012e_offline.py --evidence <actual-selected-directory> --evidence-scope provided-subset --preserve-selection --output <new-private-output>",
     "complete_offline_subset": {
       "status": "PASS",
       "preparation_status": "PASS",
-      "tests_run": 138,
+      "tests_run": 146,
       "failures": 0,
       "errors": 0,
       "skips": 0,
@@ -108,12 +108,19 @@
       "preparation_report": "preparation.json",
       "emulator_executions": 0,
       "native_runtime": "NATIVE_PENDING",
-      "full_boot": false
+      "full_boot": false,
+      "forensic_preservation": {
+        "status": "PRESERVED",
+        "archive_sha256": "13b599d9b5a210caeaff46bbb2ce044f1f42d5fe2d61e75bc0f021d046ac039b",
+        "archive_bytes": 51200,
+        "input_writes": 0,
+        "test_selection_replaced": false
+      }
     },
     "complete_offline_full_input": {
       "status": "BLOCKED",
       "preparation_status": "BLOCKED",
-      "tests_run": 138,
+      "tests_run": 146,
       "failures": 0,
       "errors": 0,
       "skips": 0,
@@ -124,65 +131,49 @@
       "preparation_report": "preparation.json",
       "emulator_executions": 0,
       "native_runtime": "NATIVE_PENDING",
-      "full_boot": false
+      "full_boot": false,
+      "forensic_preservation": {
+        "status": "PRESERVED",
+        "archive_sha256": "13b599d9b5a210caeaff46bbb2ce044f1f42d5fe2d61e75bc0f021d046ac039b",
+        "archive_bytes": 51200,
+        "input_writes": 0,
+        "test_selection_replaced": false
+      }
     },
-    "full_input_run_output": "Ran 138 tests in 10.318s; OK; preparation BLOCKED (33 original members and archive absent)",
-    "negative_controls": "20 preparation controls in addition to all original 118; synthetic mutations remain only in temporary controls",
-    "syntax": "PASS: four Python ASTs; job Bash and embedded Python; unchanged Lua observer regressions included",
-    "hold_guards": "4/4 HOLD exit2; checked within complete suite; no new authorization supplied",
-    "unchanged": "Production, overlays, tools/guest, research, original source-contract assertions, entire integrated 012-E observer/verifier/runtime and limits",
+    "full_input_run_output": "Ran 146 tests in 11.552s; OK; full input audit BLOCKED by Cloud raw-data absence, separately accredited archive user audit preserved",
+    "new_preservation_tests": 8,
+    "all_previous_tests_retained": 138,
+    "source_assertions": "Original seven Port C/PLLFSR comparisons unchanged; missing shallow pin explicitly fetched and negatively tested",
     "static_audit": {
       "status": "PASS",
-      "python_AST": 4,
-      "job_Bash_embedded_Python": "PASS",
-      "original_source_assertions": "UNCHANGED",
-      "production_and_integrated_instrumentation": "UNCHANGED",
+      "python_ASTs": 3,
+      "job_Bash_embedded_AST": "PASS",
+      "unchanged_production_and_all_original_assertions": true,
+      "copied_Cloud_files_including_original_index": 8,
+      "copied_files_byte_equal": true,
       "original_index_sha256": "c804cbc536215a5eed3db6cf3025f64dde2ddbfce10dff5eddab3021d7ab40dd",
-      "supplied_members": 7,
-      "original_indexed_members": 40,
-      "emulator_executions": 0,
-      "Commander_calls": 0
+      "private_Cloud_snapshot_sha256": "13b599d9b5a210caeaff46bbb2ce044f1f42d5fe2d61e75bc0f021d046ac039b",
+      "T_directory_mounted": false,
+      "T_RAM_preserved": false,
+      "Commander_calls": 0,
+      "emulator_executions": 0
     },
-    "isolated_frozen_source": {
-      "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
-      "shallow_boundaries": [
-        "096099119eef630651c6b242ae873ebd0ab3f26e",
-        "56a0a0040edfc161e45c1131692a64c3649fe3af",
-        "581601b49acb6603af2a100817d0f06fed17ed96"
-      ],
-      "result": {
-        "status": "PASS",
-        "preparation_status": "PASS",
-        "tests_run": 138,
-        "failures": 0,
-        "errors": 0,
-        "skips": 0,
-        "problems": [],
-        "skipped": [],
-        "evidence_scope": "provided-subset",
-        "selected_evidence": "/workspace/scratch/012d/original/evidence",
-        "preparation_report": "preparation.json",
-        "emulator_executions": 0,
-        "native_runtime": "NATIVE_PENDING",
-        "full_boot": false
-      },
-      "output": "Ran 138 tests in 9.770s; OK",
-      "source_assertions": "Original unchanged Port C/PLLFSR assertions included"
-    }
+    "hold_guards": "4/4 HOLD exit2 within full suite",
+    "syntax": "PASS: three Python ASTs, job Bash and embedded Python, unchanged Lua instrumentation regressions included"
   },
   "source_sha256": {
-    "docs/DANA_012E_OBSERVATION_CONTRACT.md": "7061f3f40249ae6131fc5a03ecd2a9ba5590ab6def68d6371c916260eaa18f7e",
-    "docs/DANA_012E_PREPARATION_CORRECTION.md": "e7b9ee797041190fad8c5d19a91c168e2ca0045adb2f685fba92b4ea648a8643",
-    "docs/DANA_012E_RECTOR_UPDATES.csv": "ecf8f3ffee9c9cff06cca7720605b64c3143468eb7523242f18559732eb3c312",
-    "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md": "1c501f57a0bd513b5cbe833d940d622bbd3ff9217e5e921c510423988fb1c5dd",
-    "docs/HANDOFF.md": "16d121aad57f59832aa4e6c7a3c92a297b0c27d663c744ebf702511149909227",
+    "docs/DANA_012E_OBSERVATION_CONTRACT.md": "439b1a1dc4556c7ad1447780b43bcacd0966d9c1b924537c9ecb6887cb2d0328",
+    "docs/DANA_012E_PREPARATION_CORRECTION.md": "830b98ac473cff2a000f1be669bf04fa2d3a134a127fdcb4afe422b0f69ff474",
+    "docs/DANA_012E_RECTOR_UPDATES.csv": "590aa6b0e8a62fc343be466e8b6630c9800678c4732560af9fcae67781693699",
+    "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md": "cb1e7c132f2248dc694a813dae630b6ac1656c71d1892a2354487f3d34542cb9",
+    "docs/HANDOFF.md": "9d87e13e97fd35ab9a285c8d82d58f7736959b9241dca4be0f1fc55d36272363",
     "tests/dana_012d_test.py": "781386fafdd18d57022334c72fc3f883f6d2264a75a278d32c8fcf79dc8220b9",
     "tests/dana_012d_verify.py": "b075a5cb1327de7e88212519c523bc4f0f6f2169c34f44a2353f39bbdd69356c",
     "tests/dana_012e_limits.json": "9d72ed033cda9e251da8cd4be9d7623795c62dc25092078f8f7bde063ff6b7f2",
     "tests/dana_012e_observer.lua": "690c7c5fdc24ace968717da1fa978c70fc1ea3c0d7e7d6f942f6d7d1e20c305c",
-    "tests/dana_012e_offline.py": "0fb017e3b0a285702e303cfba1da21a61e001d960687611ffcca6f6bdc07ca8e",
-    "tests/dana_012e_prepare.py": "c9e6c118a4e076e74134b999aefb514b9da63b06b5474fafa19993b63cf8f813",
-    "tests/dana_012e_prepare_test.py": "3c1ef30fad6bb73ac9af684fd7505dac8ee8ca9f54c72edc5c4f68a30c3ab926",
+    "tests/dana_012e_offline.py": "d7c9965a8918f7b3cc0e69dd8ac0575cd30d1921b6201a67aa1d7b486fd4ad34",
+    "tests/dana_012e_prepare.py": "f5559358bdb27a7c345b69316690fa373d3f487619e3b9a2f1050bccc2df182c",
+    "tests/dana_012e_prepare_test.py": "26994168f4304d4c1f77b15fc31ece0b9a96eb1a9d0eb22bffe7d8d0133ef435",
     "tests/dana_012e_test.py": "cf4e2b7d607cd42a30fffa8c13c2126ac6ee75227bdb9324e3d7113e89ddbcfd",
     "tests/dana_012e_verify.py": "e137c9ddfec0bc4d8fc9928f1b28e27534415660a63194dbfb3bfc374ade3135",
     "tests/f1_emutos_boot.lua": "2035c6c1c0cb448ed0da3957f1ed8091806d1d291515fedc16b0ed81a7f1797d",
@@ -190,17 +181,18 @@
   },
   "job": {
     "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
-    "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
-    "sha256": "cbbc737934284b46811c1faec46e6b830d2ad506394d5dab70d32005517e6eac",
+    "source_commit": null,
+    "sha256": null,
     "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
     "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
     "builds": 0,
     "ROM_builds": 0,
     "max_native_processes": 2,
-    "frozen_job_checks": "PASS: exact correction source commit, Bash/embedded AST, HOLD exit2 and no production/overlay difference",
+    "frozen_job_checks": "PENDING_FINAL_FREEZE",
     "required_historical_commit": "56a0a0040edfc161e45c1131692a64c3649fe3af",
     "required_evidence_scope": "FULL_ORIGINAL_40_FILES_AND_EXACT_ARCHIVE",
-    "preparation_blocker": "Any original index/archive/selected-file mismatch blocks before native guest execution"
+    "preparation_blocker": "Any archive/index/selected-file mismatch or failed preservation blocks native guests; preserve actual mismatching bytes in new private artifacts first",
+    "preserve_selected_directory_before_tests": true
   },
   "workbook": {
     "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
@@ -224,8 +216,8 @@
   "ROM_builds": 0,
   "Drive_dispatch": false,
   "full_boot": false,
-  "next_action": "Independently inspect the complete authentic preparation bundle and selected RAM/index to resolve the reported checksum mismatch; keep the single corrected native job HOLD pending integrity resolution and separate execution authorization.",
-  "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
+  "next_action": "Inspect and preserve the actual test-selected working directory with the corrected diagnostic to identify its differing path; keep the single integrated native job HOLD until separately authorized access/execution.",
+  "source_commit": null,
   "previous_012E": {
     "source_commit": "5264341dd22a5ee0bf21df63c033153c8c0318a8",
     "job": {
@@ -242,7 +234,7 @@
     "local_tests": 118,
     "qualification_scope": "Previous Cloud 118 controls with seven supplied files only; not full original archive integrity"
   },
-  "preparation_status": "BLOCKED_FULL_ORIGINAL_EVIDENCE",
+  "preparation_status": "BLOCKED_EFFECTIVE_DIRECTORY_UNIDENTIFIED",
   "preparation_correction": {
     "status": "STATIC_PASS_FULL_INPUT_BLOCKED",
     "historical_source": "56a0a0040edfc161e45c1131692a64c3649fe3af",
@@ -331,9 +323,86 @@
         "assessment": "BLOCKED_SELECTED_BYTES_UNAVAILABLE"
       }
     ],
-    "conclusion": "Historical shallow-fetch omission fixed and reproduced. RAM integrity block retained; no unique path or corruption/alteration/wrong-directory cause can be established without original bytes/provenance.",
+    "conclusion": "Historical shallow-fetch omission remains fixed. Original archive passes user audit. Unresolved selected-directory divergence is preserved and diagnosed without attribution, repair or index replacement.",
     "original_index_and_dumps_modified": false,
     "index_regeneration": false,
     "evidence_substitution": false
+  },
+  "previous_directory_candidate": {
+    "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
+    "job": {
+      "path": "tests/hold/012_e_dana_integrated_observation_diag.job.sh",
+      "source_commit": "096099119eef630651c6b242ae873ebd0ab3f26e",
+      "sha256": "cbbc737934284b46811c1faec46e6b830d2ad506394d5dab70d32005517e6eac",
+      "state": "LOCAL_GIT_HOLD_NOT_UPLOADED_NOT_LAUNCHED",
+      "authorization": "DANA_012E_AUTHORIZED=YES only after fresh scoped native approval",
+      "builds": 0,
+      "ROM_builds": 0,
+      "max_native_processes": 2,
+      "frozen_job_checks": "PASS: exact correction source commit, Bash/embedded AST, HOLD exit2 and no production/overlay difference",
+      "required_historical_commit": "56a0a0040edfc161e45c1131692a64c3649fe3af",
+      "required_evidence_scope": "FULL_ORIGINAL_40_FILES_AND_EXACT_ARCHIVE",
+      "preparation_blocker": "Any original index/archive/selected-file mismatch blocks before native guest execution"
+    },
+    "local_tests": 138
+  },
+  "archive_integrity_review": {
+    "status": "PASS_USER_DIRECT_AUDIT",
+    "source": "User directly audited complete original archive plus complete 012-E package and offline-regression.log",
+    "indexed_archive_members": 40,
+    "indexed_members_status": "PASS_USER_REVIEW",
+    "Cloud_independent_archive_rehash": false,
+    "RAM_members": {
+      "pfsel/reset/final.ram": {
+        "status": "PASS_USER_DIRECT_AUDIT",
+        "sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e"
+      },
+      "pfsel/save_restore/final.ram": {
+        "status": "PASS_USER_DIRECT_AUDIT",
+        "sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e"
+      },
+      "pfsel/save_restore/restored.ram": {
+        "status": "PASS_USER_DIRECT_AUDIT",
+        "sha256": "6be10c77aa5b9c0c5b3ee4844568ffd071a158640e16bfe04c76e9ecdb0a626e"
+      }
+    },
+    "conclusion": "Archived backup passes the user audit. The mismatch concerns the effective directory selected by the original test; exact differing file and alteration cause remain unknown."
+  },
+  "effective_directory_preservation": {
+    "status": "SOURCE_IMPLEMENTED_T_STATE_UNAVAILABLE",
+    "selected_T_directory": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/evidence",
+    "mounted_in_Cloud": false,
+    "T_files_copied": false,
+    "before_tests": "NEW private selected-directory-before.tar and preservation-before.json; actual bytes retained even if checksums fail",
+    "after_change": "Separate selected-directory-after.tar and receipt; originals never replaced",
+    "recorded_facts": [
+      "relative/selected/resolved path",
+      "original index identity",
+      "expected/calculated/captured SHA256",
+      "process current directory and selection environment",
+      "device/inode/link count/mode/owner/mtime_ns/ctime_ns"
+    ],
+    "limits": {
+      "max_entries": 256,
+      "max_regular_payload_bytes": 134217728
+    },
+    "no_input_writes": true,
+    "no_input_reindex": true,
+    "no_test_selection_substitution": true,
+    "snapshot_outputs": "Exclusive new paths outside original directory; symlinks preserved without target reads; incomplete/raced/over-bound capture BLOCKED",
+    "cloud_demonstration": {
+      "status": "PASS",
+      "python_ASTs": 3,
+      "job_Bash_embedded_AST": "PASS",
+      "unchanged_production_and_all_original_assertions": true,
+      "copied_Cloud_files_including_original_index": 8,
+      "copied_files_byte_equal": true,
+      "original_index_sha256": "c804cbc536215a5eed3db6cf3025f64dde2ddbfce10dff5eddab3021d7ab40dd",
+      "private_Cloud_snapshot_sha256": "13b599d9b5a210caeaff46bbb2ce044f1f42d5fe2d61e75bc0f021d046ac039b",
+      "T_directory_mounted": false,
+      "T_RAM_preserved": false,
+      "Commander_calls": 0,
+      "emulator_executions": 0
+    }
   }
 }

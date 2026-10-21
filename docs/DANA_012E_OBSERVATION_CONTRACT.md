@@ -1,5 +1,14 @@
 # 012-E — Integrated native observation and peripheral qualification
 
+**Current evidence finding:** the user directly verified the complete original
+archive (40 members) and all three disputed RAM hashes as PASS. The unexplained
+hash mismatch concerns the test-selected working directory. The single HOLD
+job now preserves that exact selection before regressions, including mismatching
+bytes and metadata, and reports exact paths without repairing or substituting
+inputs. Cloud has no access to that T directory; current source and offline
+results cannot identify its differing file or qualify native hardware. See the
+current section of the correction document linked below.
+
 **Current preparation correction:** [joint source/evidence correction](DANA_012E_PREPARATION_CORRECTION.md).
 The isolated job now explicitly fetches the historical Port C / PLLFSR baseline,
 binds the actual evidence selection to its original index/archive, and runs the

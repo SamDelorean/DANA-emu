@@ -17,7 +17,7 @@ import sys
 import tarfile
 import tempfile
 
-SOURCE='096099119eef630651c6b242ae873ebd0ab3f26e'
+SOURCE='PENDING_IMPLEMENTATION_COMMIT'
 BUILD_SOURCE='581601b49acb6603af2a100817d0f06fed17ed96'
 HISTORICAL_SOURCE='56a0a0040edfc161e45c1131692a64c3649fe3af'
 BINARY_SHA='caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37'
@@ -67,7 +67,7 @@ try:
     # assertion. A pristine archive cannot excuse a changed selected RAM file.
     # Run ALL offline controls even when this audit discovers an input block.
     stage('offline-regression',['python3','tests/dana_012e_offline.py','--evidence',str(PRIOR/'evidence'),
-          '--evidence-scope','full','--archive',str(ORIGINAL_ARCHIVE),'--output',str(evidence/'offline')],
+          '--evidence-scope','full','--archive',str(ORIGINAL_ARCHIVE),'--output',str(evidence/'offline'),'--preserve-selection'],
           cwd=source,env=dict(os.environ,PYTHONPATH=str(source/'tests')),accepted=(0,1,2))
     offline=json.loads((evidence/'offline/result.json').read_text())
     summary['offline_result']=offline

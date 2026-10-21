@@ -79,6 +79,7 @@ class Procedure(unittest.TestCase):
         self.assertIn("('historical-regression',HISTORICAL_SOURCE)",code)
         self.assertIn("'tests/dana_012e_offline.py','--evidence',str(PRIOR/'evidence')",code)
         self.assertIn("'--evidence-scope','full','--archive',str(ORIGINAL_ARCHIVE)",code)
+        self.assertIn("'--output',str(evidence/'offline'),'--preserve-selection'",code)
         self.assertIn("if offline['status']!='PASS':raise",code)
         self.assertNotIn("'--evidence-scope','provided-subset'",code)
 
@@ -215,6 +216,84 @@ class EvidenceSelection(unittest.TestCase):
         result=prep.preflight(PROJECT,self.root)
         self.assertEqual(result['selected_evidence']['status'],'PASS');self.assertEqual(result['status'],'BLOCKED')
         self.assertIn('ORIGINAL_ARCHIVE_REQUIRED_FOR_FULL_PREPARATION',result['archive']['errors'])
+
+    def test_preserve_bad_selected_bytes_and_original_index_without_repair(self):
+        p=self.root/'pfsel/reset/final.ram';p.write_bytes(b'SYNTHETIC ALTERED SELECTED RAM')
+        before=self.snapshot();audit=prep.audit_directory(self.root);dest=self.temp/'retained.tar'
+        result=prep.preserve_selection(self.root,dest,audit)
+        self.assertEqual(result['status'],'PRESERVED',result);self.assertEqual(before,self.snapshot())
+        self.assertEqual(result['input_writes'],0);self.assertFalse(result['test_selection_replaced'])
+        with tarfile.open(dest) as archive:
+            self.assertEqual(archive.extractfile('selection/pfsel/reset/final.ram').read(),p.read_bytes())
+            self.assertEqual(archive.extractfile('selection/'+prep.INDEX).read(),self.index_bytes)
+        self.assertEqual(prep.audit_directory(self.root)['status'],'BLOCKED')
+
+    def test_preserve_all_three_actual_hashes_and_filesystem_identity(self):
+        for name in prep.RAM_MEMBERS:(self.root/name).write_bytes(('SYNTHETIC CHANGED '+name).encode())
+        audit=prep.audit_directory(self.root)
+        result=prep.preserve_selection(self.root,self.temp/'three.tar',audit)
+        self.assertEqual(result['status'],'PRESERVED',result)
+        for name in prep.RAM_MEMBERS:
+            row=next(r for r in result['files'] if r['relative_path']==name)
+            self.assertEqual(row['captured_sha256'],prep.digest(self.root/name))
+            self.assertEqual(row['expected_sha256'],self.index[name])
+            self.assertEqual(row['before']['inode'],(self.root/name).stat().st_ino)
+            self.assertEqual(row['before'],row['after'])
+        self.assertEqual(result['archive_sha256'],prep.digest(result['archive']))
+
+    def test_forensic_outputs_inside_original_directory_are_rejected(self):
+        before=self.snapshot();destination=self.root/'forensic.tar'
+        result=prep.preserve_selection(self.root,destination,prep.audit_directory(self.root))
+        self.assertIn('FORENSICS_OUTPUT_INSIDE_INPUT',result['errors'])
+        self.assertEqual(before,self.snapshot());self.assertFalse(destination.exists())
+        nested=self.root/'forbidden-output'
+        run=subprocess.run(['python3',str(PROJECT/'tests/dana_012e_offline.py'),'--evidence',str(self.root),
+            '--output',str(nested),'--preserve-selection'],capture_output=True,text=True,timeout=10)
+        self.assertEqual(run.returncode,2);self.assertFalse(nested.exists());self.assertEqual(before,self.snapshot())
+
+    def test_forensic_bounds_keep_originals_without_silent_partial_success(self):
+        before=self.snapshot();audit=prep.audit_directory(self.root)
+        for limits in (dict(max_bytes=1),dict(max_files=1)):
+            result=prep.preserve_selection(self.root,self.temp/'over-bound.tar',audit,**limits)
+            self.assertEqual(result['status'],'BLOCKED');self.assertFalse((self.temp/'over-bound.tar').exists())
+        self.assertEqual(before,self.snapshot())
+
+    def test_forensic_destination_is_never_overwritten(self):
+        destination=self.temp/'existing.tar';destination.write_bytes(b'KEEP ORIGINAL OUTPUT')
+        result=prep.preserve_selection(self.root,destination,prep.audit_directory(self.root))
+        self.assertEqual(result['status'],'BLOCKED');self.assertEqual(destination.read_bytes(),b'KEEP ORIGINAL OUTPUT')
+        self.assertNotIn('archive_sha256',result)
+
+    def test_forensic_symlinks_preserve_link_without_reading_target(self):
+        target=self.temp/'outside';target.write_bytes(b'SYNTHETIC TARGET MUST NOT BE READ')
+        (self.root/'link').symlink_to(target)
+        result=prep.preserve_selection(self.root,self.temp/'links.tar',prep.audit_directory(self.root))
+        self.assertEqual(result['status'],'PRESERVED',result)
+        with tarfile.open(result['archive']) as archive:self.assertTrue(archive.getmember('selection/link').issym())
+        self.assertNotIn(target.read_bytes(),Path(result['archive']).read_bytes())
+        self.assertEqual(prep.audit_directory(self.root)['status'],'BLOCKED')
+
+    def test_change_after_audit_is_preserved_and_keeps_blocked_classification(self):
+        audit=prep.audit_directory(self.root);name='pfsel/reset/final.ram'
+        (self.root/name).write_bytes(b'SYNTHETIC CHANGE AFTER AUDIT')
+        result=prep.preserve_selection(self.root,self.temp/'changed.tar',audit)
+        self.assertEqual(result['status'],'BLOCKED');self.assertIn('CHANGED_SINCE_AUDIT:'+name,result['errors'])
+        with tarfile.open(result['archive']) as archive:
+            self.assertEqual(archive.extractfile('selection/'+name).read(),(self.root/name).read_bytes())
+
+    def test_change_during_capture_is_detected_with_original_captured_bytes_retained(self):
+        name='pfsel/reset/final.ram';path=self.root/name;original=path.read_bytes()
+        audit=prep.audit_directory(self.root);real=prep.metadata;calls=0
+        def changing(p):
+            nonlocal calls
+            if Path(p)==path:
+                calls+=1
+                if calls==2:path.write_bytes(b'SYNTHETIC CHANGE DURING CAPTURE')
+            return real(p)
+        with patch.object(prep,'metadata',side_effect=changing):
+            result=prep.preserve_selection(self.root,self.temp/'race.tar',audit)
+        self.assertEqual(result['status'],'BLOCKED');self.assertIn('CHANGED_DURING_CAPTURE:'+name,result['errors'])
+        with tarfile.open(result['archive']) as archive:self.assertEqual(archive.extractfile('selection/'+name).read(),original)
 
 
 if __name__=='__main__':unittest.main()

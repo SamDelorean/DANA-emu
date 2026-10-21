@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: BSD-3-Clause
-"""Read-only 012-E prerequisites. Never fetches, repairs, reindexes or executes."""
+"""Read-only prerequisites and new forensic copies. Never writes source inputs."""
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import subprocess
 import tarfile
 
@@ -28,6 +30,76 @@ def digest(path):
     with Path(path).open('rb') as stream:
         for block in iter(lambda:stream.read(1024*1024),b''):h.update(block)
     return h.hexdigest()
+
+
+def metadata(path):
+    """Stable lstat facts; exclude atime because evidence reads may update it."""
+    s=Path(path).lstat()
+    return dict(device=s.st_dev,inode=s.st_ino,bytes=s.st_size,mode=s.st_mode,
+        links=s.st_nlink,uid=s.st_uid,gid=s.st_gid,mtime_ns=s.st_mtime_ns,ctime_ns=s.st_ctime_ns)
+
+
+def preserve_selection(root,destination,audited,max_files=256,max_bytes=128*1024*1024):
+    """Preserve the selected bytes, even when invalid, into a NEW bounded tar.
+
+    This is evidence retention, never a replacement source for integrity tests.
+    Symlink targets and special files are never read. Partial copies stay labelled.
+    """
+    root=Path(root).absolute();destination=Path(destination).absolute()
+    result=dict(status='BLOCKED',selected_root=str(root),resolved_root=str(root.resolve()),
+        archive=str(destination),files=[],errors=[],max_files=max_files,max_bytes=max_bytes,
+        input_writes=0,test_selection_replaced=False)
+    created=False
+    try:
+        if destination.resolve().is_relative_to(root.resolve()):raise ValueError('FORENSICS_OUTPUT_INSIDE_INPUT')
+        if root.is_symlink() or not root.is_dir():raise ValueError('FORENSICS_ROOT_NOT_REGULAR_DIRECTORY')
+        result['root_before']=metadata(root)
+        paths=sorted(root.rglob('*'))
+        if len(paths)>max_files:raise ValueError('FORENSICS_FILE_COUNT_BOUND')
+        sizes=sum(p.lstat().st_size for p in paths if stat.S_ISREG(p.lstat().st_mode))
+        if sizes>max_bytes:raise ValueError('FORENSICS_BYTE_BOUND')
+        known={r['relative_path']:r for r in audited.get('files',[])}
+        class Reader:
+            def __init__(self,stream):self.stream=stream;self.hash=hashlib.sha256()
+            def read(self,size):
+                data=self.stream.read(size);self.hash.update(data);return data
+        # Exclusive creation; no overwrite, extraction, cleanup or input chmod.
+        with destination.open('xb') as output,tarfile.open(fileobj=output,mode='w') as archive:
+            created=True
+            for path in paths:
+                name=str(path.relative_to(root));before=metadata(path)
+                row=dict(relative_path=name,selected_path=str(path),resolved_path=str(path.resolve()),
+                    origin='ACTUAL_SELECTED_DIRECTORY_BEFORE_OR_AFTER_TESTS',before=before,
+                    index_path=audited.get('index'),index_sha256=audited.get('actual_index_sha256'),
+                    expected_sha256=known.get(name,{}).get('expected_sha256'),
+                    audited_sha256=known.get(name,{}).get('actual_sha256'))
+                result['files'].append(row)
+                item=tarfile.TarInfo('selection/'+name);item.uid=before['uid'];item.gid=before['gid']
+                item.mode=stat.S_IMODE(before['mode']);item.mtime=before['mtime_ns']/1000000000
+                if stat.S_ISREG(before['mode']):
+                    # Reject replacement of the leaf with a symlink between lstat/open.
+                    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+                    with os.fdopen(fd,'rb') as stream:
+                        opened=os.fstat(stream.fileno())
+                        if (opened.st_dev,opened.st_ino)!=(before['device'],before['inode']):raise ValueError('FORENSICS_OPEN_RACE:'+name)
+                        item.size=before['bytes'];reader=Reader(stream);archive.addfile(item,reader)
+                        row['captured_sha256']=reader.hash.hexdigest()
+                    if row['audited_sha256'] and row['captured_sha256']!=row['audited_sha256']:
+                        result['errors'].append('CHANGED_SINCE_AUDIT:'+name)
+                elif stat.S_ISDIR(before['mode']):item.type=tarfile.DIRTYPE;archive.addfile(item)
+                elif stat.S_ISLNK(before['mode']):
+                    item.type=tarfile.SYMTYPE;item.linkname=os.readlink(path);row['link_target']=item.linkname
+                    archive.addfile(item)
+                else:raise ValueError('FORENSICS_SPECIAL_FILE:'+name)
+                row['after']=metadata(path)
+                if row['after']!=before:result['errors'].append('CHANGED_DURING_CAPTURE:'+name)
+        result['root_after']=metadata(root)
+        if result['root_after']!=result['root_before']:result['errors'].append('DIRECTORY_CHANGED_DURING_CAPTURE')
+        if not result['errors']:result['status']='PRESERVED'
+    except (OSError,ValueError,tarfile.TarError) as exc:result['errors'].append(str(exc))
+    if created and destination.is_file():
+        result.update(archive_sha256=digest(destination),archive_bytes=destination.stat().st_size)
+    return result
 
 
 def unique_object(pairs):
@@ -80,9 +152,11 @@ def audit_directory(root,scope='full'):
     report=dict(status='BLOCKED',scope=scope,selection='EXPLICIT_DANA_012C_EVIDENCE_DIR',
         selected_root=str(root),resolved_root=str(root.resolve()),index=str(root/INDEX),
         index_relative_path=INDEX,origin='EXPLICIT_DANA_012C_EVIDENCE_DIR',expected_index_sha256=INDEX_SHA,files=[],errors=[])
+    report['process_context']=dict(cwd=os.getcwd(),environment_DANA_012C_EVIDENCE_DIR=os.getenv('DANA_012C_EVIDENCE_DIR'))
     try:
         if scope not in ('full','provided-subset'):raise ValueError('EXPLICIT_EVIDENCE_SCOPE_REQUIRED')
         if root.is_symlink() or not root.is_dir():raise ValueError('EVIDENCE_ROOT_NOT_REGULAR_DIRECTORY')
+        report['root_metadata']=metadata(root)
         paths=list(root.rglob('*'))
         if any(p.is_symlink() or not (p.is_file() or p.is_dir()) for p in paths):raise ValueError('SYMLINK_OR_SPECIAL_EVIDENCE')
         report['actual_index_sha256']=digest(root/INDEX)
@@ -98,6 +172,7 @@ def audit_directory(root,scope='full'):
             row=dict(relative_path=name,selected_path=str(path),resolved_path=str(path.resolve()),
                 index=str(root/INDEX),index_sha256=report['actual_index_sha256'],
                 expected_sha256=expected,actual_sha256=actual,bytes=path.stat().st_size,
+                filesystem=metadata(path),
                 origin='EXPLICIT_SELECTED_DIRECTORY',expected_origin='PINNED_ORIGINAL_012C_INDEX',
                 status='PASS' if actual==expected else 'BLOCKED')
             report['files'].append(row)
