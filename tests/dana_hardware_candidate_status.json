@@ -143,8 +143,11 @@
   "workbook": {
     "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
     "path": "AS2K_TEMP/DANA_EMU/DANA_EMU_Control_Rector_Auditoria_2026-10-20.xlsx",
-    "status": "SYNCED_VERIFIED_IN_DRIVE_V2.0_BYTES_75497",
-    "records": "docs/DANA_012E_RECTOR_UPDATES.csv"
+    "status": "SYNCED_VERIFIED_IN_DRIVE_V2.1_BYTES_76623",
+    "records": "docs/DANA_012E_RECTOR_UPDATES.csv",
+    "synced_file_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "capabilities_sheet": "18_CAPABILITIES_10_PASS",
+    "attempt_gate": "3_RECORDED_ERROR_DE_SUPERVISION_NO_FOURTH_APPROVED"
   },
   "GitHub_API": "BLOCKED_HTTP_403_BY_ENVIRONMENT_NETWORK_POLICY_NO_BYPASS",
   "full_boot": false,
