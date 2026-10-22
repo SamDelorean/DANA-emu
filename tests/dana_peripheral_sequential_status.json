@@ -1,8 +1,18 @@
 {
   "schema": "dana-peripheral-sequential-v1",
   "base": {
-    "native_qualified_driver_commit": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
-    "native_diagnostic_evidence": "Ten previously qualified scoped native PASS only on this older driver",
+    "native_qualified_binary_source_commit": "581601b49acb6603af2a100817d0f06fed17ed96",
+    "native_qualified_binary_sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
+    "native_qualified_driver_sha256": "e8211be78dfb2bf4cdc0ccabd444c97d715dc37d189d4f113f2f1cbf05b573e2",
+    "native_qualified_driver_lines": 826,
+    "f2_source_integration_parent_commit": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
+    "f2_parent_driver_lines": 1131,
+    "native_compilation_of_f2_parent": "NOT_ESTABLISHED",
+    "f2_parent_delta_vs_native_compiled": {
+      "additions": 355,
+      "deletions": 50
+    },
+    "native_diagnostic_evidence": "Ten scoped prior native PASS only on 012-C compiled source; no inheritance to 80cb/F2",
     "source_baseline_locked": true
   },
   "branch": "codex/dana-peripherals-sequential-80cbfeca",
@@ -37,7 +47,14 @@
       "baseline_SPI2_keyboard_preserved": true,
       "postload_F1_not_integrated": true,
       "F3_UART_CTS_not_integrated": true,
-      "F4_UART_IRQ4_not_integrated": true
+      "F4_UART_IRQ4_not_integrated": true,
+      "delta_is_relative_to_f2_parent_80cb_not_compiled_012C": true,
+      "actual_delta_vs_012C_compiled_driver": {
+        "additions": 436,
+        "deletions": 58
+      },
+      "actual_compiled_driver_source_commit": "581601b49acb6603af2a100817d0f06fed17ed96",
+      "accurate_statement": "F2 did not isolate source delta relative to the true compiled 012-C baseline"
     },
     "test_file": "tests/dana_hardware_test.py",
     "test_blob_sha": "0c3bd484d0afcb68f0fd509ce8ceb71351bf9928",
@@ -175,5 +192,24 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Do not repeat Clang21 job. Review minimal F2 code interaction and prior proven driver to eliminate trigger if possible before considering an alternate compiler. Prepare one coherent targeted source change; no expanded environment or new DIAG worktrees."
+  "next_action": "Review exact one-object -O0 Clang21 compile procedure and full rollback including generated libmame_danadiag.a in sole DIAG worktree; await separate explicit build authorization. If crashes again, return to native-qualified 581601 source, integrate only required dependencies/peripherals.",
+  "compilation_replan_20261022": {
+    "status": "COMPILER_BACKEND_CRASH_CONFIRMED_EXACT_TRIGGER_NOT_ISOLATED",
+    "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
+    "detected_compiler": "Ubuntu clang 21.1.8",
+    "effective_optimization": "-O3",
+    "stage": "X86 DAG->DAG Instruction Selection",
+    "function": "device_finder<dana_vz_cpu_device,false>::device_finder",
+    "compiler_exit": 139,
+    "requested_next_action": "SOURCE_AND_BUILD_REVIEW_ONLY_NO_COMPILATION_AUTHORIZED",
+    "recommended_first_experiment": "If newly authorized: one alphasdana.o with same Clang21 and -O0 only, no project regeneration, same DIAG worktree, guarded link-only stage, native qualification after product exists",
+    "second_action": "If still blocked, isolate accumulated uncompiled 355 line delta from real qualified 012-C into existing DIAG, one dependency/peripheral at a time",
+    "script_integrity_warning": "017 script does not restore libmame_danadiag.a if compilation succeeds; fix before next native attempt",
+    "alternatives_rejected": [
+      "change device_finder template based on stack symbol",
+      "full GCC MAME reconstruction",
+      "new isolated emulator tree"
+    ],
+    "memo": "docs/F2_CLANG21_BACKEND_CRASH_OPTIONS_20261022.md"
+  }
 }
