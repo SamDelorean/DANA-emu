@@ -253,7 +253,7 @@ try:
     summary['toolchain']={}
     for compiler in (cc,cxx):
         version=subprocess.check_output([compiler,'--version'],text=True,timeout=15)
-        if len(version)>32768 or not re.search(r'\\bversion 21\\.',version):
+        if len(version)>32768 or not re.search(r'\bversion 21\.',version):
             raise RuntimeError('BLOCKED_QUALIFIED_CLANG21_VERSION')
         summary['toolchain'][compiler]=version.splitlines()[:8]
     command=['make','-j3','TARGET=mame','SUBTARGET=danadiag',
@@ -267,7 +267,7 @@ try:
     plan=evidence/'plan-diag.log'
     if plan.stat().st_size>33554432:raise RuntimeError('BLOCKED_BUILD_PLAN_BOUND')
     planned=[line for line in plan.read_text(errors='replace').splitlines()
-             if re.search(r'(?:^|\\s)-c(?:\\s|$)',line)]
+             if re.search(r'(?:^|\s)-c(?:\s|$)',line)]
     summary['incremental_build']['planned_compilation_units']=len(planned)
     if len(planned)!=1 or 'alphasdana.cpp' not in planned[0]:
         raise RuntimeError('BLOCKED_NOT_EXACTLY_ONE_F2_DANA_OBJECT')
