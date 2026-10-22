@@ -1,4 +1,4 @@
-# F2 compilation: verified Clang21 backend crash and minimal remediation options
+> **UPDATED F2 SAFETY OVERRIDE (2026-10-22):** Before following the ranked options below, read `docs/F2_MANDATORY_SOURCE_CONTRAST_AND_NO_BLIND_TESTING_20261022.md`. Motorola SPICONT2 bit9=0x0200 and bit8=0x0100 establish that the 012-C `0x2100` gate is an incomplete/incorrect general SPI2 condition even though EmuTOS's current `0x23xx` writes happen to pass it. The F2 test also assumes post-012-C IRQ4 behavior. **No true F2-only candidate is ready yet**; do not invoke `-O3`, `-O0`, compiler alternates or native campaigns until these contracts/test implications are resolved statically. The earlier order of technical alternatives remains contingent on the cross-check, not a go-ahead to build.\n\n# F2 compilation: verified Clang21 backend crash and minimal remediation options
 
 **Date:** 2026-10-22. **Type:** source/log audit only; no new Commander, MAME build, native test, ROM build, or workspace creation.
 
