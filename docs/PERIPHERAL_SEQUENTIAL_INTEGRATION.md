@@ -26,3 +26,7 @@ Después de acreditar compilación y prueba F2, integrar **F3 (UART1 CTS)** sobr
 ## Objetivo de producto
 
 No confundir aprobar un periférico con arrancar por completo EmuTOS. Mantener separados los indicadores de compilación, prueba periférica y arranque completo; la investigación Timer1/IRQ6 y GUI debe retomarse una vez disponible el ejecutable integrado.
+
+## CURRENT OVERRIDE — SINGLE DIAG WORKTREE (2026-10-22)
+
+The F2 execution job previously prepared in `tests/hold/016_f2_stylus_only_diag.job.sh` is **RETIRED** because it duplicates a complete build tree on every attempt. Do not run it again. User specifically stopped this practice; ONLY one active Dana emulator/build version is authorized, `dana-diag`. Future F2/F3/F4 increments go into the same canonical DIAG workspace without `cp -a` source/object trees, temporary full MAME copies, or parallel binary variants. Maintain only essential bounded evidence and Git history. The abandoned 2026-10-22 F2 copy `dana_integrated_hardware_j7xxm3xq` and its `f2_stylus_single_WLcT8C` launcher directory were both deleted after process termination (1.5GB plus ~2.1MB), without touching the older 012C qualified cache. The source F2 integration in Git remains valid **as uncompiled/unqualified code**; no F2 runtime PASS has been established. A replacement one-worktree job must be designed before any new T execution and requires new authorization.
