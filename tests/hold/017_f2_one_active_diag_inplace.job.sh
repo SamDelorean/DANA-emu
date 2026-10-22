@@ -44,8 +44,8 @@ def cmd(label,args,**opts):
  if r:raise RuntimeError("FAILED_"+label+":"+str(r))
 oldsrc=None; oldobj=None; oldinternal=None; oldarchive=None; oldbin=None; obj=None
 dep=None; olddep=None; original_times={}
-OBS_PIN="c92b256c21161a00d07c29f5fd08a3fb84bee9e6"
-OBS_BLOB="a775debd5ac146e875a89d8c0f35024cfd6ee9ea"
+OBS_PIN="0db758db6c1be571b1d8f83ce0910c690712f068"
+OBS_BLOB="5676f95fce0ee9db6b2ed8154c9fee0d392c7fc9"
 OBS_PATH=EV/"F2_native_mmio.lua"
 OBS_RESULT=EV/"F2_native_mmio_result.txt"
 try:
@@ -82,7 +82,7 @@ try:
      OBS_PIN+":tests/dana_f2_native_mmio.lua"])
  obs_git_hash=subprocess.check_output(["git","-C",str(GIT),"hash-object","--stdin"],
      input=obs_bytes,text=False).decode().strip()
- if obs_git_hash!=OBS_BLOB or b"PASS_HOST_NATIVE_MMIO_ONLY" not in obs_bytes:
+ if obs_git_hash!=OBS_BLOB or b"PASS_HOST_NATIVE_MMIO_ONLY" not in obs_bytes or b"emu.add_machine_stop_notifier" not in obs_bytes or b"emu.register_stop" in obs_bytes:
   raise RuntimeError("F2_NATIVE_OBSERVER_IDENTITY_MISMATCH")
  OBS_PATH.write_bytes(obs_bytes)
  SRC.write_bytes(fresh)
