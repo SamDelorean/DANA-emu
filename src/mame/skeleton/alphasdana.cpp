@@ -868,10 +868,14 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
-    // Host stylus is an external pen contact and two 16-bit position inputs,
-    // not a high-level Atari mouse injection. EmuTOS reads PF1 and SPI2 ADC.
+    // Use one SDL lightgun-class pointing device for absolute X/Y AND its
+    // trigger. The SDL lightgun provider already tracks the host mouse
+    // position and left button in the MAME window. Never inject GEM mouse
+    // events: EmuTOS reads PF1/PG2/SPI2 and calls mousevec itself.
+    // Interactive Linux profile: -lightgun -lightgun_device lightgun
+    // -lightgunprovider sdl -nomouse (avoid two competing input streams).
     PORT_START("PEN")
-    PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Dana Stylus Contact") PORT_CODE(MOUSECODE_BUTTON1)
+    PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Dana Stylus Contact") PORT_CODE(GUNCODE_BUTTON1) PORT_PLAYER(1)
     PORT_BIT(0xfe, IP_ACTIVE_HIGH, IPT_UNUSED)
     PORT_START("PENX")
     PORT_BIT(0xffff, 0x8000, IPT_LIGHTGUN_X) PORT_MINMAX(0,0xffff) PORT_SENSITIVITY(50) PORT_KEYDELTA(256) PORT_PLAYER(1)
