@@ -82,7 +82,7 @@
       "irq4_assertion_removed_from_new_F2_tests": true
     },
     "build": {
-      "status": "PREPARED_CLANG21_DRIVER_ONLY_O0_HOLD_NOT_EXECUTED",
+      "status": "CLANG21_O0_FAIL_SELECTOR_CRASH_ONE_DRIVER_DIAG_RESTORED",
       "source_pin": "09f171b426c7180eea2c244861005176a9c5ac82",
       "source_sha256": "105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557",
       "retained_previous_run": {
@@ -116,7 +116,7 @@
       "one_active_emulator": "dana-diag",
       "target_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
       "candidate_compiler": "same Clang21.1.8",
-      "optimization_override": "-O3 -> -O0 on exactly one alphasdana.cpp command",
+      "optimization_override": "one driver object only -O3 -> -O0",
       "global_MAME_OPTIMIZE": "left at 3; no regenerated project",
       "precompile_verify": "exact old clang command, source path, object path and one -O3 token",
       "postcompile_verify": "make -n must show ZERO compilation units, only archive/link permitted",
@@ -126,13 +126,21 @@
       "rebuild_EmuTOS": false,
       "new_MAME_trees": 0,
       "additional_executables": 0,
-      "rollback": "restore original source, object, dependency file, archive, installed binary, linker output and original mtimes in the one DIAG tree",
+      "rollback": {
+        "qualified_binary": true,
+        "qualified_source": true,
+        "old_driver_object": true,
+        "old_archive": true,
+        "old_internal_link": true,
+        "old_dependency_file": true,
+        "original_build_timestamps": true
+      },
       "native_observer": "tests/dana_f2_native_mmio.lua",
       "observer_pin": "0db758db6c1be571b1d8f83ce0910c690712f068",
       "observer_blob_sha": "5676f95fce0ee9db6b2ed8154c9fee0d392c7fc9",
       "observer_API_contract": "pinned MAME luaengine.cpp exposes emu.add_machine_stop_notifier and emu.register_periodic, not emu.register_stop",
       "observer_scope": "HOST_MMIO_NOT_GUEST_BOOT",
-      "t_execution": "NOT_STARTED",
+      "t_execution": "COMPLETED_FAIL_NO_RETRY",
       "requires_new_T_authorization": true,
       "logs_of_last_crash": [
         "F2_compile_and_link.log",
@@ -143,10 +151,62 @@
         "/tmp/alphasdana-9c8dbf.sh"
       ],
       "tests_status": "NOT_RUN",
-      "native_status": "NOT_RUN"
+      "native_status": "NOT_RUN",
+      "authorized_max_commander_calls": 5,
+      "commander_calls_used": 4,
+      "compiler": "Ubuntu Clang 21.1.8",
+      "initial_compiler_start_verified": true,
+      "actual_compilation_attempted": true,
+      "failure_type": "LLVM_SELECTION_DAG_INTERNAL_CRASH",
+      "failure_different_function": "std::basic_string_view<char>::basic_string_view(char const*)",
+      "compiler_exit": 139,
+      "stage_exit": 1,
+      "make_link_executed": false,
+      "source_tests_executed": 0,
+      "native_mame_tests_executed": 0,
+      "native_guest_tests_executed": 0,
+      "relevant_stages": [
+        [
+          "fetch_observer_pin",
+          0
+        ],
+        [
+          "dryrun",
+          0
+        ],
+        [
+          "compile_driver_O0_only",
+          1
+        ]
+      ],
+      "preprocessed_repro_O3": {
+        "cpp": "/tmp/alphasdana-9c8dbf.cpp",
+        "sha256": "c427328974deac87742116c171799ff588167042ee685764e760cb9637b5af0f",
+        "bytes": 4707882,
+        "shell": "/tmp/alphasdana-9c8dbf.sh",
+        "shell_sha256": "9072649d088ec1efb2d4498ad220687c62548ee39e4563604a687afb79d5ce2b"
+      },
+      "preprocessed_repro_O0": {
+        "cpp": "/tmp/alphasdana-56e5a6.cpp",
+        "shell": "/tmp/alphasdana-56e5a6.sh",
+        "exists": true,
+        "source_sha256": "NOT_MEASURED"
+      },
+      "alt_toolchains_present": {
+        "clang21": "/usr/bin/clang++-21",
+        "clang17to20": "NOT_INSTALLED_AS_COMPILER",
+        "gpp15": "/usr/bin/g++-15",
+        "gcc_version": "15.2.0-16ubuntu1",
+        "llvm_config20": "AVAILABLE_BUT_NO_CLANGXX20"
+      },
+      "new_mame_trees": 0,
+      "old_verified_diag_retained": true,
+      "exact_failure_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_driver_O0_only.log",
+      "exact_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+      "conclusion": "lowering Clang21 optimization to O0 does not prevent x86 SelectionDAG crash; not a proven functional F2 defect; do not repeat"
     },
     "native": {
-      "status": "BLOCKED_COMPILER_BACKEND_ERROR",
+      "status": "BLOCKED_CLANG21_CODEGEN_NOT_EXECUTED",
       "native_observer": "tests/dana_f2_native_mmio.lua",
       "observer_git_pin": "c92b256c21161a00d07c29f5fd08a3fb84bee9e6",
       "observer_scope": "HOST_NATIVE_MMIO_ONLY_NOT_GUEST_CPU",
@@ -210,9 +270,9 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Before executing, obtain per-intervention Commander authorization. Then use ONLY retained 017 job on sole DIAG; one true O0 driver compile if exact -O3 command shape verified, stop on first compile failure; one short 5–10-second real-start check, no follow-up polling. Native Lua tests only after build/link and directed tests succeed.",
+  "next_action": "Avoid further Clang21 optimization attempts; investigate in place existing GCC15's precise flag differences and object ABI compatibility with Clang21-generated MAME cache using static evidence, then propose one minimal justified build only if compatible. No automatic fallback, no alternate MAME instances.",
   "compilation_replan_20261022": {
-    "status": "SINGLE_DRIVER_O0_GUARDED_JOB_STATIC_PREPARED_NOT_RUN",
+    "status": "CLANG21_O3_AND_O0_BOTH_CRASH_AT_SELECTIONDAG_NO_MORE_CLANG21_RETRIES",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
     "detected_compiler": "Ubuntu clang 21.1.8",
     "effective_optimization": "-O3",
@@ -239,7 +299,15 @@
     "native_mame_lua_api_verified_from_pinned_donor": true,
     "remaining_uncertainty": "The exact reproducer on T not yet read; -O0 may still crash; no PASS claim",
     "automatic_retries": 0,
-    "noCommanderForStaticPreparation": true
+    "noCommanderForStaticPreparation": true,
+    "exact_functions": {
+      "-O3": "device_finder<dana_vz_cpu_device,false>::device_finder",
+      "-O0": "std::basic_string_view<char>::basic_string_view(char const*)"
+    },
+    "next_alternatives": "Research static compiler options and ABI of already installed GCC15 vs existing Clang21/libstdc++15 and exact generated one-driver command; or repair/replace Clang21 via approved toolchain installation if justified. No mixed-toolchain build or recompile without new authorization.",
+    "first_party_docs_check": "LLVM Clang Toolchain: C++ ABI and standard library consistency; GCC15 Compatibility: same ABI needed; not guaranteed by target architecture alone",
+    "rollback_guard_preserved": true,
+    "fixed_current_DIAG": true
   },
   "documentation_prebuild_policy": {
     "mandatory": true,
