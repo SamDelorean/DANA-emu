@@ -49,22 +49,25 @@
       "previous_F2_source_test": "ALREADY_EXISTED_AT_PINNED_F2_COMMIT_NOT_REQUALIFIED_HERE"
     },
     "build": {
-      "job": "tests/hold/016_f2_stylus_only_diag.job.sh",
-      "status": "RETIRED_DUPLICATES_FULL_MAME_TREE",
-      "target": "Only source src/mame/skeleton/alphasdana.cpp using prior qualified MAME Clang21 cache, then bounded native dana-diag",
-      "run_pid": 94023,
-      "run_result": "PROCESS_ALREADY_ENDED_WHEN_USER_REQUESTED_CANCEL; NO_NATIVE_PASS_CLAIMED; FULL_BUILD_TREE_DELETED",
-      "retired_job": "tests/hold/016_f2_stylus_only_diag.job.sh",
-      "replacement": "REQUIRES_ONE_CANONICAL_DIAG_TREE_NOT_PREPARED",
-      "extra_tree_removed": "/home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_j7xxm3xq",
-      "launch_directory_removed": "/home/spc/DANA_EMU_ISOLATED/f2_stylus_single_WLcT8C",
-      "approx_bytes_deleted": "~1.5 GB tree plus 2.1 MB stage",
-      "remote_kill_result": "ESRCH_ALREADY_EXITED",
-      "scope_of_deletion": "EXACT TWO VERIFIED CURRENT_ATTEMPT_DIRECTORIES"
+      "status": "ONE_TREE_INPLACE_JOB_PREPARED_NOT_EXECUTED",
+      "previous_job": "tests/hold/016_f2_stylus_only_diag.job.sh",
+      "previous_job_status": "RETIRED_DUPLICATE_MAME_TREE",
+      "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+      "source_commit": "78be96c5615c4b929a96c9dc835b9fff3a2161aa",
+      "exact_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
+      "action": "Reuse original qualified Clang MAME DIAG, compile only alphasdana.o in place, run six directed production-method tests, restore qualified DIAG in same tree until F2 native qualification",
+      "worktree_copies": 0,
+      "alternative_binaries": 0,
+      "compiler_changes": 0,
+      "ROM_builds": 0,
+      "active_binary_overwrites": 0,
+      "T_run": "NOT_STARTED",
+      "authorization": "NEW_EXPLICIT_T_COMMANDER_AUTHORIZATION_REQUIRED",
+      "native_F2_probe": "NOT_PREPARED_OR_EXECUTED_DO_NOT_CLAIM_PASS"
     },
     "native": {
-      "status": "NOT_QUALIFIED_AFTER_ABORTED_JOB",
-      "guest": "Pinned earlier EmuTOS build unchanged"
+      "status": "PENDING_UNTIL_GUEST_PEN_SPI2_REAL_OBSERVATION",
+      "guest": "Existing EmuTOS original reused"
     }
   },
   "next_peripheral": {
@@ -123,5 +126,6 @@
     "original_source_repo": "/home/spc/Projects/alphasmart/DANA-emu",
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
-  }
+  },
+  "next_action": "Run one authorized unattended in-place F2 compile and six directed tests. Independently implement authentic MAME pen-contact/SPI2 native observation before declaring F2 functionally PASS. No F3 changes before F2 qualification."
 }
