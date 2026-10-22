@@ -13,7 +13,11 @@
     "Only dana-diag emulator permitted for native tests",
     "Never extrapolate prior driver native PASS to newer code",
     "No Commander without separate per-intervention authorization",
-    "No fallback compile attempts after a failed bounded run"
+    "No fallback compile attempts after a failed bounded run",
+    "ONE_ACTIVE_DIAG_WORKTREE_ONLY_NO_PER_INCREMENT_ISOLATED_COPIES",
+    "NO_PER_ATTEMPT_CP_A_OF_MAME_BUILD",
+    "MINIMAL_SHA_LOG_EVIDENCE_ONLY",
+    "RETIRED_JOB_016_NOT_AUTHORIZED_FOR_REEXECUTION"
   ],
   "first_peripheral": {
     "id": "F2",
@@ -43,11 +47,20 @@
     },
     "build": {
       "job": "tests/hold/016_f2_stylus_only_diag.job.sh",
-      "status": "HOLD_PENDING_USER_AUTHORIZATION",
-      "target": "Only source src/mame/skeleton/alphasdana.cpp using prior qualified MAME Clang21 cache, then bounded native dana-diag"
+      "status": "RETIRED_DUPLICATES_FULL_MAME_TREE",
+      "target": "Only source src/mame/skeleton/alphasdana.cpp using prior qualified MAME Clang21 cache, then bounded native dana-diag",
+      "run_pid": 94023,
+      "run_result": "PROCESS_ALREADY_ENDED_WHEN_USER_REQUESTED_CANCEL; NO_NATIVE_PASS_CLAIMED; FULL_BUILD_TREE_DELETED",
+      "retired_job": "tests/hold/016_f2_stylus_only_diag.job.sh",
+      "replacement": "REQUIRES_ONE_CANONICAL_DIAG_TREE_NOT_PREPARED",
+      "extra_tree_removed": "/home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_j7xxm3xq",
+      "launch_directory_removed": "/home/spc/DANA_EMU_ISOLATED/f2_stylus_single_WLcT8C",
+      "approx_bytes_deleted": "~1.5 GB tree plus 2.1 MB stage",
+      "remote_kill_result": "ESRCH_ALREADY_EXITED",
+      "scope_of_deletion": "EXACT TWO VERIFIED CURRENT_ATTEMPT_DIRECTORIES"
     },
     "native": {
-      "status": "PENDING",
+      "status": "NOT_QUALIFIED_AFTER_ABORTED_JOB",
       "guest": "Pinned earlier EmuTOS build unchanged"
     }
   },
@@ -71,5 +84,13 @@
     "status": "SYNC_CONFIRMED",
     "new_sheet": "SECUENCIA_PERIFERICOS",
     "source": "https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit"
+  },
+  "universal_override_20261022": {
+    "only_active_emulator": "dana-diag",
+    "only_active_worktree": true,
+    "no_per_run_copy_of_full_MAME": true,
+    "no_second_emulator_version": true,
+    "no_monitoring_or_polling": true,
+    "old_012C_evidence_preserved": true
   }
 }
