@@ -172,7 +172,9 @@ using u8=std::uint8_t;using u16=std::uint16_t;using u32=std::uint32_t;using offs
 #define COMBINE_DATA(p) (*(p)=(*(p)&~mem_mask)|(data&mem_mask))
 #define logerror(...) ((void)0)
 enum {PARITY_NONE,PARITY_ODD,PARITY_EVEN,STOP_BITS_1,STOP_BITS_2};
+struct CtsPort {unsigned value=0;unsigned read()const{return value;}};
 struct alphasdana_state {
+ CtsPort cts;CtsPort *m_uart_cts=&cts;
  u16 m_ustcnt1=0,m_ubaud1=2,m_umisc1=0,m_utx1=0,m_urx1=0,m_uart_rx_fifo[12]={};
  u8 m_uart_tx_fifo[8]={},m_uart_tx_head=0,m_uart_tx_count=0,m_uart_rx_head=0,m_uart_rx_count=0,m_uart_shift_byte=0;
  bool m_uart_tx_busy=false;u32 m_pending=0,m_uart_completed=0;int m_uart_txd=1;
@@ -213,6 +215,36 @@ s.uart1_ustcnt_w(0,0,0xffff);assert(!s.m_uart_rx_count&&!s.m_uart_tx_count&&!s.m
 s.uart1_ustcnt_w(0,0xaf00,0xffff);assert(s.bits==8&&s.parity==PARITY_ODD&&s.stops==STOP_BITS_2);
 s.m_ubaud1=0x802;s.uart1_configure();assert(s.baud==0); // Unconnected UCLK never clocks itself.
 s.m_umisc1=0x1000;s.m_ustcnt1=0xe100;s.tra_callback();assert(s.rx_line==0&&s.m_uart_txd==0);
+// A no-cable CTS level must block TX and report UTX_CTS_STAT.
+alphasdana_state unplugged;unplugged.cts.value=1;
+unplugged.uart1_ustcnt_w(0,0xe108,0xffff);
+for(unsigned i=0;i<8;++i)unplugged.uart1_utx_w(0,0x30+i,0xff);
+assert(!unplugged.m_uart_tx_busy&&unplugged.m_uart_tx_count==8);
+assert((unplugged.uart1_utx_r()&0x2200)==0x0200); // CTS high; FIFO full.
+unplugged.cts.value=0;unplugged.peek=true;
+assert(!(unplugged.uart1_utx_r()&0x0200));
+assert(unplugged.m_uart_tx_count==8&&!unplugged.m_uart_tx_busy);
+unplugged.peek=false;assert(unplugged.uart1_utx_r()&0x0400);
+assert(unplugged.m_uart_tx_busy&&unplugged.m_uart_tx_count==7&&unplugged.shift==0x30);
+for(unsigned i=0;i<8;++i)unplugged.tra_complete();
+assert(unplugged.m_uart_completed==8&&!unplugged.m_uart_tx_count);
+// Control-only NOCTS write releases ALREADY QUEUED bytes.
+alphasdana_state firmware_nocts;firmware_nocts.cts.value=1;
+firmware_nocts.uart1_ustcnt_w(0,0xe108,0xffff);
+firmware_nocts.uart1_utx_w(0,0x55,0x00ff);
+assert(firmware_nocts.m_uart_tx_count==1&&!firmware_nocts.m_uart_tx_busy);
+firmware_nocts.uart1_utx_w(0,0x0800,0xff00);
+assert(firmware_nocts.m_uart_tx_busy&&firmware_nocts.shift==0x55);
+assert(firmware_nocts.uart1_utx_r()&0x0200);
+firmware_nocts.tra_complete();
+assert(firmware_nocts.m_uart_completed==1);
+// Internal hardware loopback bypasses external CTS without injecting RX.
+alphasdana_state loop;loop.cts.value=1;
+loop.uart1_ustcnt_w(0,0xe108,0xffff);
+loop.uart1_utx_w(0,0x61,0xff);
+assert(!loop.m_uart_tx_busy);
+loop.m_umisc1=0x1000;loop.uart1_configure();
+assert(loop.m_uart_tx_busy&&loop.shift==0x61);
 }
 ''')
 
