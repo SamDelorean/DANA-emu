@@ -54,8 +54,8 @@ GUEST_PKG=GUEST_DIR/"emutos.dana"
 GUEST_IMG=GUEST_DIR/"emutos.img"
 GUEST_MAP=GUEST_DIR/"emutos.map"
 GUEST_MANIFEST=GUEST_DIR/"guest_manifest.json"
-GUEST_PIN="44da415eee09e2d41a4fe85a1b573e27999b98af"
-GUEST_LUA_BLOB="3df9f26476800e68b8cedb2c6a00c30c8d4eeac7"
+GUEST_PIN="8c46900622214f4890bef751f972d2e73c7c492e"
+GUEST_LUA_BLOB="173a026b9635988a9b850958767a2a9d1a0b3dee"
 GUEST_VERIFY_BLOB="45277d4f28c25672f6cfcc0738e7b1a7e89bbbcf"
 GUEST_TEST_BLOB="ff634b119e38c41e3560e1ebb7bb558d7c6a7eaf"
 GUEST_LUA=EV/"F2_guest_cpu_observer.lua"
@@ -151,6 +151,10 @@ try:
          input=payload).decode().strip()
   if actual!=blob:raise RuntimeError("GUEST_INSTRUMENT_IDENTITY_MISMATCH:"+repo_path)
   path.write_bytes(payload)
+ if any(x not in GUEST_LUA.read_text() for x in
+        ("initialize_after_autoboot()", "OBSERVER_LUA_LOADED_NOT_INITIALIZED",
+         'json(v[k],k=="events")', "pen_injected=true")):
+  raise RuntimeError("F2_GUEST_OBSERVER_POST_AUTOBOOT_LIFECYCLE_CONTRACT_MISSING")
  if "dana-f2-natural-guest-bus-v1" not in GUEST_LUA.read_text() or "PASS_GUEST_CPU_PEN_X_Y" not in GUEST_VERIFY.read_text():
   raise RuntimeError("GUEST_OBSERVER_VERIFIER_SCOPE_MISMATCH")
  # Synthetic verification of the VERIFIER, not an EmuTOS run or F2 PASS.
