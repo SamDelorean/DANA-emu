@@ -87,7 +87,6 @@
       "source_commit": "09f171b426c7180eea2c244861005176a9c5ac82",
       "job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
       "job_commit": "fc36f5e54dcfc341b145d3b824d837e083973199",
-      "job_blob_sha256": "NOT_COMPUTED_GIT_BLOB_REF_WILL_BE_VERIFIED_ON_NEXT_LAUNCH",
       "sole_active_emulator": "dana-diag",
       "sole_build_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
       "compiler_for_target_object": "installed g++-15 15.2.0; not yet used for F2",
@@ -114,7 +113,8 @@
       "required_approval": "NEW_PER_INTERVENTION_COMMANDER_AUTHORIZATION",
       "source_of_evidence": "Real previous F2 dryrun log and Clang reproducer with GCC15 C++ headers; official Clang/GCC/libstdc++ ABI docs",
       "risk": "macro/library checks are necessary but insufficient to prove ABI compatibility; require actual link and scoped DIAG native tests to qualify",
-      "previous_result_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json"
+      "previous_result_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+      "job_blob_sha": "6e8551980ced43a4b68e9bb01d4e66c2f1114995"
     },
     "native": {
       "status": "BLOCKED_CLANG21_CODEGEN_NOT_EXECUTED",
