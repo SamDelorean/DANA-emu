@@ -64,6 +64,7 @@ private:
     void program_map(address_map &map) ATTR_COLD;
     void cpu_space_map(address_map &map) ATTR_COLD;
     void update_irq_lines();
+    void restore_guest_interrupt_state();
     u8 irq_vector_r(offs_t offset);
     TIMER_CALLBACK_MEMBER(timer1_compare);
     u32 guest_system_clock_hz() const;
@@ -340,6 +341,10 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_uart_shift_byte)); save_item(NAME(m_uart_tx_busy));
     save_item(NAME(m_uart_cts_last));
     save_item(NAME(m_uart_completed));
+    // MAME restores the timer and saved VZ latches. Re-drive interrupt pins
+    // and the guest PLL clock AFTER the core has restored its state.
+    machine().save().register_postload(
+        save_prepost_delegate(FUNC(alphasdana_state::restore_guest_interrupt_state), this));
     m_guest_ready = 0;
 }
 
@@ -693,6 +698,15 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
     update_irq_lines();
 }
 
+
+void alphasdana_state::restore_guest_interrupt_state()
+{
+    // Preserve the exact saved compare deadline: MAME restores emu_timer
+    // separately. Only re-drive CPU inputs based on restored pending/IMR.
+    if (m_guest_loaded)
+        m_maincpu->set_unscaled_clock(guest_system_clock_hz());
+    update_irq_lines();
+}
 
 void alphasdana_state::update_irq_lines()
 {
