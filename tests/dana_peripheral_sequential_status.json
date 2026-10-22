@@ -64,5 +64,12 @@
     "source_available_in_original_branch": true
   },
   "last_compiler_crash_scope": "Prior compiled unsuccessful F2+F3+F4 aggregate, not proof F2-only crashes",
-  "excel_rector": "Original Drive rector v2.8 currently retained; this branch manifest is canonical immediate integration record until workbook synchronizes"
+  "excel_rector": {
+    "version": "2.9",
+    "same_original_file_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "size_bytes": 91426,
+    "status": "SYNC_CONFIRMED",
+    "new_sheet": "SECUENCIA_PERIFERICOS",
+    "source": "https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit"
+  }
 }
