@@ -1,0 +1,68 @@
+{
+  "schema": "dana-peripheral-sequential-v1",
+  "base": {
+    "native_qualified_driver_commit": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
+    "native_diagnostic_evidence": "Ten previously qualified scoped native PASS only on this older driver",
+    "source_baseline_locked": true
+  },
+  "branch": "codex/dana-peripherals-sequential-80cbfeca",
+  "rules": [
+    "One peripheral in production source per compiled/native-tested candidate",
+    "No rewriting of previously implemented code",
+    "No MAME donor/rebuild or EmuTOS rebuild unless specific actual failure demonstrates necessity",
+    "Only dana-diag emulator permitted for native tests",
+    "Never extrapolate prior driver native PASS to newer code",
+    "No Commander without separate per-intervention authorization",
+    "No fallback compile attempts after a failed bounded run"
+  ],
+  "first_peripheral": {
+    "id": "F2",
+    "title": "Stylus touch input and SPI2 ADC",
+    "source_commit": "78be96c5615c4b929a96c9dc835b9fff3a2161aa",
+    "source_file": "src/mame/skeleton/alphasdana.cpp",
+    "source_blob_sha": "5bac95c484d5cb83e7089bc3225a9d3348765665",
+    "source_sha256": "4841e227b7a12798517cc4220ae40c22450022c0f9a954d873581bd0fb4d5f0d",
+    "source_scope": {
+      "added": 81,
+      "removed": 8,
+      "other_production_files_changed": 0,
+      "base_cpu_unchanged": true,
+      "baseline_SPI2_keyboard_preserved": true,
+      "postload_F1_not_integrated": true,
+      "F3_UART_CTS_not_integrated": true,
+      "F4_UART_IRQ4_not_integrated": true
+    },
+    "test_file": "tests/dana_hardware_test.py",
+    "test_blob_sha": "0c3bd484d0afcb68f0fd509ce8ceb71351bf9928",
+    "tests": {
+      "previous_baseline_cases_preserved": 5,
+      "new_stylus_case": 1,
+      "source_case_count": 6,
+      "candidate_test_executed": "NOT_RUN_IN_THIS_INTERVENTION",
+      "previous_F2_source_test": "ALREADY_EXISTED_AT_PINNED_F2_COMMIT_NOT_REQUALIFIED_HERE"
+    },
+    "build": {
+      "job": "tests/hold/016_f2_stylus_only_diag.job.sh",
+      "status": "HOLD_PENDING_USER_AUTHORIZATION",
+      "target": "Only source src/mame/skeleton/alphasdana.cpp using prior qualified MAME Clang21 cache, then bounded native dana-diag"
+    },
+    "native": {
+      "status": "PENDING",
+      "guest": "Pinned earlier EmuTOS build unchanged"
+    }
+  },
+  "next_peripheral": {
+    "id": "F3",
+    "title": "UART1 external CTS",
+    "status": "PENDING_F2_BUILD_AND_NATIVE_EVIDENCE",
+    "source_available_in_original_branch": true
+  },
+  "then": {
+    "id": "F4",
+    "title": "UART1 CTS_DELTA, busy and IRQ4",
+    "status": "PENDING_F3",
+    "source_available_in_original_branch": true
+  },
+  "last_compiler_crash_scope": "Prior compiled unsuccessful F2+F3+F4 aggregate, not proof F2-only crashes",
+  "excel_rector": "Original Drive rector v2.8 currently retained; this branch manifest is canonical immediate integration record until workbook synchronizes"
+}
