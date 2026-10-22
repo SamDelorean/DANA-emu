@@ -49,7 +49,7 @@
       "previous_F2_source_test": "ALREADY_EXISTED_AT_PINNED_F2_COMMIT_NOT_REQUALIFIED_HERE"
     },
     "build": {
-      "status": "ONE_TREE_INPLACE_JOB_PREPARED_NOT_EXECUTED",
+      "status": "LAUNCHED_UNSUPERVISED_RESULT_NOT_YET_RETRIEVED",
       "previous_job": "tests/hold/016_f2_stylus_only_diag.job.sh",
       "previous_job_status": "RETIRED_DUPLICATE_MAME_TREE",
       "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
@@ -61,9 +61,21 @@
       "compiler_changes": 0,
       "ROM_builds": 0,
       "active_binary_overwrites": 0,
-      "T_run": "NOT_STARTED",
+      "T_run": "STARTED_NO_POLLING",
       "authorization": "NEW_EXPLICIT_T_COMMANDER_AUTHORIZATION_REQUIRED",
-      "native_F2_probe": "NOT_PREPARED_OR_EXECUTED_DO_NOT_CLAIM_PASS"
+      "native_F2_probe": "NOT_PREPARED_OR_EXECUTED_DO_NOT_CLAIM_PASS",
+      "launcher_pid": 98536,
+      "launcher_job_pin": "9e529a3a2b5d74aceaea9e4f1172dfe79fa07537",
+      "job_blob_sha": "21389fde57bfde8b71e885fe706949c6b100b4c8",
+      "preflight": "PASS_JOB_GIT_BLOB_BASH_AND_EMBEDDED_PYTHON",
+      "local_report": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+      "log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_one_active_diag_launch.log",
+      "Commander_calls_for_launch": 1,
+      "unattended": true,
+      "compiler_build_status": "UNKNOWN_UNTIL_JOB_REPORT",
+      "runtime_f2_status": "NOT_PROVEN",
+      "full_builds": 0,
+      "duplicate_trees": 0
     },
     "native": {
       "status": "PENDING_UNTIL_GUEST_PEN_SPI2_REAL_OBSERVATION",
