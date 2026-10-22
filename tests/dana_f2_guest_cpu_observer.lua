@@ -141,7 +141,11 @@ emu.register_periodic(function()
             host_field=true
             pen_field:set_value(1)
             counts.pen_input_events=counts.pen_input_events+1
-            record({origin="host_input",kind="PEN_DOWN",value=1})
+            -- Capture the exact host-controlled ADC inputs, but never MMIO.
+            local px=assert(manager.machine.ioport.ports[":PENX"],"No PENX")
+            local py=assert(manager.machine.ioport.ports[":PENY"],"No PENY")
+            record({origin="host_input",kind="PEN_DOWN",value=1,
+                    penx_raw=px:read() & 0xffff,peny_raw=py:read() & 0xffff})
             host_field=false
         end
         if manager.machine.debugger.execution_state=="stop" and loaded_seen then
