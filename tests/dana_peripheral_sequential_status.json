@@ -69,9 +69,9 @@
         "test_f2_scope_and_pinned_guest_contract",
         "test_exact_EmuTOS_pen_spi2_and_existing_st_slave"
       ],
-      "new_source_tests_execution": "NOT_RUN",
+      "new_source_tests_execution": "NOT_RUN_COMPILER_FAILED",
       "previous_F2_suite": "PRESERVED_AS_HISTORICAL_ONLY_NOT_APPLICABLE_TO_012C_BASE",
-      "native_f2": "NOT_RUN",
+      "native_f2": "NOT_RUN_COMPILER_FAILED",
       "guest_exact_control_sequences": [
         "0x2247",
         "0x2347",
@@ -82,24 +82,74 @@
       "irq4_assertion_removed_from_new_F2_tests": true
     },
     "build": {
-      "status": "PREPARED_IN_SAME_HOLD_JOB_NOT_EXECUTED",
+      "status": "FAILED_CLANG21_BACKEND_IDENTICAL_CRASH_ON_TRUE_012C_PLUS_F2",
       "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
-      "job_blob_sha": "1e737e4e3b5d931577768d6c910f25c8ab0489a2",
+      "job_blob_sha": "cdcdddfdbf828dfcfe4cde8ff3a729dd9c3e8f9e",
       "source_pin": "09f171b426c7180eea2c244861005176a9c5ac82",
       "source_sha256": "105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557",
       "target_worktree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
       "expected_new_objects": 1,
-      "compiler": "pre-existing Clang21 (unchanged)",
+      "compiler": "Ubuntu clang++-21 21.1.8",
       "cleanup": "in-memory rollback of source, one object, libmame_danadiag.a and danadiagd",
       "full_builds": 0,
       "ROM_rebuilds": 0,
       "extra_DIAG_instances": 0,
       "current_execution": "HOLD_NO_COMMANDER_CALL",
-      "limitation": "Job currently compiles+2 source-method tests then rolls candidate back; authentic native pen observer not yet integrated. DO NOT call its status F2 functional PASS."
+      "limitation": "Job currently compiles+2 source-method tests then rolls candidate back; authentic native pen observer not yet integrated. DO NOT call its status F2 functional PASS.",
+      "execution": "COMPLETED_FAIL_NO_RETRY",
+      "launcher_pid": 105763,
+      "child_pid": 105907,
+      "job_pin": "0c9b5aa493a68153a1e51b570bd6873050740f64",
+      "optimization": "-O3",
+      "compiler_exit": 139,
+      "make_exit": 2,
+      "stage_results": [
+        [
+          "fetch_existing_git",
+          0
+        ],
+        [
+          "fetch_observer_pin",
+          0
+        ],
+        [
+          "dryrun",
+          0
+        ],
+        [
+          "compile_and_link",
+          2
+        ]
+      ],
+      "real_compile_started": true,
+      "source_tests_run": 0,
+      "native_mmio_runs": 0,
+      "guest_pen_runs": 0,
+      "alternative_compiler_executions": 0,
+      "compiler_retries": 0,
+      "new_DIAG_instances": 0,
+      "observed_failure": "LLVM X86 DAG->DAG Instruction Selection on unchanged device_finder<dana_vz_cpu_device,false>::device_finder",
+      "crash_repro_reported": [
+        "/tmp/alphasdana-9c8dbf.cpp",
+        "/tmp/alphasdana-9c8dbf.sh"
+      ],
+      "reproducer_files_persist_verified": false,
+      "qualified_binary_preserved": true,
+      "qualified_source_restored": true,
+      "object_restored": true,
+      "library_restored": true,
+      "linker_output_restored": true,
+      "details": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+      "compiler_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
+      "detected_by": "single focused startup/receipt read; no process polling",
+      "status_accuracy": "F2 source compile FAIL; native host-MMIO and guest-input NOT RUN"
     },
     "native": {
-      "status": "NOT_QUALIFIED_PENDING_REAL_CPU_SPI2_PF1_OBSERVATION",
-      "note": "The real EmuTOS-native stylus observer has not been run. Avoid redundant native rebuild by binding it into the same eventual authorized DIAG campaign."
+      "status": "BLOCKED_COMPILER_BACKEND_ERROR",
+      "native_observer": "tests/dana_f2_native_mmio.lua",
+      "observer_git_pin": "c92b256c21161a00d07c29f5fd08a3fb84bee9e6",
+      "observer_scope": "HOST_NATIVE_MMIO_ONLY_NOT_GUEST_CPU",
+      "executed": false
     }
   },
   "next_peripheral": {
@@ -159,9 +209,9 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Complete bounded genuine DIAG-only CPU MMIO PF1/PG2 SPI2 F2 observer in same existing job, then one separately authorized real Clang21 object compile, 2 directed tests and actual native F2 observation. Do not rebuild 012-C or recompile twice.",
+  "next_action": "Use LLVM's emitted preprocessed reproducer and the exact one-object command already logged to establish whether Clang21 codegen crash can be avoided by targeted per-driver optimization; preserve sole DIAG worktree. Do not rerun without a fresh explicit authorization.",
   "compilation_replan_20261022": {
-    "status": "STATIC_TRUE_F2_CANDIDATE_PREPARED_NATIVE_NOT_RUN",
+    "status": "TRUE_F2_ONLY_STILL_SAME_CLANG21_SELECTOR_CRASH",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
     "detected_compiler": "Ubuntu clang 21.1.8",
     "effective_optimization": "-O3",
@@ -178,7 +228,11 @@
       "new isolated emulator tree"
     ],
     "memo": "docs/F2_CLANG21_BACKEND_CRASH_OPTIONS_20261022.md",
-    "spi2_semantics_dependency_note": "Existing compiled 012-C SPI2 transfer gate & 0x2100; later uncompiled 80cb gate & 0x0300. They differ; preserve 012-C behavior and test separately if needed, do not silently conflate with pen"
+    "spi2_semantics_dependency_note": "Existing compiled 012-C SPI2 transfer gate & 0x2100; later uncompiled 80cb gate & 0x0300. They differ; preserve 012-C behavior and test separately if needed, do not silently conflate with pen",
+    "single_source_unit_verified": true,
+    "exact_trigger": "UNKNOWN: also not proven for untouched baseline",
+    "first_fallback": "Precisely one driver-only lower-optimization clang21 compile (e.g., -O0 in exact driver command; do not change global MAME flags), but needs separate authorization and static command audit before execution",
+    "no_automatic_retry": true
   },
   "documentation_prebuild_policy": {
     "mandatory": true,
