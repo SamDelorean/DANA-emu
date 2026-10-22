@@ -49,6 +49,7 @@ public:
         , m_pen_contact(*this, "PEN")
         , m_pen_x(*this, "PENX")
         , m_pen_y(*this, "PENY")
+        , m_uart_cts(*this, "UART1CTS")
         , m_uart_txd(*this, "dana_uart1_txd")
     {
     }
@@ -234,6 +235,7 @@ private:
     required_ioport m_pen_contact;
     required_ioport m_pen_x;
     required_ioport m_pen_y;
+    required_ioport m_uart_cts;
     output_finder<> m_uart_txd;
     u8 m_uart_tx_fifo[8]={}, m_uart_tx_head=0, m_uart_tx_count=0;
     u16 m_uart_rx_fifo[12]={};
@@ -846,7 +848,13 @@ void alphasdana_state::uart1_ustcnt_w(offs_t, u16 data, u16 mem_mask)
 
 u16 alphasdana_state::uart1_utx_r()
 {
-    return (m_utx1 & 0x18ff) | (m_uart_tx_count<8 ? 0x2000 : 0)
+    // An asserted external CTS may free a previously back-pressured FIFO.
+    // The guest polls UTX when waiting for space; a debugger peek must NOT
+    // advance the transmitter or alter the accepted bytes.
+    if (!machine().side_effects_disabled()) uart1_start_tx();
+    // UTX[9] is the actual active-low CTS pin level, never a writable latch.
+    return (m_utx1 & 0x18ff) | ((m_uart_cts->read() & 1) ? 0x0200 : 0)
+        | (m_uart_tx_count<8 ? 0x2000 : 0)
         | (m_uart_tx_count<4 ? 0x4000 : 0) | (!m_uart_tx_count ? 0x8000 : 0)
         | (m_uart_tx_busy ? 0x0400 : 0);
 }
@@ -886,9 +894,14 @@ void alphasdana_state::uart1_start_tx()
 {
     if (m_uart_tx_busy || !m_uart_tx_count || (m_ustcnt1 & 0xa000)!=0xa000)
         return;
-    // CTS is unconnected. Software may explicitly choose IGNORE_CTS;
-    // internal loopback also permits a transaction without an external peer.
-    if (!(m_utx1 & 0x0800) && !(m_umisc1 & 0x1000)) return;
+    // CTS1 is physical PE7, active LOW (MC68VZ328UM UART signals).
+    // A virtual attached terminal can assert it; the no-cable setting keeps
+    // it deasserted. Firmware NOCTS and internal loopback bypass flow control.
+    // Without this input the old driver could fill the eight-byte FIFO and
+    // stall an authentic guest waiting for UTX_TX_AVAIL indefinitely.
+    if (!(m_utx1 & 0x0800) && !(m_umisc1 & 0x1000)
+        && (m_uart_cts->read() & 1))
+        return;
     m_uart_shift_byte=m_uart_tx_fifo[m_uart_tx_head];
     m_uart_tx_head=(m_uart_tx_head+1)%8;
     --m_uart_tx_count;
@@ -1100,6 +1113,14 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
+    // Explicit virtual receiver wiring, not an assertion about the physical
+    // Dana's disconnected RS-232 accessory. The default is a ready virtual
+    // terminal; select no cable to exercise authentic CTS backpressure.
+    PORT_START("UART1CTS")
+    PORT_CONFNAME(0x01, 0x00, "UART1 virtual serial receiver (CTS)")
+    PORT_CONFSETTING(0x00, "Connected / ready (CTS asserted)")
+    PORT_CONFSETTING(0x01, "No cable (CTS deasserted)")
+
     // Host stylus is an external pen contact and two 16-bit position inputs,
     // not a high-level Atari mouse injection. EmuTOS reads PF1 and SPI2 ADC.
     PORT_START("PEN")
