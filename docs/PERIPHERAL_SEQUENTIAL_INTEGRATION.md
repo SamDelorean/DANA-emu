@@ -30,3 +30,12 @@ No confundir aprobar un periférico con arrancar por completo EmuTOS. Mantener s
 ## CURRENT OVERRIDE — SINGLE DIAG WORKTREE (2026-10-22)
 
 The F2 execution job previously prepared in `tests/hold/016_f2_stylus_only_diag.job.sh` is **RETIRED** because it duplicates a complete build tree on every attempt. Do not run it again. User specifically stopped this practice; ONLY one active Dana emulator/build version is authorized, `dana-diag`. Future F2/F3/F4 increments go into the same canonical DIAG workspace without `cp -a` source/object trees, temporary full MAME copies, or parallel binary variants. Maintain only essential bounded evidence and Git history. The abandoned 2026-10-22 F2 copy `dana_integrated_hardware_j7xxm3xq` and its `f2_stylus_single_WLcT8C` launcher directory were both deleted after process termination (1.5GB plus ~2.1MB), without touching the older 012C qualified cache. The source F2 integration in Git remains valid **as uncompiled/unqualified code**; no F2 runtime PASS has been established. A replacement one-worktree job must be designed before any new T execution and requires new authorization.
+
+
+## F2 — single active DIAG continuation (2026-10-22)
+
+A replacement HOLD job is now at tests/hold/017_f2_one_active_diag_inplace.job.sh. It targets **only** the retained canonical DIAG tree /home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag and source commit 78be96c5615c4b929a96c9dc835b9fff3a2161aa. No MAME copying, detached secondary worktree, additional DIAG installation, stable build, replacement compiler, or ROM rebuild is permitted. The MAME driver source/object and existing internal linker output are preserved in process memory and restored in place after the attempt. It uses a read-only \`make -n\` check for exactly one new driver object, then one incremental Clang build and the **six pre-existing source-method tests** applied to the actual staged driver.
+
+**Evidence scope:** compiled driver + six directed code-level tests only. These do NOT establish an authentic guest pen-contact/SPI2 native PASS; the installed prior qualified \`dana-diag\` remains unchanged until a new candidate has a separately evidenced native peripheral qualification. After that, F3 CTS and F4 IRQ may be integrated sequentially in the same installation. The existing 016 job is permanently retired.
+
+**Execution:** NOT RUN. It explicitly requires a fresh T/Commander authorization and is never polled. Git edits and HOLD preparation do not count as a MAME compile or native proof.
