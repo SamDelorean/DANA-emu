@@ -66,20 +66,21 @@ class DanaF2FromQualified012C(unittest.TestCase):
     def test_sdl_pointer_reuses_single_absolute_lightgun_input(self):
         """Source contract, not a claim of an interactive GUI test."""
         src=DRIVER.read_text()
-        pen=re.search(r'PORT_START\\("PEN"\\)(.*?)PORT_START\\("PENX"\\)',src,re.S)
-        x=re.search(r'PORT_START\\("PENX"\\)(.*?)PORT_START\\("PENY"\\)',src,re.S)
-        y=re.search(r'PORT_START\\("PENY"\\)(.*?)PORT_START\\("KEYS"\\)',src,re.S)
-        self.assertIsNotNone(pen)
-        self.assertIsNotNone(x)
-        self.assertIsNotNone(y)
+        pen_start=src.index('PORT_START("PEN")')
+        x_start=src.index('PORT_START("PENX")',pen_start)
+        y_start=src.index('PORT_START("PENY")',x_start)
+        keys_start=src.index('PORT_START("KEYS")',y_start)
+        pen=src[pen_start:x_start]
+        x=src[x_start:y_start]
+        y=src[y_start:keys_start]
         # SDL lightgun module consumes window mouse motion AND button events.
         # Do not mix a second mouse-class input provider for contact alone.
-        self.assertIn('PORT_CODE(GUNCODE_BUTTON1)',pen.group(1))
-        self.assertIn('PORT_PLAYER(1)',pen.group(1))
-        self.assertNotIn('MOUSECODE_BUTTON1',pen.group(1))
-        self.assertIn('IPT_LIGHTGUN_X',x.group(1))
-        self.assertIn('IPT_LIGHTGUN_Y',y.group(1))
-        for axis in (x.group(1),y.group(1)):
+        self.assertIn('PORT_CODE(GUNCODE_BUTTON1)',pen)
+        self.assertIn('PORT_PLAYER(1)',pen)
+        self.assertNotIn('MOUSECODE_BUTTON1',pen)
+        self.assertIn('IPT_LIGHTGUN_X',x)
+        self.assertIn('IPT_LIGHTGUN_Y',y)
+        for axis in (x,y):
             self.assertIn('PORT_MINMAX(0,0xffff)',axis)
             self.assertIn('PORT_PLAYER(1)',axis)
         self.assertIn('m_screen->set_size(560,160)',src)
