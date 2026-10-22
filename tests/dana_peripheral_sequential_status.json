@@ -92,5 +92,20 @@
     "no_second_emulator_version": true,
     "no_monitoring_or_polling": true,
     "old_012C_evidence_preserved": true
+  },
+  "cleanup_20261022": {
+    "authorization": "explicit user: search and clean other Dana versions; only Dana DIAG",
+    "status": "COMPLETE",
+    "device": "spc-HP-t640-Thin-Client",
+    "original_duplicate_trees_removed": 45,
+    "remaining_extra_version_trees": 0,
+    "small_evidence_bytes_preserved": 334031769,
+    "verification_journal": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/CLEANUP_20261022.json",
+    "canonical_diag_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769",
+    "qualified_diag_binary_sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
+    "original_guest_dir": "/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k",
+    "original_source_repo": "/home/spc/Projects/alphasmart/DANA-emu",
+    "runtime_pass_created": false,
+    "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   }
 }
