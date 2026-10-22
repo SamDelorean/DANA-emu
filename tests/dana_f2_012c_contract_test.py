@@ -6,10 +6,34 @@ Only the single real DIAG driver is read. Compiled C++ extraction is a
 small transient test executable, NOT an alternate Dana emulator.
 """
 from pathlib import Path
+import re
+import subprocess
+import tempfile
 import unittest
 
-from dana_hardware_test import compile_logic
-from d2_1_pllfsr_contract_test import method_body
+# Exact reusable helpers from previously qualified source-method suites.
+# No import from an unrelated revision of the local T checkout.
+def method_body(source: str, start_pattern: str) -> str:
+    match=re.search(start_pattern,source)
+    if not match: raise AssertionError("Missing production method: "+start_pattern)
+    opening=source.index("{",match.start())
+    depth=0
+    for i in range(opening,len(source)):
+        if source[i]=="{": depth+=1
+        elif source[i]=="}":
+            depth-=1
+            if depth==0: return source[match.start():i+1]
+    raise AssertionError("Unclosed C++ method")
+
+def compile_logic(code):
+    # Standalone production-method test; not another emulator/DIAG build.
+    with tempfile.TemporaryDirectory(prefix="dana-f2-method-") as temp:
+        work=Path(temp)
+        (work/"test.cpp").write_text("#include <initializer_list>\n"+code)
+        subprocess.run(["c++","-std=c++20","-Wall","-Wextra","-Werror",
+            "-fsanitize=address,undefined",str(work/"test.cpp"),"-o",str(work/"logic")],
+            check=True,timeout=60)
+        subprocess.run([str(work/"logic")],check=True,timeout=10)
 
 ROOT=Path(__file__).resolve().parents[1]
 DRIVER=ROOT/"src/mame/skeleton/alphasdana.cpp"
