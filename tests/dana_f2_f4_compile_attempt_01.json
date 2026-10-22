@@ -1,0 +1,44 @@
+{
+  "schema": "dana-f2-f4-compile-attempt-v1",
+  "observed_at": "2026-10-21T23:00:00-06:00",
+  "authorization": "User requested compile only changed source and test; maximum 3 Commander calls",
+  "source_pin": "87e26793ff4743d5fef5539def994872e2291739",
+  "source_driver_sha256": "c10fa1303eb9f608e219bc9c9afa7ea6f8f4afd37c34526e3a523b5f8b6fe578",
+  "executed_job_commit": "915e785ed2dd7c558b55ec3eb0490e4e6bfa6fcc",
+  "executed_job_sha256": "2f6d5f51e692af381b14209de77ceaa7dfba679e799a1769a860176b54156a5f",
+  "device": "HP t640 canonical T",
+  "pid": 79632,
+  "commander_calls": 3,
+  "build": {
+    "status": "FAIL_COMPILER_INTERNAL",
+    "clang_version": "21.1.8",
+    "driver": "src/mame/skeleton/alphasdana.cpp",
+    "incremental_plan_exit": 0,
+    "build_stage_exit": 2,
+    "clang_frontend_exit": 139,
+    "optimizer": "LLVM SLP vectorizer at -O3",
+    "crash_function": "util::detail::format_output",
+    "driver_changed_only": true,
+    "rebuilt_objects_verified": null,
+    "new_binary_sha256": null
+  },
+  "tests": {
+    "production_extraction": "NOT_RUN",
+    "emutos_guest_processes": 0,
+    "guest_test_status": "NOT_RUN",
+    "rom_rebuilds": 0
+  },
+  "archived_evidence": {
+    "path": "/home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_1uk0iv44/dana_integrated_hardware_1uk0iv44.tar.gz",
+    "sha256": "c7bb2a1c8d292075b4c8108b744fd20f69d922b19338fa27faf34866df6ddd05",
+    "compile_log": "evidence/build-diag.log"
+  },
+  "compiler_workaround_candidate": {
+    "status": "PUBLISHED_NOT_TESTED",
+    "job_commit": "0ddfebc96912b8ebc32b62ef062d1a592b9e5683",
+    "command_change": "Use wrapper clang++21 -fno-slp-vectorize for only newly compiled alphasdana.cpp; preserve existing Clang21 linker and object cache."
+  },
+  "new_native_attempts": 0,
+  "old_native_objective": "DANA-012E-GUEST-BOOT has three existing attempts, unchanged",
+  "next": "No automatic retry; request fresh explicit bounded Commander authorization to execute the isolated Clang workaround one-shot build+tests."
+}
