@@ -69,7 +69,7 @@ int main(){
  s.m_imr=0x00ffffff;s.restore_guest_interrupt_state();
  assert(s.cpu.irq6==0&&s.m_pending==2);
  // UART and SPI2 share IRQ4, independently from the Timer1 IRQ6.
- s.m_imr=0x00fffffa;s.m_pending=4;s.restore_guest_interrupt_state();
+ s.m_imr=0x00fffff8;s.m_pending=6;s.restore_guest_interrupt_state();
  assert(s.cpu.irq4==1&&s.cpu.irq6==1);
  s.m_pending=0;s.m_spi2_ctrl=0x00c0;s.restore_guest_interrupt_state();
  assert((s.m_pending&1)==1&&s.cpu.irq4==1);
