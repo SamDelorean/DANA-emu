@@ -69,9 +69,9 @@
         "test_f2_scope_and_pinned_guest_contract",
         "test_exact_EmuTOS_pen_spi2_and_existing_st_slave"
       ],
-      "new_source_tests_execution": "NOT_RUN_COMPILER_FAILED",
+      "new_source_tests_execution": "PASS_2_OF_2",
       "previous_F2_suite": "PRESERVED_AS_HISTORICAL_ONLY_NOT_APPLICABLE_TO_012C_BASE",
-      "native_f2": "NOT_RUN_COMPILER_FAILED",
+      "native_f2": "PASS_HOST_ORIGIN_MMIO_ONLY",
       "guest_exact_control_sequences": [
         "0x2247",
         "0x2347",
@@ -79,49 +79,122 @@
         "0x234f"
       ],
       "rate_independent_SPI2_enable": true,
-      "irq4_assertion_removed_from_new_F2_tests": true
+      "irq4_assertion_removed_from_new_F2_tests": true,
+      "guest_pen_cpu": "NOT_TESTED"
     },
     "build": {
-      "status": "GCC15_SINGLE_OBJECT_ABI_PREFLIGHT_PREPARED_HOLD_NOT_RUN",
-      "previous_Clang21_attempts": "-O3 and -O0 both internally crashed in LLVM SelectionDAG; qualified 012-C DIAG restored",
-      "source_commit": "09f171b426c7180eea2c244861005176a9c5ac82",
+      "status": "PASS_GCC15_SINGLE_OBJECT_CLANG_LINK_AND_NATIVE_HOST_MMIO_ONLY",
       "job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
       "job_commit": "fc36f5e54dcfc341b145d3b824d837e083973199",
-      "sole_active_emulator": "dana-diag",
-      "sole_build_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
-      "compiler_for_target_object": "installed g++-15 15.2.0; not yet used for F2",
-      "linker_for_existing_MAME": "original Clang21 link, unchanged",
-      "MAME_OPTIMIZE": "3 unchanged; generated gmake trees and objects reused",
-      "driver_optimization": "-O3 unchanged; no further Clang21 O0 attempts",
-      "preflight": [
-        "exactly 1 generated Clang driver compile command from make -n",
-        "verify source/output object exact canonical paths and original ABI flags",
-        "verify g++-15 installed x86-64 compiler",
-        "read-only macro identity for _GLIBCXX_USE_CXX11_ABI,_GLIBCXX_RELEASE,__GLIBCXX__,__EXCEPTIONS,__GXX_RTTI,__SIZEOF_POINTER__,__BYTE_ORDER__",
-        "same resolved libstdc++.so compiler linker path",
-        "remove only expected Clang-specific diagnostic/warning options",
-        "ensure GCC15-compiled object ELF64 little-endian x86-64 matches old object",
-        "second make -n must plan ZERO other translation units before archive and existing link",
-        "restore original DIAG source/object/dependency/archive/link/bin/mtimes"
+      "job_blob_sha": "6e8551980ced43a4b68e9bb01d4e66c2f1114995",
+      "source_commit": "09f171b426c7180eea2c244861005176a9c5ac82",
+      "compiled_driver_object_sha256": "695845b0b632c6812da70700c7a17a8e2e0f184198377435273525a4fc1c2abf",
+      "candidate_linked_diag_sha256": "fb8400e35e0db3b91edeee83466dcb120505c373fd9786222842498a2656d75e",
+      "original_qualified_diag_sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
+      "compiler": "GCC 15.2.0 solely for alphasdana.o",
+      "linker": "Clang 21.1.8 unchanged for cached full MAME link",
+      "optimization": "-O3 retained",
+      "cpp_standard": "C++20",
+      "abi_verification": {
+        "same_libstdcxx": "/usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so",
+        "libstdcxx_release": "15",
+        "glibcxx_cxx11_abi": "1",
+        "glibcxx_header_date": "20260321",
+        "pointer_bytes": 8,
+        "exceptions": true,
+        "rtti": true,
+        "endian": "little",
+        "elf_arch": "x86_64",
+        "status": "MATCH"
+      },
+      "stage_results": [
+        {
+          "name": "dryrun",
+          "exit": 0
+        },
+        {
+          "name": "compile_driver_GCC15_only",
+          "exit": 0
+        },
+        {
+          "name": "post_driver_dryrun",
+          "exit": 0
+        },
+        {
+          "name": "archive_and_link_only",
+          "exit": 0
+        },
+        {
+          "name": "native_mmio",
+          "exit": 0
+        }
       ],
-      "fallback_compilers": 0,
-      "duplicate_dana_instances": 0,
-      "planned_compile_units": 1,
-      "total_builds_executed_this_increment": 0,
-      "native_tests_executed_this_increment": 0,
-      "status_accuracy": "GCC15 + Clang21 mixed object ABI unproven; source tests/native host MMIO not run on GCC F2",
-      "required_approval": "NEW_PER_INTERVENTION_COMMANDER_AUTHORIZATION",
-      "source_of_evidence": "Real previous F2 dryrun log and Clang reproducer with GCC15 C++ headers; official Clang/GCC/libstdc++ ABI docs",
-      "risk": "macro/library checks are necessary but insufficient to prove ABI compatibility; require actual link and scoped DIAG native tests to qualify",
-      "previous_result_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
-      "job_blob_sha": "6e8551980ced43a4b68e9bb01d4e66c2f1114995"
+      "additional_translation_units_compiled": 0,
+      "ROM_rebuilds": 0,
+      "MAME_full_rebuilds": 0,
+      "new_DIAG_instances": 0,
+      "directed_method_tests": {
+        "cases": 2,
+        "failures": 0,
+        "errors": 0,
+        "status": "PASS"
+      },
+      "native_host_MMIO": {
+        "status": "PASS_HOST_NATIVE_MMIO_ONLY",
+        "origin": "HOST_LUA_NOT_GUEST_CPU",
+        "periodic_ticks": 2,
+        "PF1": "PASS",
+        "PG2": "PASS",
+        "SPI2_8_and_16": "PASS",
+        "X": "0x7E90",
+        "Y": "0x7850",
+        "rate_independence": "PASS",
+        "keyboard_chip_select_separation": "PASS"
+      },
+      "EmuTOS_pen_CPU_execution": "NOT_TESTED_NO_GUEST_BOOT_IN_THIS_TEST",
+      "candidate_promotion": "NOT_PROMOTED_POST_TEST_ROLLBACK",
+      "rollback_verified": {
+        "installed_binary": true,
+        "source": true,
+        "driver_object": true,
+        "dependency_file": true,
+        "archive": true,
+        "internal_linker_output": true,
+        "original_timestamps": true
+      },
+      "evidence": {
+        "receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+        "gcc_compile": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_driver_GCC15_only.log",
+        "post_compile_dryrun": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_post_driver_dryrun.log",
+        "archive_link": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_archive_and_link_only.log",
+        "directed_methods": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_production_methods.log",
+        "native_mmio": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_native_mmio_result.txt"
+      },
+      "Commander_calls_this_intervention": 3,
+      "Commander_cap_this_and_following_interventions": 5,
+      "no_polling": true,
+      "real_process_launch_verified": true,
+      "note": "The actual Clang link and host-initiated real MAME MMIO PASS are qualified only in their stated scope. It is NOT an EmuTOS CPU pen usage PASS. The prior accredited DIAG was restored after testing; no second version was left."
     },
     "native": {
-      "status": "BLOCKED_CLANG21_CODEGEN_NOT_EXECUTED",
-      "native_observer": "tests/dana_f2_native_mmio.lua",
-      "observer_git_pin": "c92b256c21161a00d07c29f5fd08a3fb84bee9e6",
-      "observer_scope": "HOST_NATIVE_MMIO_ONLY_NOT_GUEST_CPU",
-      "executed": false
+      "status": "PASS_HOST_INITIATED_MAME_MMIO_GUEST_PEN_CPU_PENDING",
+      "origin": "HOST_LUA_NOT_GUEST_CPU",
+      "observer": "tests/dana_f2_native_mmio.lua",
+      "reporter": "F2_native_mmio_result.txt",
+      "real_mame_executions": 1,
+      "tested": [
+        "PF1 active-low contact",
+        "PG2 ADC selection",
+        "SPI2 8-bit command and 16-bit response",
+        "X/Y conversion",
+        "SPI2 rate-independent ENABLE",
+        "ST and ADC chip-select isolation"
+      ],
+      "not_tested": [
+        "EmuTOS CPU executing pen_send_recv",
+        "EmuTOS actual guest boot with F2 candidate"
+      ],
+      "candidate_uninstalled_and_previous_diag_restored": true
     }
   },
   "next_peripheral": {
@@ -181,9 +254,9 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Wait for separately authorized Commander work; run only existing 017 job with GCC15 checked ABI and one in-place alphasdana.o, same Clang link and F2 contract/native host-MMIO checks, ensure qualified DIAG rollback. No GCC build during static audit.",
+  "next_action": "Design/adapt the existing pinned EmuTOS guest F1-012E observer for real guest CPU PF1/PG2/SPI2 contact/read evidence using the same one-DIAG workspace, then one bounded DIAG native guest test with the exact previously validated GCC15 object build approach. Avoid treating host Lua MMIO alone as guest PASS; avoid another full rebuild or isolated tree.",
   "compilation_replan_20261022": {
-    "status": "SAME_DIAG_GCC15_SINGLE_OBJECT_ABI_GUARDED_HOLD_PREPARED_NO_EXECUTION",
+    "status": "GCC15_DRIVER_AND_ORIGINAL_CLANG_LINK_PASS_NO_FULL_REBUILD",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
     "detected_compiler": "Ubuntu clang 21.1.8",
     "effective_optimization": "-O3",
@@ -224,7 +297,12 @@
     "gcc15_link": "NOT_EXECUTED",
     "full_MAME_rebuilds": 0,
     "artifacts_created_on_T": 0,
-    "next_action": "Authorize one limited T/Commander intervention, verify GCC15/Clang21 ABI macros+libstdc++ and only run exact single GCC driver compile if all checks pass; stop on first error, no fallback"
+    "next_action": "Authorize one limited T/Commander intervention, verify GCC15/Clang21 ABI macros+libstdc++ and only run exact single GCC driver compile if all checks pass; stop on first error, no fallback",
+    "result": "one object GCC15 with same libstdc++15 ABI and original Clang link successful; 2 source-directed and native host MMIO PASS",
+    "final_compiler_resolution": "mixed GCC15 single F2 driver + original Clang21 cache VALIDATED_FOR_LINK_AND_HOST_MMIO_SCOPE_ONLY",
+    "do_not_retry_clang21": true,
+    "caution": "Product guest CPU stylus path still not qualified. Do not assert EmuTOS PASS or install F2 permanently without guest evidence.",
+    "no_additional_Dana_instances": true
   },
   "documentation_prebuild_policy": {
     "mandatory": true,
