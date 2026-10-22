@@ -247,6 +247,7 @@ try:
     cxx=shutil.which('clang++-21') or shutil.which('clang++')
     if not cc or not cxx:raise RuntimeError('BLOCKED_CLANG21_MISSING_NO_INSTALL')
     import re
+    import shlex
     summary['toolchain']={}
     for compiler in (cc,cxx):
         version=subprocess.check_output([compiler,'--version'],text=True,timeout=15)
@@ -257,15 +258,16 @@ try:
     # compiler workaround to the ONLY object rebuilt. Never mutate cached
     # object flags, global toolchains, or the donor. Link with the real Clang.
     wrapper=root/'driver_cxx_no_slp.sh'
-    wrapper.write_text('#!/bin/sh\nexec '+cxx+' -fno-slp-vectorize "$@"\n')
+    wrapper.write_text('#!/bin/sh\nexec '+shlex.quote(cxx)+' "$@" -O1 -fno-slp-vectorize\n')
     wrapper.chmod(0o755)
     summary['compiler_workaround']=dict(
         trigger='CLANG21_1_8_O3_SLP_VECTORIZER_EXIT_139',
-        opt_flag='-fno-slp-vectorize', scope='driver_only_incremental_CXX',
+        opt_flag='-O1 -fno-slp-vectorize', scope='driver_only_incremental_CXX',
         status='CANDIDATE_NOT_NATIVE_TESTED')
     command=['make','-j3','TARGET=mame','SUBTARGET=danadiag','SOURCES='+driver,'BUILDDIR=build/dana-diag',
              'TOOLS=0','DEBUG=1','PRECOMPILE=0','USE_QTDEBUG=0',
-             'OVERRIDE_CC='+cc,'OVERRIDE_CXX='+str(wrapper),'OVERRIDE_LD='+cxx]
+             'OVERRIDE_CC='+cc,'OVERRIDE_CXX='+str(wrapper),'OVERRIDE_LD='+cxx,
+             'CXX='+str(wrapper)]
     # Donor MAME makefile uses "ifdef REGENIE"; even REGENIE=0
     # forces full project regeneration. Omit this variable to retain
     # 012C generated projects and their incremental object/dependency cache.
@@ -279,6 +281,15 @@ try:
     summary['incremental_build']['planned_compilation_units']=len(planned)
     if not 1<=len(planned)<=16 or not any('alphasdana.cpp' in line for line in planned):
         raise RuntimeError('BLOCKED_NOT_A_DRIVER_INCREMENTAL_BUILD')
+    # Already-generated gmake projects set their own CXX. Passing OVERRIDE_CXX
+    # alone DID NOT propagate to the existing project: the previous build
+    # invocation still used /usr/bin/clang++-21. Require the actual driver
+    # recipe to name our isolated wrapper before permitting compilation.
+    driver_lines=[line for line in planned if 'alphasdana.cpp' in line]
+    if len(driver_lines)!=1 or str(wrapper) not in driver_lines[0]:
+        raise RuntimeError('BLOCKED_DRIVER_WRAPPER_NOT_IN_EFFECTIVE_MAKE_PLAN')
+    if '-O1 -fno-slp-vectorize' not in wrapper.read_text():
+        raise RuntimeError('BLOCKED_DRIVER_WRAPPER_FLAGS_MISSING')
     summary['MAME_builds']=1;save()
     stage('build-diag',command,cwd=mame,timeout=7200,env=build_env)
     # Record objective reused-versus-touched object metadata, not an
