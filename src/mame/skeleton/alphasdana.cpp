@@ -93,6 +93,7 @@ private:
     void uart1_configure();
     void uart1_start_tx();
     void uart1_update_irq();
+    void uart1_sample_cts();
     virtual void tra_callback() override;
     virtual void tra_complete() override;
     virtual void rcv_complete() override;
@@ -241,6 +242,7 @@ private:
     u16 m_uart_rx_fifo[12]={};
     u8 m_uart_rx_head=0, m_uart_rx_count=0, m_uart_shift_byte=0;
     bool m_uart_tx_busy=false;
+    bool m_uart_cts_last=false;
     u32 m_uart_completed=0;
     emu_timer *m_clk32_timer = nullptr;
     emu_timer *m_timer1_timer = nullptr;
@@ -336,6 +338,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_uart_tx_count)); save_item(NAME(m_uart_rx_fifo));
     save_item(NAME(m_uart_rx_head)); save_item(NAME(m_uart_rx_count));
     save_item(NAME(m_uart_shift_byte)); save_item(NAME(m_uart_tx_busy));
+    save_item(NAME(m_uart_cts_last));
     save_item(NAME(m_uart_completed));
     m_guest_ready = 0;
 }
@@ -363,6 +366,7 @@ void alphasdana_state::machine_reset()
     m_utx1=0; m_umisc1=0; m_uart_prescaler1=0;
     m_uart_tx_head=0; m_uart_tx_count=0; m_uart_rx_head=0; m_uart_rx_count=0;
     m_uart_shift_byte=0; m_uart_tx_busy=false; m_uart_completed=0;
+    m_uart_cts_last=bool(m_uart_cts->read() & 1);
     std::fill(std::begin(m_uart_tx_fifo),std::end(m_uart_tx_fifo),0);
     std::fill(std::begin(m_uart_rx_fifo),std::end(m_uart_rx_fifo),0);
     transmit_register_reset(); receive_register_reset(); set_rate(0);
@@ -846,17 +850,38 @@ void alphasdana_state::uart1_ustcnt_w(offs_t, u16 data, u16 mem_mask)
     uart1_update_irq();
 }
 
+void alphasdana_state::uart1_sample_cts()
+{
+    // CTS is active low. The Delta latch is sticky until a software
+    // UTX high-byte write of zero to bit 8. Sampling on guest reads/writes
+    // preserves the actual external pin state without a fabricated device.
+    bool const current=bool(m_uart_cts->read() & 1);
+    if (current != m_uart_cts_last)
+    {
+        m_uart_cts_last=current;
+        m_utx1 |= 0x0100;
+        uart1_update_irq();
+    }
+}
+
 u16 alphasdana_state::uart1_utx_r()
 {
-    // An asserted external CTS may free a previously back-pressured FIFO.
-    // The guest polls UTX when waiting for space; a debugger peek must NOT
-    // advance the transmitter or alter the accepted bytes.
-    if (!machine().side_effects_disabled()) uart1_start_tx();
-    // UTX[9] is the actual active-low CTS pin level, never a writable latch.
-    return (m_utx1 & 0x18ff) | ((m_uart_cts->read() & 1) ? 0x0200 : 0)
+    // UTX status is live. Guest reads sample the external CTS and can start
+    // queued data after it becomes asserted. Debugger peeks stay read-only.
+    if (!machine().side_effects_disabled())
+    {
+        uart1_sample_cts();
+        u8 const previous_count=m_uart_tx_count;
+        uart1_start_tx();
+        if (previous_count != m_uart_tx_count)
+            uart1_update_irq();
+    }
+    // Motorola UTX BUSY is set while shifting OR while bytes remain in FIFO,
+    // including genuine CTS backpressure. CTS_DELTA is sticky and readable.
+    return (m_utx1 & 0x19ff) | ((m_uart_cts->read() & 1) ? 0x0200 : 0)
         | (m_uart_tx_count<8 ? 0x2000 : 0)
         | (m_uart_tx_count<4 ? 0x4000 : 0) | (!m_uart_tx_count ? 0x8000 : 0)
-        | (m_uart_tx_busy ? 0x0400 : 0);
+        | ((m_uart_tx_busy || m_uart_tx_count) ? 0x0400 : 0);
 }
 
 u16 alphasdana_state::uart1_urx_r(offs_t, u16 mem_mask)
@@ -884,7 +909,8 @@ void alphasdana_state::uart1_update_irq()
         | (!m_uart_tx_count ? 4 : 0);
     bool const pending=(m_ustcnt1 & 0x8000) &&
         (((m_ustcnt1 & 0x4000) && (rx & m_ustcnt1)) ||
-         ((m_ustcnt1 & 0x2000) && (tx & m_ustcnt1)));
+         ((m_ustcnt1 & 0x2000) && (tx & m_ustcnt1)) ||
+         ((m_ustcnt1 & 0x0040) && (m_utx1 & 0x0100)));
     if (pending) m_pending |= 4;
     else m_pending &= ~u32(4);
     update_irq_lines();
@@ -911,7 +937,10 @@ void alphasdana_state::uart1_start_tx()
 
 void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
 {
-    m_utx1=(m_utx1 & ~mem_mask) | (data & mem_mask & 0x18ff);
+    uart1_sample_cts();
+    // CTS_DELTA bit8 is writable as a latched status (write zero clears,
+    // write one sets). Keep NOCTS/BREAK while rejecting CTSSTAT/BUSY writes.
+    m_utx1=(m_utx1 & ~mem_mask) | (data & mem_mask & 0x19ff);
     if ((mem_mask & 0x00ff) && (m_ustcnt1 & 0xa000)==0xa000 && m_uart_tx_count<8)
     {
         m_uart_tx_fifo[(m_uart_tx_head+m_uart_tx_count)%8]=data;
