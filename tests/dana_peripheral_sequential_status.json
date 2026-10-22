@@ -82,67 +82,68 @@
       "irq4_assertion_removed_from_new_F2_tests": true
     },
     "build": {
-      "status": "FAILED_CLANG21_BACKEND_IDENTICAL_CRASH_ON_TRUE_012C_PLUS_F2",
-      "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
-      "job_blob_sha": "cdcdddfdbf828dfcfe4cde8ff3a729dd9c3e8f9e",
+      "status": "PREPARED_CLANG21_DRIVER_ONLY_O0_HOLD_NOT_EXECUTED",
       "source_pin": "09f171b426c7180eea2c244861005176a9c5ac82",
       "source_sha256": "105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557",
-      "target_worktree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
-      "expected_new_objects": 1,
-      "compiler": "Ubuntu clang++-21 21.1.8",
-      "cleanup": "in-memory rollback of source, one object, libmame_danadiag.a and danadiagd",
-      "full_builds": 0,
-      "ROM_rebuilds": 0,
-      "extra_DIAG_instances": 0,
-      "current_execution": "HOLD_NO_COMMANDER_CALL",
-      "limitation": "Job currently compiles+2 source-method tests then rolls candidate back; authentic native pen observer not yet integrated. DO NOT call its status F2 functional PASS.",
-      "execution": "COMPLETED_FAIL_NO_RETRY",
-      "launcher_pid": 105763,
-      "child_pid": 105907,
-      "job_pin": "0c9b5aa493a68153a1e51b570bd6873050740f64",
-      "optimization": "-O3",
-      "compiler_exit": 139,
-      "make_exit": 2,
-      "stage_results": [
-        [
-          "fetch_existing_git",
-          0
-        ],
-        [
-          "fetch_observer_pin",
-          0
-        ],
-        [
-          "dryrun",
-          0
-        ],
-        [
-          "compile_and_link",
-          2
+      "retained_previous_run": {
+        "status": "FAILED_CLANG21_BACKEND_IDENTICAL_CRASH_ON_TRUE_012C_PLUS_F2",
+        "compiler_exit": 139,
+        "make_exit": 2,
+        "compiler": "Ubuntu clang++-21 21.1.8",
+        "optimization": "-O3",
+        "stages": [
+          [
+            "fetch_existing_git",
+            0
+          ],
+          [
+            "fetch_observer_pin",
+            0
+          ],
+          [
+            "dryrun",
+            0
+          ],
+          [
+            "compile_and_link",
+            2
+          ]
         ]
+      },
+      "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+      "job_commit": "ece9b1143af495642733187dee59b445fb3c8247",
+      "job_blob_sha": "97050281626ee57716d613d1b51453d9b0130160",
+      "one_active_emulator": "dana-diag",
+      "target_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
+      "candidate_compiler": "same Clang21.1.8",
+      "optimization_override": "-O3 -> -O0 on exactly one alphasdana.cpp command",
+      "global_MAME_OPTIMIZE": "left at 3; no regenerated project",
+      "precompile_verify": "exact old clang command, source path, object path and one -O3 token",
+      "postcompile_verify": "make -n must show ZERO compilation units, only archive/link permitted",
+      "other_objects_compiled": 0,
+      "expected_new_source_objects": 1,
+      "fallback_compilers": 0,
+      "rebuild_EmuTOS": false,
+      "new_MAME_trees": 0,
+      "additional_executables": 0,
+      "rollback": "restore original source, object, dependency file, archive, installed binary, linker output and original mtimes in the one DIAG tree",
+      "native_observer": "tests/dana_f2_native_mmio.lua",
+      "observer_pin": "0db758db6c1be571b1d8f83ce0910c690712f068",
+      "observer_blob_sha": "5676f95fce0ee9db6b2ed8154c9fee0d392c7fc9",
+      "observer_API_contract": "pinned MAME luaengine.cpp exposes emu.add_machine_stop_notifier and emu.register_periodic, not emu.register_stop",
+      "observer_scope": "HOST_MMIO_NOT_GUEST_BOOT",
+      "t_execution": "NOT_STARTED",
+      "requires_new_T_authorization": true,
+      "logs_of_last_crash": [
+        "F2_compile_and_link.log",
+        "F2_dryrun.log"
       ],
-      "real_compile_started": true,
-      "source_tests_run": 0,
-      "native_mmio_runs": 0,
-      "guest_pen_runs": 0,
-      "alternative_compiler_executions": 0,
-      "compiler_retries": 0,
-      "new_DIAG_instances": 0,
-      "observed_failure": "LLVM X86 DAG->DAG Instruction Selection on unchanged device_finder<dana_vz_cpu_device,false>::device_finder",
-      "crash_repro_reported": [
+      "unverified_T_repro": [
         "/tmp/alphasdana-9c8dbf.cpp",
         "/tmp/alphasdana-9c8dbf.sh"
       ],
-      "reproducer_files_persist_verified": false,
-      "qualified_binary_preserved": true,
-      "qualified_source_restored": true,
-      "object_restored": true,
-      "library_restored": true,
-      "linker_output_restored": true,
-      "details": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
-      "compiler_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
-      "detected_by": "single focused startup/receipt read; no process polling",
-      "status_accuracy": "F2 source compile FAIL; native host-MMIO and guest-input NOT RUN"
+      "tests_status": "NOT_RUN",
+      "native_status": "NOT_RUN"
     },
     "native": {
       "status": "BLOCKED_COMPILER_BACKEND_ERROR",
@@ -209,9 +210,9 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Use LLVM's emitted preprocessed reproducer and the exact one-object command already logged to establish whether Clang21 codegen crash can be avoided by targeted per-driver optimization; preserve sole DIAG worktree. Do not rerun without a fresh explicit authorization.",
+  "next_action": "Before executing, obtain per-intervention Commander authorization. Then use ONLY retained 017 job on sole DIAG; one true O0 driver compile if exact -O3 command shape verified, stop on first compile failure; one short 5–10-second real-start check, no follow-up polling. Native Lua tests only after build/link and directed tests succeed.",
   "compilation_replan_20261022": {
-    "status": "TRUE_F2_ONLY_STILL_SAME_CLANG21_SELECTOR_CRASH",
+    "status": "SINGLE_DRIVER_O0_GUARDED_JOB_STATIC_PREPARED_NOT_RUN",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
     "detected_compiler": "Ubuntu clang 21.1.8",
     "effective_optimization": "-O3",
@@ -232,7 +233,13 @@
     "single_source_unit_verified": true,
     "exact_trigger": "UNKNOWN: also not proven for untouched baseline",
     "first_fallback": "Precisely one driver-only lower-optimization clang21 compile (e.g., -O0 in exact driver command; do not change global MAME flags), but needs separate authorization and static command audit before execution",
-    "no_automatic_retry": true
+    "no_automatic_retry": true,
+    "MAME_config": "OPTIMIZE=3 global, MAME build Makefile pinned c4e483...",
+    "single_command_override": "Only alphasdana.o -O3 replaced with -O0; others remain compiled before",
+    "native_mame_lua_api_verified_from_pinned_donor": true,
+    "remaining_uncertainty": "The exact reproducer on T not yet read; -O0 may still crash; no PASS claim",
+    "automatic_retries": 0,
+    "noCommanderForStaticPreparation": true
   },
   "documentation_prebuild_policy": {
     "mandatory": true,
