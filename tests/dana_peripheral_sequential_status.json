@@ -177,7 +177,7 @@
       "note": "The actual Clang link and host-initiated real MAME MMIO PASS are qualified only in their stated scope. It is NOT an EmuTOS CPU pen usage PASS. The prior accredited DIAG was restored after testing; no second version was left."
     },
     "native": {
-      "status": "PASS_HOST_INITIATED_MAME_MMIO_GUEST_PEN_CPU_PENDING",
+      "status": "PASS_HOST_INITIATED_MAME_MMIO_NATURAL_EMUTOS_GUEST_CPU_PENDING",
       "origin": "HOST_LUA_NOT_GUEST_CPU",
       "observer": "tests/dana_f2_native_mmio.lua",
       "reporter": "F2_native_mmio_result.txt",
@@ -194,7 +194,68 @@
         "EmuTOS CPU executing pen_send_recv",
         "EmuTOS actual guest boot with F2 candidate"
       ],
-      "candidate_uninstalled_and_previous_diag_restored": true
+      "candidate_uninstalled_and_previous_diag_restored": true,
+      "natural_guest_cpu_observer_prepared": true,
+      "natural_guest_cpu_executed": false
+    },
+    "guest_cpu_validation": {
+      "status": "ORIGINAL_EMUTOS_GUEST_CPU_OBSERVER_AND_INDEPENDENT_VERIFIER_PREPARED_NOT_RUN",
+      "source_observer": "tests/dana_f2_guest_cpu_observer.lua",
+      "source_verifier": "tests/dana_f2_guest_cpu_verify.py",
+      "synthetic_unit_tests": "tests/dana_f2_guest_cpu_verify_test.py",
+      "sole_DIAG_hold_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+      "job_commit": "0da4f0e29a925589a2d7ff330199da3ac1b9227b",
+      "job_blob_sha": "e95ef277ba783ecbdcf4329fd260723bb8568efc",
+      "original_emutos_guest_dir": "/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/emutos-built",
+      "original_emutos_package_sha256": "c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d",
+      "original_emutos_image_sha256": "ba590da2661bc582c19bb24d65db04667daf37a17d7aa51fb462b945933ba0a3",
+      "original_emutos_map_sha256": "17cc980e675e2e1b50e713b9029f6fc3e51d3e55392deb99d53552d4b3af3e68",
+      "guest_source_pin": "9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+      "symbols": {
+        "_os_header": 8512,
+        "_dana_init": 33406,
+        "_dana_kbd_init": 33832,
+        "_dana_ts_rawread": 34092,
+        "_dana_poll_keyboard": 34232,
+        "_dana_poll_touchscreen": 34468
+      },
+      "actual_guest_execution": "NOT_RUN_IN_THIS_INTERVENTION",
+      "candidate_new_compile": "NOT_RUN_IN_THIS_INTERVENTION",
+      "verified_from_real_T": [
+        "Original guest package, image and map hash identities match previous F1 E1/E2",
+        "Exact underscores in linker map expose touch routine symbol addresses",
+        "Lua 5.4 syntax parse PASS using native shared liblua",
+        "Bash/Python AST and Git blobs PASS on frozen prior integrated job",
+        "Host-origin native MMIO PASS remains historical from previous intervention"
+      ],
+      "static_verifier_validation": {
+        "positive_synthetic_test": "NOT_YET_PASS",
+        "discrepancy": "Two ad hoc synthetic fixtures had wrong counters then wrong PF1 CPU PC; these are fixture defects, not native failures",
+        "revised_fixtures": "Five synthetic-only unit controls committed; the existing job invokes them BEFORE any new compilation",
+        "expected_preflight": "All five synthetic verifier unit tests must PASS, or stop before source/object write"
+      },
+      "evidence_scopes": {
+        "PASS_existing": "One GCC15 driver and Clang21 link; 2 directed methods; host-origin real MAME MMIO",
+        "PENDING": "Natural EmuTOS CPU executing original touch polling and raw ADC read, F2 X/Y conversion response",
+        "statuses": [
+          "PASS_GUEST_CPU_PEN_X_Y",
+          "PARTIAL_CPU_TOUCH",
+          "NOT_REACHED",
+          "BLOCKED_GUEST",
+          "BLOCKED_EVIDENCE"
+        ]
+      },
+      "boundaries": {
+        "no_ROM_recompile": true,
+        "no_extra_emulator": true,
+        "same_installed_DIAG_path": true,
+        "no_Debugger_CPU_PC_forcing": true,
+        "no_host_MMIO_pokes": true,
+        "real_PEN_field_only": true,
+        "one_driver_recompile_if_preflight_passes": true,
+        "rollback_entire_original_DIAG": true
+      },
+      "future_operation": "At next intervention with five-call cap, run existing job 017 only after static syntax/hash & five synthetic verifier unit controls pass. One short startup check, no recurring polling or automatic fallback. Guest code cannot be declared fully booted by touches alone."
     }
   },
   "next_peripheral": {
@@ -254,7 +315,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Design/adapt the existing pinned EmuTOS guest F1-012E observer for real guest CPU PF1/PG2/SPI2 contact/read evidence using the same one-DIAG workspace, then one bounded DIAG native guest test with the exact previously validated GCC15 object build approach. Avoid treating host Lua MMIO alone as guest PASS; avoid another full rebuild or isolated tree.",
+  "next_action": "Run the same 017 job after five explicit synthetic-only verifier preflight cases pass, then one GCC15 alphasdana.o+Clang link+host MMIO+original EmuTOS CPU pen probe on sole DIAG; classify NOT_REACHED separately from hardware error. Five Commander calls per intervention maximum, no polling.",
   "compilation_replan_20261022": {
     "status": "GCC15_DRIVER_AND_ORIGINAL_CLANG_LINK_PASS_NO_FULL_REBUILD",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -342,5 +403,19 @@
       "Prior native guest boot is historical, not F2 PASS"
     ],
     "no_unapproved_experiments": true
+  },
+  "latest_increment_20261022": {
+    "topic": "F2 original EmuTOS natural guest CPU pen proof",
+    "commander_calls_used": 5,
+    "commander_calls_limit": 5,
+    "operation": "read-only T guest/map inspection and static job/verifier syntax/fixtures; NO MAME, ROM or compiler run",
+    "results": [
+      "guest paths and hashes confirmed",
+      "actual touch function PC discovered from '_' symbols",
+      "Lua syntax PASSED via liblua5.4",
+      "initial synthetic verifier fixtures incomplete and corrected in committed 5-test file",
+      "same job prepared with precompile failure guard"
+    ],
+    "remaining": "actual 5 synthetic unit tests and natural CPU test NOT RUN"
   }
 }
