@@ -46,6 +46,9 @@ public:
         , m_ram(*this, "ram")
         , m_keys(*this, "KEYS")
         , m_extra_keys(*this, "KEYS%u", 1U)
+        , m_pen_contact(*this, "PEN")
+        , m_pen_x(*this, "PENX")
+        , m_pen_y(*this, "PENY")
         , m_uart_txd(*this, "dana_uart1_txd")
     {
     }
@@ -130,17 +133,27 @@ private:
     void pb_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pd, 1)
     DANA_GPIO_PORT(pe, 2)
-    // PF1 is the pen IRQ input, active low. Without a touch event it is
-    // pulled high; returning the raw DATA latch (zero) fabricates a press.
+    // PF1 is the active-low pen IRQ input. Only override its DATA bit while
+    // configured as GPIO input; software-driven PF1 retains its own latch.
     u8 pf_r(offs_t reg)
     {
         u8 value=m_gpio[3*4+reg];
-        if (reg==1 && !(m_gpio[3*4] & 0x02))
-            value |= 0x02;
+        if (reg==1 && !(m_gpio[3*4] & 0x02) && !(m_pfsel & 0x02))
+            value=(value & ~u8(0x02)) | ((m_pen_contact->read() & 1) ? 0 : 0x02);
         return value;
     }
     void pf_w(offs_t reg, u8 value) { m_gpio[3*4+reg]=value; }
-    DANA_GPIO_PORT(pg, 4)
+    // PG2 selects the external pen ADC, distinct from PE3 selecting the ST.
+    u8 pg_r(offs_t reg) { return m_gpio[4*4+reg]; }
+    void pg_w(offs_t reg, u8 value)
+    {
+        m_gpio[4*4+reg]=value;
+        if (reg==1 && (value & 0x04))
+        {
+            m_pen_command=0;
+            m_pen_sample=0;
+        }
+    }
     DANA_GPIO_PORT(pj, 5)
     u8 pk_r(offs_t reg);
     void pk_w(offs_t reg, u8 value);
@@ -175,6 +188,7 @@ private:
     u16 spi2_ctrl_r() { return m_spi2_ctrl; }
     void spi2_ctrl_w(offs_t, u16 data, u16 mem_mask);
     u8 st_exchange(u8 command);
+    u16 pen_exchange(unsigned width, u16 outgoing);
     void st_input_reset();
 
     // Guest-owned VZ LCD configuration registers; the DMA-backed screen
@@ -217,6 +231,9 @@ private:
     required_shared_ptr<u16> m_ram;
     required_ioport m_keys;
     required_ioport_array<3> m_extra_keys;
+    required_ioport m_pen_contact;
+    required_ioport m_pen_x;
+    required_ioport m_pen_y;
     output_finder<> m_uart_txd;
     u8 m_uart_tx_fifo[8]={}, m_uart_tx_head=0, m_uart_tx_count=0;
     u16 m_uart_rx_fifo[12]={};
@@ -242,6 +259,9 @@ private:
     u8 m_pfsel = 0xc5;
     u8 m_gpio[32] = {};
     u16 m_spi2_data = 0, m_spi2_ctrl = 0;
+    // ADC command and sample are held only for one active PG2 transaction.
+    u8 m_pen_command = 0;
+    u16 m_pen_sample = 0;
     u16 m_spi1_rx=0, m_spi1_tx=0, m_spi1_ctrl=0;
     u16 m_spi1_intcs=0, m_spi1_test=0, m_spi1_spc=0;
     bool m_st_ready = false, m_st_hello = false, m_st_reset_held = false;
@@ -286,6 +306,8 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_spi1_test)); save_item(NAME(m_spi1_spc));
     save_item(NAME(m_spi2_data));
     save_item(NAME(m_spi2_ctrl));
+    save_item(NAME(m_pen_command));
+    save_item(NAME(m_pen_sample));
     save_item(NAME(m_st_ready));
     save_item(NAME(m_st_hello));
     save_item(NAME(m_st_reset_held));
@@ -330,6 +352,7 @@ void alphasdana_state::machine_reset()
     m_imr = 0x00ffffff;
     m_pending = 0;
     m_spi2_data=0; m_spi2_ctrl=0;
+    m_pen_command=0; m_pen_sample=0;
     m_tctl1=0; m_tprer1=0; m_tcmp1=0xffff;
     m_tcr1=0; m_tcn1=0; m_tstat1=0; m_tstat_clear1=0;
     m_timer1_compares=0; m_timer1_iacks=0;
@@ -480,6 +503,39 @@ u8 alphasdana_state::st_exchange(u8 command)
     return 0;
 }
 
+u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
+{
+    // EmuTOS dana.c::pen_send_recv sends 0x90/0xD0 (8 clocks), followed
+    // by a 16-clock read on the same active-low PG2 chip-select window.
+    // The guest consumes (received >> 4) as an unsigned 12-bit sample.
+    // No claimed factory calibration: these bounded endpoints are a
+    // provisional emulator digitizer mapping, separate from the LCD pixels.
+    if (!(m_pen_contact->read() & 1))
+        return 0xffff;
+    if (width==8)
+    {
+        m_pen_command=(outgoing==0x90 || outgoing==0xd0) ? u8(outgoing) : 0;
+        if (!m_pen_command)
+        {
+            m_pen_sample=0;
+            return 0xff;
+        }
+        unsigned const coord=(m_pen_command==0x90) ? (m_pen_x->read() & 0xffff) : (m_pen_y->read() & 0xffff);
+        unsigned const minimum=(m_pen_command==0x90) ? 290 : 200;
+        unsigned const span=(m_pen_command==0x90) ? 3470 : 3450;
+        m_pen_sample=u16(minimum+(coord*span)/65535U);
+        return 0xff; // command phase clocks out idle data
+    }
+    if (width==16 && m_pen_command)
+    {
+        u16 const sample=u16(m_pen_sample<<4);
+        m_pen_command=0;
+        m_pen_sample=0;
+        return sample;
+    }
+    return 0xffff; // wrong phase, unknown command or unimplemented mode
+}
+
 void alphasdana_state::spi2_ctrl_w(offs_t, u16 data, u16 mem_mask)
 {
     COMBINE_DATA(&m_spi2_ctrl);
@@ -491,9 +547,16 @@ void alphasdana_state::spi2_ctrl_w(offs_t, u16 data, u16 mem_mask)
         return;
     }
     unsigned const width=(m_spi2_ctrl & 0x000f)+1;
-    // Guest's ST transactions use 8-bit. Preserve the 16-bit data path for
-    // ADC wiring later; never invent valid pen conversion data.
-    u16 const in = width==8 ? st_exchange(u8(m_spi2_data)) : 0xffff;
+    // PE3 selects the existing ST keyboard; PG2 independently selects the
+    // pen ADC. Do not inject guest keystrokes or return a conversion when CS
+    // is inactive. Unknown/overlapping slaves stay electrically idle.
+    bool const st_selected=!(m_gpio[2*4+1] & 0x08);
+    bool const pen_selected=!(m_gpio[4*4+1] & 0x04);
+    u16 in=0xffff;
+    if (st_selected && !pen_selected && width==8)
+        in=st_exchange(u8(m_spi2_data));
+    else if (pen_selected && !st_selected)
+        in=pen_exchange(width,m_spi2_data);
     m_spi2_data = width==8 ? (m_spi2_data & 0xff00) | (in & 0xff) : in;
     m_spi2_ctrl=(m_spi2_ctrl & ~0x0100) | 0x0080;
     // SPI2 completion is a level source (IPR bit0 -> IRQ4), shared with
@@ -1037,6 +1100,16 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
+    // Host stylus is an external pen contact and two 16-bit position inputs,
+    // not a high-level Atari mouse injection. EmuTOS reads PF1 and SPI2 ADC.
+    PORT_START("PEN")
+    PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Dana Stylus Contact") PORT_CODE(MOUSECODE_BUTTON1)
+    PORT_BIT(0xfe, IP_ACTIVE_HIGH, IPT_UNUSED)
+    PORT_START("PENX")
+    PORT_BIT(0xffff, 0x8000, IPT_LIGHTGUN_X) PORT_MINMAX(0,0xffff) PORT_SENSITIVITY(50) PORT_KEYDELTA(256) PORT_PLAYER(1)
+    PORT_START("PENY")
+    PORT_BIT(0xffff, 0x8000, IPT_LIGHTGUN_Y) PORT_MINMAX(0,0xffff) PORT_SENSITIVITY(50) PORT_KEYDELTA(256) PORT_PLAYER(1)
+
     // Dana physical ST scan codes; host events traverse native SPI2.
     PORT_START("KEYS")
     PORT_BIT(0x01,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("A") PORT_CODE(KEYCODE_A) PORT_CHAR('a')
