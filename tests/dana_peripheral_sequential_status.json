@@ -82,128 +82,39 @@
       "irq4_assertion_removed_from_new_F2_tests": true
     },
     "build": {
-      "status": "CLANG21_O0_FAIL_SELECTOR_CRASH_ONE_DRIVER_DIAG_RESTORED",
-      "source_pin": "09f171b426c7180eea2c244861005176a9c5ac82",
-      "source_sha256": "105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557",
-      "retained_previous_run": {
-        "status": "FAILED_CLANG21_BACKEND_IDENTICAL_CRASH_ON_TRUE_012C_PLUS_F2",
-        "compiler_exit": 139,
-        "make_exit": 2,
-        "compiler": "Ubuntu clang++-21 21.1.8",
-        "optimization": "-O3",
-        "stages": [
-          [
-            "fetch_existing_git",
-            0
-          ],
-          [
-            "fetch_observer_pin",
-            0
-          ],
-          [
-            "dryrun",
-            0
-          ],
-          [
-            "compile_and_link",
-            2
-          ]
-        ]
-      },
-      "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
-      "job_commit": "ece9b1143af495642733187dee59b445fb3c8247",
-      "job_blob_sha": "97050281626ee57716d613d1b51453d9b0130160",
-      "one_active_emulator": "dana-diag",
-      "target_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
-      "candidate_compiler": "same Clang21.1.8",
-      "optimization_override": "one driver object only -O3 -> -O0",
-      "global_MAME_OPTIMIZE": "left at 3; no regenerated project",
-      "precompile_verify": "exact old clang command, source path, object path and one -O3 token",
-      "postcompile_verify": "make -n must show ZERO compilation units, only archive/link permitted",
-      "other_objects_compiled": 0,
-      "expected_new_source_objects": 1,
+      "status": "GCC15_SINGLE_OBJECT_ABI_PREFLIGHT_PREPARED_HOLD_NOT_RUN",
+      "previous_Clang21_attempts": "-O3 and -O0 both internally crashed in LLVM SelectionDAG; qualified 012-C DIAG restored",
+      "source_commit": "09f171b426c7180eea2c244861005176a9c5ac82",
+      "job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+      "job_commit": "fc36f5e54dcfc341b145d3b824d837e083973199",
+      "job_blob_sha256": "NOT_COMPUTED_GIT_BLOB_REF_WILL_BE_VERIFIED_ON_NEXT_LAUNCH",
+      "sole_active_emulator": "dana-diag",
+      "sole_build_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
+      "compiler_for_target_object": "installed g++-15 15.2.0; not yet used for F2",
+      "linker_for_existing_MAME": "original Clang21 link, unchanged",
+      "MAME_OPTIMIZE": "3 unchanged; generated gmake trees and objects reused",
+      "driver_optimization": "-O3 unchanged; no further Clang21 O0 attempts",
+      "preflight": [
+        "exactly 1 generated Clang driver compile command from make -n",
+        "verify source/output object exact canonical paths and original ABI flags",
+        "verify g++-15 installed x86-64 compiler",
+        "read-only macro identity for _GLIBCXX_USE_CXX11_ABI,_GLIBCXX_RELEASE,__GLIBCXX__,__EXCEPTIONS,__GXX_RTTI,__SIZEOF_POINTER__,__BYTE_ORDER__",
+        "same resolved libstdc++.so compiler linker path",
+        "remove only expected Clang-specific diagnostic/warning options",
+        "ensure GCC15-compiled object ELF64 little-endian x86-64 matches old object",
+        "second make -n must plan ZERO other translation units before archive and existing link",
+        "restore original DIAG source/object/dependency/archive/link/bin/mtimes"
+      ],
       "fallback_compilers": 0,
-      "rebuild_EmuTOS": false,
-      "new_MAME_trees": 0,
-      "additional_executables": 0,
-      "rollback": {
-        "qualified_binary": true,
-        "qualified_source": true,
-        "old_driver_object": true,
-        "old_archive": true,
-        "old_internal_link": true,
-        "old_dependency_file": true,
-        "original_build_timestamps": true
-      },
-      "native_observer": "tests/dana_f2_native_mmio.lua",
-      "observer_pin": "0db758db6c1be571b1d8f83ce0910c690712f068",
-      "observer_blob_sha": "5676f95fce0ee9db6b2ed8154c9fee0d392c7fc9",
-      "observer_API_contract": "pinned MAME luaengine.cpp exposes emu.add_machine_stop_notifier and emu.register_periodic, not emu.register_stop",
-      "observer_scope": "HOST_MMIO_NOT_GUEST_BOOT",
-      "t_execution": "COMPLETED_FAIL_NO_RETRY",
-      "requires_new_T_authorization": true,
-      "logs_of_last_crash": [
-        "F2_compile_and_link.log",
-        "F2_dryrun.log"
-      ],
-      "unverified_T_repro": [
-        "/tmp/alphasdana-9c8dbf.cpp",
-        "/tmp/alphasdana-9c8dbf.sh"
-      ],
-      "tests_status": "NOT_RUN",
-      "native_status": "NOT_RUN",
-      "authorized_max_commander_calls": 5,
-      "commander_calls_used": 4,
-      "compiler": "Ubuntu Clang 21.1.8",
-      "initial_compiler_start_verified": true,
-      "actual_compilation_attempted": true,
-      "failure_type": "LLVM_SELECTION_DAG_INTERNAL_CRASH",
-      "failure_different_function": "std::basic_string_view<char>::basic_string_view(char const*)",
-      "compiler_exit": 139,
-      "stage_exit": 1,
-      "make_link_executed": false,
-      "source_tests_executed": 0,
-      "native_mame_tests_executed": 0,
-      "native_guest_tests_executed": 0,
-      "relevant_stages": [
-        [
-          "fetch_observer_pin",
-          0
-        ],
-        [
-          "dryrun",
-          0
-        ],
-        [
-          "compile_driver_O0_only",
-          1
-        ]
-      ],
-      "preprocessed_repro_O3": {
-        "cpp": "/tmp/alphasdana-9c8dbf.cpp",
-        "sha256": "c427328974deac87742116c171799ff588167042ee685764e760cb9637b5af0f",
-        "bytes": 4707882,
-        "shell": "/tmp/alphasdana-9c8dbf.sh",
-        "shell_sha256": "9072649d088ec1efb2d4498ad220687c62548ee39e4563604a687afb79d5ce2b"
-      },
-      "preprocessed_repro_O0": {
-        "cpp": "/tmp/alphasdana-56e5a6.cpp",
-        "shell": "/tmp/alphasdana-56e5a6.sh",
-        "exists": true,
-        "source_sha256": "NOT_MEASURED"
-      },
-      "alt_toolchains_present": {
-        "clang21": "/usr/bin/clang++-21",
-        "clang17to20": "NOT_INSTALLED_AS_COMPILER",
-        "gpp15": "/usr/bin/g++-15",
-        "gcc_version": "15.2.0-16ubuntu1",
-        "llvm_config20": "AVAILABLE_BUT_NO_CLANGXX20"
-      },
-      "new_mame_trees": 0,
-      "old_verified_diag_retained": true,
-      "exact_failure_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_driver_O0_only.log",
-      "exact_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
-      "conclusion": "lowering Clang21 optimization to O0 does not prevent x86 SelectionDAG crash; not a proven functional F2 defect; do not repeat"
+      "duplicate_dana_instances": 0,
+      "planned_compile_units": 1,
+      "total_builds_executed_this_increment": 0,
+      "native_tests_executed_this_increment": 0,
+      "status_accuracy": "GCC15 + Clang21 mixed object ABI unproven; source tests/native host MMIO not run on GCC F2",
+      "required_approval": "NEW_PER_INTERVENTION_COMMANDER_AUTHORIZATION",
+      "source_of_evidence": "Real previous F2 dryrun log and Clang reproducer with GCC15 C++ headers; official Clang/GCC/libstdc++ ABI docs",
+      "risk": "macro/library checks are necessary but insufficient to prove ABI compatibility; require actual link and scoped DIAG native tests to qualify",
+      "previous_result_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json"
     },
     "native": {
       "status": "BLOCKED_CLANG21_CODEGEN_NOT_EXECUTED",
@@ -270,9 +181,9 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Avoid further Clang21 optimization attempts; investigate in place existing GCC15's precise flag differences and object ABI compatibility with Clang21-generated MAME cache using static evidence, then propose one minimal justified build only if compatible. No automatic fallback, no alternate MAME instances.",
+  "next_action": "Wait for separately authorized Commander work; run only existing 017 job with GCC15 checked ABI and one in-place alphasdana.o, same Clang link and F2 contract/native host-MMIO checks, ensure qualified DIAG rollback. No GCC build during static audit.",
   "compilation_replan_20261022": {
-    "status": "CLANG21_O3_AND_O0_BOTH_CRASH_AT_SELECTIONDAG_NO_MORE_CLANG21_RETRIES",
+    "status": "SAME_DIAG_GCC15_SINGLE_OBJECT_ABI_GUARDED_HOLD_PREPARED_NO_EXECUTION",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
     "detected_compiler": "Ubuntu clang 21.1.8",
     "effective_optimization": "-O3",
@@ -307,7 +218,13 @@
     "next_alternatives": "Research static compiler options and ABI of already installed GCC15 vs existing Clang21/libstdc++15 and exact generated one-driver command; or repair/replace Clang21 via approved toolchain installation if justified. No mixed-toolchain build or recompile without new authorization.",
     "first_party_docs_check": "LLVM Clang Toolchain: C++ ABI and standard library consistency; GCC15 Compatibility: same ABI needed; not guaranteed by target architecture alone",
     "rollback_guard_preserved": true,
-    "fixed_current_DIAG": true
+    "fixed_current_DIAG": true,
+    "gcc15_compatibility_static": "LIBSTDCXX15_LIKELY_FROM_CLANG21_PREPROCESSED_SOURCE_BUT_UNVERIFIED_IN_THIS_INTERVENTION",
+    "gcc15_real_object_build": "NOT_EXECUTED",
+    "gcc15_link": "NOT_EXECUTED",
+    "full_MAME_rebuilds": 0,
+    "artifacts_created_on_T": 0,
+    "next_action": "Authorize one limited T/Commander intervention, verify GCC15/Clang21 ABI macros+libstdc++ and only run exact single GCC driver compile if all checks pass; stop on first error, no fallback"
   },
   "documentation_prebuild_policy": {
     "mandatory": true,
