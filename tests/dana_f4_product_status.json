@@ -1,0 +1,29 @@
+{
+  "schema": "dana-f4-product-v1",
+  "branch": "codex/dana-d1-2-ram-bus",
+  "source_commit": "1cebf6743099c68622e1707541489bde866001db",
+  "regression_commit": "2256eaefbb3396d312aaa1d76e06fa6349efaf46",
+  "legacy_native_source": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
+  "status": "F4_REAL_DRIVER_IMPLEMENTED_FOCUSED_CPP20_ASAN_PASS_NATIVE_PENDING",
+  "changes": [
+    "UART_BUSY_when_queued_under_CTS",
+    "CTS_DELTA_sticky_status",
+    "CTSD_irq4_pending",
+    "status_read_threshold_recompute",
+    "save_state_previous_cts"
+  ],
+  "qualification": {
+    "focused_actual_method_subset_Cpp20_ASAN_UBSAN": "PASS",
+    "test_double": "RX empty, IRQ line stub",
+    "committed_extracted_production_test": "PUBLISHED_NOT_RUN",
+    "complete_MAME_build": "NOT_RUN",
+    "actual_EmuTOS_guest": "NOT_RUN"
+  },
+  "commander_calls": 0,
+  "new_native_attempts": 0,
+  "full_boot": false,
+  "workbook": {
+    "original_drive_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "next_version": "2.5"
+  }
+}
