@@ -21,6 +21,69 @@ def compile_logic(code):
         subprocess.run([str(p/'logic')],check=True,timeout=10)
 
 class Hardware(unittest.TestCase):
+    def test_real_postload_restores_timer_irq6_and_shared_irq4_without_rescheduling(self):
+        src=DRIVER.read_text()
+        restored=method_body(src,r'void alphasdana_state::restore_guest_interrupt_state\(\)\s*')
+        irq=method_body(src,r'void alphasdana_state::update_irq_lines\(\)\s*')
+        # Compile the actual two production methods with the M68000 input
+        # line replaced by a deterministic fake CPU. No MAME or guest needed.
+        compile_logic('''#include <cstdint>
+#include <cassert>
+using u16=std::uint16_t;using u32=std::uint32_t;
+constexpr int ASSERT_LINE=1,CLEAR_LINE=0;
+struct Cpu {
+  int irq4=-1,irq6=-1;
+  u32 hz=0;
+  void set_input_line(int line,int state) {
+    if (line==4) irq4=state;
+    else if (line==6) irq6=state;
+    else assert(false);
+  }
+  void set_unscaled_clock(u32 clock) { hz=clock; }
+};
+struct alphasdana_state {
+  Cpu cpu;Cpu *m_maincpu=&cpu;
+  bool m_guest_loaded=false;
+  u16 m_pllfsr=0x0347,m_spi2_ctrl=0;
+  u32 m_pending=0,m_imr=0x00ffffff;
+  unsigned timer_reschedules=0;
+  u32 guest_system_clock_hz() const {
+    return (u32(m_pllfsr & 0xff)*14+
+            u32((m_pllfsr>>8)&0x3f)+15)*32768;
+  }
+  void update_irq_lines();
+  void restore_guest_interrupt_state();
+};
+'''+irq+restored+'''
+int main(){
+ alphasdana_state s;
+ s.cpu.hz=1000000;
+ s.restore_guest_interrupt_state();
+ assert(s.cpu.hz==1000000&&s.cpu.irq6==0&&s.cpu.irq4==0);
+ // Timer1 compare pending and unmasked must resume IRQ6 after state load.
+ s.m_guest_loaded=true;s.m_imr=0x00fffffd;s.m_pending=2;
+ s.restore_guest_interrupt_state();
+ assert(s.cpu.irq6==1&&s.cpu.irq4==0);
+ assert(s.cpu.hz==33161216&&s.timer_reschedules==0);
+ // A masked Timer1 pending bit must NEVER invent an IRQ6.
+ s.m_imr=0x00ffffff;s.restore_guest_interrupt_state();
+ assert(s.cpu.irq6==0&&s.m_pending==2);
+ // UART and SPI2 share IRQ4, independently from the Timer1 IRQ6.
+ s.m_imr=0x00fffffa;s.m_pending=4;s.restore_guest_interrupt_state();
+ assert(s.cpu.irq4==1&&s.cpu.irq6==1);
+ s.m_pending=0;s.m_spi2_ctrl=0x00c0;s.restore_guest_interrupt_state();
+ assert((s.m_pending&1)==1&&s.cpu.irq4==1);
+ // Clearing SPI status must lower IRQ4 without touching Timer1.
+ s.m_spi2_ctrl=0;s.restore_guest_interrupt_state();
+ assert(s.cpu.irq4==0&&s.cpu.irq6==0&&s.timer_reschedules==0);
+ // Save-state guest PLL must be propagated to CPU.
+ s.m_pllfsr=0x0123;s.restore_guest_interrupt_state();
+ assert(s.cpu.hz==(u32(0x23)*14+1+15)*32768);
+}
+''')
+        self.assertIn('register_postload(',src)
+        self.assertIn('restore_guest_interrupt_state), this)',src)
+
     def test_spi1_empty_bus_all_widths_and_disabled_master(self):
         src=DRIVER.read_text()
         method=method_body(src,r'void alphasdana_state::spi1_ctrl_w\(offs_t, u16 data, u16 mem_mask\)\s*')
