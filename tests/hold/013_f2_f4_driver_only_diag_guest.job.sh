@@ -252,9 +252,20 @@ try:
         version=subprocess.check_output([compiler,'--version'],text=True,timeout=15)
         if len(version)>32768 or not re.search(r'\bversion 21\.',version):raise RuntimeError('BLOCKED_CLANG21_VERSION')
         summary['toolchain'][compiler]=version.splitlines()[:8]
+    # Clang 21.1.8 crashed (signal 139) in LLVM's SLP vectorizer at -O3
+    # on this exact product driver, before any guest ran. Isolate a C++ driver
+    # compiler workaround to the ONLY object rebuilt. Never mutate cached
+    # object flags, global toolchains, or the donor. Link with the real Clang.
+    wrapper=root/'driver_cxx_no_slp.sh'
+    wrapper.write_text('#!/bin/sh\\nexec '+cxx+' -fno-slp-vectorize "$@"\\n')
+    wrapper.chmod(0o755)
+    summary['compiler_workaround']=dict(
+        trigger='CLANG21_1_8_O3_SLP_VECTORIZER_EXIT_139',
+        opt_flag='-fno-slp-vectorize', scope='driver_only_incremental_CXX',
+        status='CANDIDATE_NOT_NATIVE_TESTED')
     command=['make','-j3','TARGET=mame','SUBTARGET=danadiag','SOURCES='+driver,'BUILDDIR=build/dana-diag',
              'TOOLS=0','DEBUG=1','PRECOMPILE=0','USE_QTDEBUG=0',
-             'OVERRIDE_CC='+cc,'OVERRIDE_CXX='+cxx,'OVERRIDE_LD='+cxx]
+             'OVERRIDE_CC='+cc,'OVERRIDE_CXX='+str(wrapper),'OVERRIDE_LD='+cxx]
     # Donor MAME makefile uses "ifdef REGENIE"; even REGENIE=0
     # forces full project regeneration. Omit this variable to retain
     # 012C generated projects and their incremental object/dependency cache.
