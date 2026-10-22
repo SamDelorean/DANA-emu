@@ -63,6 +63,30 @@ class DanaF2FromQualified012C(unittest.TestCase):
         self.assertIn('required_device<dana_vz_cpu_device> m_maincpu;',src)
         self.assertNotIn('m_st_queue_pos',src)
 
+    def test_sdl_pointer_reuses_single_absolute_lightgun_input(self):
+        """Source contract, not a claim of an interactive GUI test."""
+        src=DRIVER.read_text()
+        pen=re.search(r'PORT_START\\("PEN"\\)(.*?)PORT_START\\("PENX"\\)',src,re.S)
+        x=re.search(r'PORT_START\\("PENX"\\)(.*?)PORT_START\\("PENY"\\)',src,re.S)
+        y=re.search(r'PORT_START\\("PENY"\\)(.*?)PORT_START\\("KEYS"\\)',src,re.S)
+        self.assertIsNotNone(pen)
+        self.assertIsNotNone(x)
+        self.assertIsNotNone(y)
+        # SDL lightgun module consumes window mouse motion AND button events.
+        # Do not mix a second mouse-class input provider for contact alone.
+        self.assertIn('PORT_CODE(GUNCODE_BUTTON1)',pen.group(1))
+        self.assertIn('PORT_PLAYER(1)',pen.group(1))
+        self.assertNotIn('MOUSECODE_BUTTON1',pen.group(1))
+        self.assertIn('IPT_LIGHTGUN_X',x.group(1))
+        self.assertIn('IPT_LIGHTGUN_Y',y.group(1))
+        for axis in (x.group(1),y.group(1)):
+            self.assertIn('PORT_MINMAX(0,0xffff)',axis)
+            self.assertIn('PORT_PLAYER(1)',axis)
+        self.assertIn('m_screen->set_size(560,160)',src)
+        self.assertIn('m_screen->set_visarea(0,559,0,159)',src)
+        self.assertNotIn('call_mousevec(',src)
+        self.assertNotIn('GEM_MOUSE',src)
+
     def test_exact_EmuTOS_pen_spi2_and_existing_st_slave(self):
         src=DRIVER.read_text()
         pf=src[src.index('    u8 pf_r(offs_t reg)'):src.index('    void pf_w(offs_t reg, u8 value)')]
