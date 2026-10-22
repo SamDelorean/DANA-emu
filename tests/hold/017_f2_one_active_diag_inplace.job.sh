@@ -41,7 +41,7 @@ def cmd(label,args,**opts):
  state["tests"].append({"name":label,"exit":r,"log":str(log)})
  save()
  if r:raise RuntimeError("FAILED_"+label+":"+str(r))
-original_head=None; oldsrc=None; oldobj=None; oldinternal=None
+original_head=None; original_branch=None; oldsrc=None; oldobj=None; oldinternal=None
 try:
  for p in (WORK,MAME,SRC,BIN,INTERNAL,GIT):
   if not p.exists() or p.is_symlink():raise RuntimeError("UNEXPECTED_CANONICAL_PATH:"+str(p))
@@ -54,6 +54,8 @@ try:
  if subprocess.check_output(["git","-C",str(GIT),"status","--porcelain"],text=True).strip():
   raise RuntimeError("GIT_HAS_UNCOMMITTED_WORK_DO_NOT_OVERWRITE")
  original_head=subprocess.check_output(["git","-C",str(GIT),"rev-parse","HEAD"],text=True).strip()
+ original_branch=subprocess.run(["git","-C",str(GIT),"symbolic-ref","--quiet","--short","HEAD"],
+                                capture_output=True,text=True).stdout.strip()
  if subprocess.run(["git","-C",str(GIT),"cat-file","-e",PIN+"^{commit}"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
   cmd("fetch_existing_git",["git","-C",str(GIT),"fetch","--depth=1","origin",PIN],timeout=300)
  fresh=subprocess.check_output(["git","-C",str(GIT),"show",PIN+":src/mame/skeleton/alphasdana.cpp"])
@@ -106,7 +108,9 @@ finally:
  if oldobj is not None:obj.write_bytes(oldobj)
  if oldinternal is not None:INTERNAL.write_bytes(oldinternal)
  if original_head and original_head!=PIN:
-  p=subprocess.run(["git","-C",str(GIT),"switch","--detach",original_head],
+  restore_cmd=(["git","-C",str(GIT),"switch",original_branch] if original_branch
+               else ["git","-C",str(GIT),"switch","--detach",original_head])
+  p=subprocess.run(restore_cmd,
                    stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
   if p.returncode:state["git_restore_error"]=p.stderr[-2000:]
  state["original_DIAG_binary_preserved"]=hashfile(BIN)==OLD_BIN
