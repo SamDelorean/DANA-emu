@@ -35,104 +35,71 @@
   "first_peripheral": {
     "id": "F2",
     "title": "Stylus touch input and SPI2 ADC",
-    "source_commit": "78be96c5615c4b929a96c9dc835b9fff3a2161aa",
+    "source_commit": "09f171b426c7180eea2c244861005176a9c5ac82",
     "source_file": "src/mame/skeleton/alphasdana.cpp",
-    "source_blob_sha": "5bac95c484d5cb83e7089bc3225a9d3348765665",
-    "source_sha256": "4841e227b7a12798517cc4220ae40c22450022c0f9a954d873581bd0fb4d5f0d",
+    "source_blob_sha": "791926d45577a8adc407b0ada7e80e10d4c63c3f",
+    "source_sha256": "105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557",
     "source_scope": {
-      "added": 81,
-      "removed": 8,
+      "real_native_baseline": "581601b49acb6603af2a100817d0f06fed17ed96",
+      "baseline_driver_lines": 826,
+      "candidate_driver_lines": 897,
+      "diff_additions": 84,
+      "diff_deletions": 13,
+      "diff_hunks": 15,
       "other_production_files_changed": 0,
       "base_cpu_unchanged": true,
-      "baseline_SPI2_keyboard_preserved": true,
-      "postload_F1_not_integrated": true,
-      "F3_UART_CTS_not_integrated": true,
-      "F4_UART_IRQ4_not_integrated": true,
-      "delta_is_relative_to_f2_parent_80cb_not_compiled_012C": true,
-      "actual_delta_vs_012C_compiled_driver": {
-        "additions": 436,
-        "deletions": 58
-      },
-      "actual_compiled_driver_source_commit": "581601b49acb6603af2a100817d0f06fed17ed96",
-      "accurate_statement": "F2 did not isolate source delta relative to the true compiled 012-C baseline"
+      "ST_keyboard_logic_unchanged": true,
+      "UART1_logic_unchanged": true,
+      "SPI1_not_added": true,
+      "LCD_renderer_unchanged": true,
+      "Timer1_unchanged": true,
+      "F3_and_F4_excluded": true,
+      "SPI2_gate_fix": "0x2100 corrected to manufacturer 0x0300 (named supporting correction)",
+      "SPI2_IRQ4": "historical 012-C deferred IRQ retained, test does not assert IRQ4",
+      "PF1_pen_contact": true,
+      "PG2_pen_chip_select": true,
+      "ADC_8_16": true,
+      "status": "PREPARED_SOURCE_AUDITED_NO_NATIVE_BUILD"
     },
-    "test_file": "tests/dana_hardware_test.py",
-    "test_blob_sha": "0c3bd484d0afcb68f0fd509ce8ceb71351bf9928",
+    "test_file": "tests/dana_f2_012c_contract_test.py",
+    "test_blob_sha": "1fedf9eafec528a1ce3ae1d1c4520c861f034e92",
     "tests": {
-      "previous_baseline_cases_preserved": 5,
-      "new_stylus_case": 1,
-      "source_case_count": 6,
-      "candidate_test_executed": "NOT_RUN_IN_THIS_INTERVENTION",
-      "previous_F2_source_test": "ALREADY_EXISTED_AT_PINNED_F2_COMMIT_NOT_REQUALIFIED_HERE"
+      "cases": 2,
+      "case_names": [
+        "test_f2_scope_and_pinned_guest_contract",
+        "test_exact_EmuTOS_pen_spi2_and_existing_st_slave"
+      ],
+      "new_source_tests_execution": "NOT_RUN",
+      "previous_F2_suite": "PRESERVED_AS_HISTORICAL_ONLY_NOT_APPLICABLE_TO_012C_BASE",
+      "native_f2": "NOT_RUN",
+      "guest_exact_control_sequences": [
+        "0x2247",
+        "0x2347",
+        "0x224f",
+        "0x234f"
+      ],
+      "rate_independent_SPI2_enable": true,
+      "irq4_assertion_removed_from_new_F2_tests": true
     },
     "build": {
-      "status": "BLOCKED_CLANG21_BACKEND_CRASH_AFTER_REAL_COMPILER_LAUNCH",
-      "previous_job": "tests/hold/016_f2_stylus_only_diag.job.sh",
-      "previous_job_status": "RETIRED_DUPLICATE_MAME_TREE",
+      "status": "PREPARED_IN_SAME_HOLD_JOB_NOT_EXECUTED",
       "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
-      "source_commit": "78be96c5615c4b929a96c9dc835b9fff3a2161aa",
-      "exact_tree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
-      "action": "Reuse original qualified Clang MAME DIAG, compile only alphasdana.o in place, run six directed production-method tests, restore qualified DIAG in same tree until F2 native qualification",
-      "worktree_copies": 0,
-      "alternative_binaries": 0,
-      "compiler_changes": 0,
-      "ROM_builds": 0,
-      "active_binary_overwrites": 0,
-      "T_run": "COMPLETED_EXIT_2",
-      "authorization": "NEW_EXPLICIT_T_COMMANDER_AUTHORIZATION_REQUIRED",
-      "native_F2_probe": "NOT_PREPARED_OR_EXECUTED_DO_NOT_CLAIM_PASS",
-      "launcher_pid": 98536,
-      "launcher_job_pin": "9e529a3a2b5d74aceaea9e4f1172dfe79fa07537",
-      "job_blob_sha": "21389fde57bfde8b71e885fe706949c6b100b4c8",
-      "preflight": "PASS_JOB_GIT_BLOB_BASH_AND_EMBEDDED_PYTHON",
-      "local_report": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
-      "log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_one_active_diag_launch.log",
-      "Commander_calls_for_launch": 1,
-      "unattended": true,
-      "compiler_build_status": "FAIL",
-      "runtime_f2_status": "NOT_PROVEN",
+      "job_blob_sha": "1e737e4e3b5d931577768d6c910f25c8ab0489a2",
+      "source_pin": "09f171b426c7180eea2c244861005176a9c5ac82",
+      "source_sha256": "105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557",
+      "target_worktree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag",
+      "expected_new_objects": 1,
+      "compiler": "pre-existing Clang21 (unchanged)",
+      "cleanup": "in-memory rollback of source, one object, libmame_danadiag.a and danadiagd",
       "full_builds": 0,
-      "duplicate_trees": 0,
-      "stage_results": [
-        {
-          "name": "fetch_existing_git",
-          "exit": 0
-        },
-        {
-          "name": "switch_existing_checkout",
-          "exit": 0
-        },
-        {
-          "name": "dryrun",
-          "exit": 0
-        },
-        {
-          "name": "compile_and_link",
-          "exit": 2
-        }
-      ],
-      "observed_compiler": "clang++-21 version 21.1.8",
-      "failure_type": "LLVM_SELECTION_DAG_INTERNAL_CRASH",
-      "failure_function": "device_finder<dana_vz_cpu_device,false>::device_finder",
-      "compiler_failure_exit": 139,
-      "failure_source_path": "src/mame/skeleton/alphasdana.cpp",
-      "result_path": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
-      "compile_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
-      "evidence_read_method": "ONE_READ_ONLY_MULTIFILE_CALL_NO_POLLING",
-      "real_work_started_verified": true,
-      "dryrun_planned_compilation_units": 1,
-      "new_binary_generated": false,
-      "source_directed_tests_executed": 0,
-      "native_runs": 0,
-      "old_DIAG_binary_preserved": true,
-      "old_DIAG_source_restored": true,
-      "extra_worktrees_created": 0,
       "ROM_rebuilds": 0,
-      "further_auto_retries": 0
+      "extra_DIAG_instances": 0,
+      "current_execution": "HOLD_NO_COMMANDER_CALL",
+      "limitation": "Job currently compiles+2 source-method tests then rolls candidate back; authentic native pen observer not yet integrated. DO NOT call its status F2 functional PASS."
     },
     "native": {
-      "status": "NOT_RUN_BUILD_FAILED",
-      "guest": "Existing EmuTOS original unchanged"
+      "status": "NOT_QUALIFIED_PENDING_REAL_CPU_SPI2_PF1_OBSERVATION",
+      "note": "The real EmuTOS-native stylus observer has not been run. Avoid redundant native rebuild by binding it into the same eventual authorized DIAG campaign."
     }
   },
   "next_peripheral": {
@@ -192,9 +159,9 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Before next F2 compile: static scope reduction to compiled 012-C + F2 only, explicitly resolve SPI2 gate 0x2100 vs 0x0300 and IRQ4 test assumptions, align EmuTOS exact transfer/write order, make full in-place .a rollback, and prepare genuine native pen probe. Do not perform blind builds.",
+  "next_action": "Complete bounded genuine DIAG-only CPU MMIO PF1/PG2 SPI2 F2 observer in same existing job, then one separately authorized real Clang21 object compile, 2 directed tests and actual native F2 observation. Do not rebuild 012-C or recompile twice.",
   "compilation_replan_20261022": {
-    "status": "COMPILER_BACKEND_CRASH_CONFIRMED_EXACT_TRIGGER_NOT_ISOLATED",
+    "status": "STATIC_TRUE_F2_CANDIDATE_PREPARED_NATIVE_NOT_RUN",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
     "detected_compiler": "Ubuntu clang 21.1.8",
     "effective_optimization": "-O3",
@@ -215,7 +182,7 @@
   },
   "documentation_prebuild_policy": {
     "mandatory": true,
-    "status": "AUDITED_RELEVANT_PINNED_SOURCES_DISCREPANCIES_OPEN",
+    "status": "F2_SOURCE_AND_TEST_CONTRACT_STATIC_RESOLUTION_PREPARED",
     "new_review_doc": "docs/F2_MANDATORY_SOURCE_CONTRAST_AND_NO_BLIND_TESTING_20261022.md",
     "sources": [
       "MC68VZ328UM/D sections 13.5 and 13.6 and addendum",
@@ -236,6 +203,20 @@
       "Native pen SPI2 stimulus observation absent"
     ],
     "planned_build_approval": "NOT_AUTHORIZED_FRESH; NO_BUILD_BEFORE_SOURCE_DELTA_AND_ASSERTIONS_AUDITED",
-    "honesty": "Specific relevant public primary sources/documents reviewed, not all historic Drive source bytes reverified"
+    "honesty": "Specific relevant public primary sources/documents reviewed, not all historic Drive source bytes reverified",
+    "resolved": [
+      "True compiled 012-C baseline used",
+      "SPI2 0x0200 enable and 0x0100 XCH corrected without IRQ4 scope creep",
+      "EmuTOS exact 8+16 control sequence reflected in F2 tests",
+      "Old uncompiled F2 broader suite no longer used",
+      "One-DIAG job archive restoration included"
+    ],
+    "still_pending": [
+      "Compilation of new source on original Clang21 not run",
+      "Source-method tests not executed",
+      "Genuine MAME pen-contact SPI2 native observer not executed",
+      "Prior native guest boot is historical, not F2 PASS"
+    ],
+    "no_unapproved_experiments": true
   }
 }
