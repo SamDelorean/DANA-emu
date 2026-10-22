@@ -1,0 +1,59 @@
+{
+  "schema": "dana-f2-f4-compile-attempt-v2",
+  "objective_id": "DANA-F2F4-NEW-DIAG-COMPILE",
+  "ordinal_attempt": 2,
+  "authorization": "User allowed max 10 Commander calls following first Clang21 failed incremental build.",
+  "source_commit": "87e26793ff4743d5fef5539def994872e2291739",
+  "driver_sha256": "c10fa1303eb9f608e219bc9c9afa7ea6f8f4afd37c34526e3a523b5f8b6fe578",
+  "executed_job_commit": "0ddfebc96912b8ebc32b62ef062d1a592b9e5683",
+  "executed_job_sha256": "73a91694a12cfad31956892f790b1de3fcb58f4e3a59bfbd210e5678f744e731",
+  "device": "HP t640 canonical T",
+  "job_pid": 79973,
+  "result": "BUILD_BLOCKED_LLVM21_SELECTION_DAG_EXIT139",
+  "prerequisites": "pinned sources, guest SHA and cached MAME object tree PASS; make -n PASS",
+  "build": {
+    "clang_version": "21.1.8",
+    "optimized": "-O3",
+    "build_exit": 2,
+    "clang_internal_exit": 139,
+    "pass": "X86 DAG->DAG Instruction Selection (SelectionDAGISel)",
+    "function": "device_finder<dana_vz_cpu_device,...>::operator()",
+    "binary_created": false,
+    "emutos_runs": 0,
+    "rom_builds": 0
+  },
+  "wrapper_not_effective": true,
+  "actual_generated_make": "build/dana-diag/projects/sdl/mamedanadiag/gmake-linux-clang/mame_danadiag.make",
+  "actual_generated_make_cxx_line": "36: CXX = /usr/bin/clang++-21",
+  "actual_compilation_flag_no_slp_seen": false,
+  "targeted_production_method_regressions": {
+    "status": "PASS",
+    "tests": 7,
+    "elapsed_seconds": 1.882,
+    "method": "python3 -m unittest -q dana_hardware_test.Hardware",
+    "run_after_failed_build_without_emulator": true
+  },
+  "archive": {
+    "path": "/home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_fx1n9rd9/dana_integrated_hardware_fx1n9rd9.tar.gz",
+    "sha256": "81ba355bede8e927acf7759fd3672fd0c6d3b865f748371799cee5c49e634b97"
+  },
+  "proposed_future_compile_job": {
+    "commit": "fc1ffd30200d6d08668d56c28e255f87ea97bbfd",
+    "fix": "CLI CXX=wrapper to override previously generated gmake makefile; append -O1 -fno-slp-vectorize after all compiler flags on the sole rebuilt driver; fail before compile if make -n misses wrapper",
+    "status": "PUBLISHED_NOT_RUN"
+  },
+  "supervision": {
+    "commander_calls_used": 5,
+    "commander_max": 10,
+    "more_remote_builds_started": 0,
+    "legacy_012E_guest_boot_attempts_unchanged": 3,
+    "approval_for_third_compile_attempt": false,
+    "gate": "ALTO: REVIEW_AFTER_TWO_ATTEMPTS"
+  },
+  "workbook": {
+    "same_original_drive_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "version": "2.7",
+    "verified_bytes": 86457
+  },
+  "next": "Do not launch another build under the current authorization after two unsuccessful compilations. Future job must first independently verify effective CXX flag in make -n and receive specific new human approval."
+}
