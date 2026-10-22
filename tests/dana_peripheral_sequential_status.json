@@ -192,7 +192,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Review exact one-object -O0 Clang21 compile procedure and full rollback including generated libmame_danadiag.a in sole DIAG worktree; await separate explicit build authorization. If crashes again, return to native-qualified 581601 source, integrate only required dependencies/peripherals.",
+  "next_action": "Prepare real F2-only delta from compiled 012-C pin 581601, retaining unrelated UART/ST/LCD/Timer1/SPI2 behavior. Repair archive .a rollback; run only after explicit authorization.",
   "compilation_replan_20261022": {
     "status": "COMPILER_BACKEND_CRASH_CONFIRMED_EXACT_TRIGGER_NOT_ISOLATED",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -202,14 +202,15 @@
     "function": "device_finder<dana_vz_cpu_device,false>::device_finder",
     "compiler_exit": 139,
     "requested_next_action": "SOURCE_AND_BUILD_REVIEW_ONLY_NO_COMPILATION_AUTHORIZED",
-    "recommended_first_experiment": "If newly authorized: one alphasdana.o with same Clang21 and -O0 only, no project regeneration, same DIAG worktree, guarded link-only stage, native qualification after product exists",
-    "second_action": "If still blocked, isolate accumulated uncompiled 355 line delta from real qualified 012-C into existing DIAG, one dependency/peripheral at a time",
+    "recommended_first_experiment": "TRUE F2-only source delta on compiled 012-C source pin 581601 (retain its SPI2 gate/IRQ semantics), same Clang21 -O3, only alphasdana.o and guarded link in the one existing DIAG worktree; new authorization required",
+    "second_action": "Only if true F2 source delta still triggers Clang crash: same compiler, only one alphasdana.o at -O0 (no project regen or full rebuild)",
     "script_integrity_warning": "017 script does not restore libmame_danadiag.a if compilation succeeds; fix before next native attempt",
     "alternatives_rejected": [
       "change device_finder template based on stack symbol",
       "full GCC MAME reconstruction",
       "new isolated emulator tree"
     ],
-    "memo": "docs/F2_CLANG21_BACKEND_CRASH_OPTIONS_20261022.md"
+    "memo": "docs/F2_CLANG21_BACKEND_CRASH_OPTIONS_20261022.md",
+    "spi2_semantics_dependency_note": "Existing compiled 012-C SPI2 transfer gate & 0x2100; later uncompiled 80cb gate & 0x0300. They differ; preserve 012-C behavior and test separately if needed, do not silently conflate with pen"
   }
 }
