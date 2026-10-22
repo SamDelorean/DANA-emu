@@ -17,7 +17,10 @@
     "ONE_ACTIVE_DIAG_WORKTREE_ONLY_NO_PER_INCREMENT_ISOLATED_COPIES",
     "NO_PER_ATTEMPT_CP_A_OF_MAME_BUILD",
     "MINIMAL_SHA_LOG_EVIDENCE_ONLY",
-    "RETIRED_JOB_016_NOT_AUTHORIZED_FOR_REEXECUTION"
+    "RETIRED_JOB_016_NOT_AUTHORIZED_FOR_REEXECUTION",
+    "ONLY_ONE_ACTIVE_DANA_DIAG_INSTANCE",
+    "STABLE_ONLY_WHEN_EXPLICITLY_AUTHORIZED",
+    "NO_ADDITIONAL_DANA_EMULATOR_VERSIONS_UNDER_ANY_LABEL"
   ],
   "first_peripheral": {
     "id": "F2",
@@ -91,7 +94,20 @@
     "no_per_run_copy_of_full_MAME": true,
     "no_second_emulator_version": true,
     "no_monitoring_or_polling": true,
-    "old_012C_evidence_preserved": true
+    "old_012C_evidence_preserved": true,
+    "allowed_product_identities": [
+      "dana-diag",
+      "dana-stable"
+    ],
+    "only_active_product": "dana-diag",
+    "active_diag_instance_count": 1,
+    "stable_status": "PLANNED_NOT_AUTHORIZED_TO_BUILD",
+    "no_isolated_versions": true,
+    "no_parallel_dana_diag_instances": true,
+    "no_full_mame_copies": true,
+    "same_working_tree_for_all_peripherals": true,
+    "no_polling_or_process_supervision": true,
+    "exact_worktree": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769"
   },
   "cleanup_20261022": {
     "authorization": "explicit user: search and clean other Dana versions; only Dana DIAG",
