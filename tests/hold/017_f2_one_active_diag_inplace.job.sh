@@ -48,6 +48,22 @@ OBS_PIN="0db758db6c1be571b1d8f83ce0910c690712f068"
 OBS_BLOB="5676f95fce0ee9db6b2ed8154c9fee0d392c7fc9"
 OBS_PATH=EV/"F2_native_mmio.lua"
 OBS_RESULT=EV/"F2_native_mmio_result.txt"
+# Original F1 E1/E2 guest binaries and symbol map are immutable.
+GUEST_DIR=BASE/"f1_e1e2_baldoi9k/emutos-built"
+GUEST_PKG=GUEST_DIR/"emutos.dana"
+GUEST_IMG=GUEST_DIR/"emutos.img"
+GUEST_MAP=GUEST_DIR/"emutos.map"
+GUEST_MANIFEST=GUEST_DIR/"guest_manifest.json"
+GUEST_PIN="65fe6e9f5428fdc293bf32650ce44dacd3de5e18"
+GUEST_LUA_BLOB="f345b0f9c8b0915222d4ccee2459a71c249b50c1"
+GUEST_VERIFY_BLOB="45277d4f28c25672f6cfcc0738e7b1a7e89bbbcf"
+GUEST_LUA=EV/"F2_guest_cpu_observer.lua"
+GUEST_VERIFY=EV/"F2_guest_cpu_verify.py"
+GUEST_RESULT=EV/"F2_guest_cpu_observation.json"
+GUEST_VERDICT=EV/"F2_guest_cpu_verdict.json"
+GUEST_PKG_SHA="c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d"
+GUEST_IMG_SHA="ba590da2661bc582c19bb24d65db04667daf37a17d7aa51fb462b945933ba0a3"
+GUEST_MAP_SHA="17cc980e675e2e1b50e713b9029f6fc3e51d3e55392deb99d53552d4b3af3e68"
 try:
  for p in (WORK,MAME,SRC,BIN,INTERNAL,ARCHIVE,GIT):
   if not p.exists() or p.is_symlink():raise RuntimeError("UNEXPECTED_CANONICAL_PATH:"+str(p))
@@ -251,9 +267,74 @@ try:
   raise RuntimeError("REAL_NATIVE_MMIO_NOT_QUALIFIED")
  state["native_F2"]="PASS_HOST_NATIVE_MMIO_ONLY_NOT_GUEST"
  state["status"]="F2_COMPILE_SOURCE_TESTS_NATIVE_HOST_MMIO_PASS_NOT_GUEST"
+ state["status"]="F2_COMPILE_SOURCE_TESTS_NATIVE_HOST_MMIO_PASS_GUEST_CPU_TEST_PREPARATION";save()
+ # Guest evidence is the original F1 immutable EmuTOS-Dana, not a rebuilt ROM
+ # or synthesized subroutine call. Reject changed guest/map before the run.
+ for p in (GUEST_DIR,GUEST_PKG,GUEST_IMG,GUEST_MAP,GUEST_MANIFEST):
+  if not p.exists() or p.is_symlink():
+   raise RuntimeError("F2_GUEST_ARTIFACT_MISSING_OR_LINK:"+str(p))
+ for p,expected in ((GUEST_PKG,GUEST_PKG_SHA),(GUEST_IMG,GUEST_IMG_SHA),(GUEST_MAP,GUEST_MAP_SHA)):
+  if hashfile(p)!=expected:
+   raise RuntimeError("ORIGINAL_EMUTOS_GUEST_HASH_MISMATCH:"+p.name)
+ guest_manifest=json.loads(GUEST_MANIFEST.read_text())
+ required_symbols={"_os_header":0x2140,"_dana_init":0x827e}
+ if any(guest_manifest.get("symbols",{}).get(k)!=v for k,v in required_symbols.items()):
+  raise RuntimeError("GUEST_INITIAL_ENTRY_NOT_PINNED")
+ if guest_manifest.get("artifacts",{}).get("emutos.img",{}).get("sha256")!=GUEST_IMG_SHA or guest_manifest.get("package",{}).get("sha256")!=GUEST_PKG_SHA:
+  raise RuntimeError("GUEST_MANIFEST_IDENTITY_UNBOUND")
+ guest_map_text=GUEST_MAP.read_text(errors="replace")
+ expected_map_symbols={"_dana_ts_rawread":0x852c,"_dana_poll_touchscreen":0x86a4}
+ for name,address in expected_map_symbols.items():
+  lines=[line for line in guest_map_text.splitlines()
+        if re.search(r"\b"+re.escape(name)+r"$",line.strip())]
+  if len(lines)!=1 or not re.search(r"0x0*"+format(address,"x")+r"\s+"+re.escape(name)+r"$",lines[0].strip()):
+   raise RuntimeError("GUEST_SYMBOL_MAP_BINDING_MISMATCH:"+name)
+ if subprocess.run(["git","-C",str(GIT),"cat-file","-e",GUEST_PIN+"^{commit}"],
+                   stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
+  cmd("fetch_guest_observer_pin",["git","-C",str(GIT),"fetch","--depth=1","origin",GUEST_PIN],timeout=300)
+ for repo_path,blob,path in (
+    ("tests/dana_f2_guest_cpu_observer.lua",GUEST_LUA_BLOB,GUEST_LUA),
+    ("tests/dana_f2_guest_cpu_verify.py",GUEST_VERIFY_BLOB,GUEST_VERIFY)):
+  payload=subprocess.check_output(["git","-C",str(GIT),"show",GUEST_PIN+":"+repo_path],timeout=30)
+  actual=subprocess.check_output(["git","-C",str(GIT),"hash-object","--stdin"],
+         input=payload).decode().strip()
+  if actual!=blob:raise RuntimeError("GUEST_INSTRUMENT_IDENTITY_MISMATCH:"+repo_path)
+  path.write_bytes(payload)
+ if "dana-f2-natural-guest-bus-v1" not in GUEST_LUA.read_text() or "PASS_GUEST_CPU_PEN_X_Y" not in GUEST_VERIFY.read_text():
+  raise RuntimeError("GUEST_OBSERVER_VERIFIER_SCOPE_MISMATCH")
+ # F1 already established -quickload, debugger and real CPU bus taps. Never
+ # change the guest PC, call a function, or inject synthetic MMIO responses.
+ for p in (GUEST_RESULT,GUEST_VERDICT):
+  if p.exists():p.unlink()
+ native_guest=[
+    str(BIN),"asmdana","-noreadconfig","-quickload",str(GUEST_PKG),
+    "-debug","-debugger","none","-autoboot_script",str(GUEST_LUA),
+    "-video","none","-sound","none","-skip_gameinfo",
+    "-seconds_to_run","13"]
+ state["guest_command"]=native_guest
+ state["guest_emutos_package_sha256"]=GUEST_PKG_SHA
+ state["guest_map_sha256"]=GUEST_MAP_SHA
+ state["status"]="ORIGINAL_EMUTOS_NATURAL_GUEST_CPU_OBSERVATION_STARTED";save()
+ cmd("native_guest_cpu",native_guest,cwd=EV,
+     env=dict(os.environ,DANA_F2_GUEST_OBSERVATION=str(GUEST_RESULT)),timeout=200)
+ if not GUEST_RESULT.is_file():
+  raise RuntimeError("NO_F2_GUEST_CPU_OBSERVATION_RECEIPT")
+ cmd("verify_native_guest_cpu",["python3",str(GUEST_VERIFY),
+     str(GUEST_RESULT),str(GUEST_VERDICT)],cwd=EV,timeout=50)
+ guest_truth=json.loads(GUEST_VERDICT.read_text())
+ state["guest_cpu_result"]=guest_truth
+ if guest_truth.get("status")!="PASS_GUEST_CPU_PEN_X_Y":
+  raise RuntimeError("NATIVE_GUEST_CPU_F2_NOT_QUALIFIED")
+ state["native_F2"]="PASS_GUEST_CPU_PEN_X_Y"
+ state["status"]="F2_COMPILED_LINKED_METHODS_HOST_MMIO_AND_ORIGINAL_GUEST_CPU_PASS"
 
 except Exception as error:
  state["status"]="BLOCKED";state["error"]=str(error)
+ if GUEST_VERDICT.is_file():
+  try:
+   state["guest_cpu_result"]=json.loads(GUEST_VERDICT.read_text())
+   state["status"]="F2_GUEST_"+str(state["guest_cpu_result"].get("status","BLOCKED"))
+  except (OSError,ValueError,KeyError):pass
  (EV/"F2_error_trace.log").write_text(traceback.format_exc()[-24000:])
 finally:
  # Restore the SAME canonical DIAG source/object/archive/linker output/installed binary in RAM.
@@ -291,5 +372,5 @@ finally:
  save()
  lock.close()
 print(json.dumps({"status":state["status"],"record":str(REPORT),"native_F2":state["native_F2"]}))
-if state["status"] in ("BLOCKED","ROLLBACK_INTEGRITY_FAIL"):sys.exit(2)
+if state["status"]!="F2_COMPILED_LINKED_METHODS_HOST_MMIO_AND_ORIGINAL_GUEST_CPU_PASS":sys.exit(2)
 PY
