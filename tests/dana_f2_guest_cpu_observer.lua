@@ -16,6 +16,14 @@ local counts={cpu_pf1_reads=0,cpu_pg2_writes=0,cpu_spi2_reads=0,
               cpu_spi2_writes=0,pen_input_events=0,overflow=0}
 local reason="NOT_FINISHED"
 local guest_state="NOT_LOADED"
+local initial_cpu_pc=nil
+-- autoboot_script is invoked by the pinned mame_machine_manager's
+-- post-reset timer. It CANNOT rely on a prestart callback already passed.
+-- Create an explicit early receipt, so a failed init never looks like
+-- missing guest functionality.
+local initial_receipt=assert(io.open(output,"wb"))
+initial_receipt:write('{"schema":"dana-f2-natural-guest-bus-v1","status":"OBSERVER_LUA_LOADED_NOT_INITIALIZED","origin":"M68000_CPU_TAPS_AND_DEBUGGER_BREAKPOINTS"}\n')
+initial_receipt:close()
 local function json(v)
     local t=type(v)
     if t=="string" then
@@ -49,6 +57,7 @@ local function save(final_reason)
         expected_guest_image_sha256="ba590da2661bc582c19bb24d65db04667daf37a17d7aa51fb462b945933ba0a3",
         expected_guest_package_sha256="c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d",
         event_count=#events,counters=counts,
+        initialization_cpu_pc=initial_cpu_pc,
         pen_injected_once=pen_injected,
         events=events,
         no_guest_pass_in_lua=true
@@ -104,10 +113,11 @@ local function traced(kind,lo,hi)
             if not ok then reason="BLOCKED_TAP:"..tostring(err) end
         end)
 end
-emu.register_prestart(function()
+local function initialize_after_autoboot()
     local ok,err=pcall(function()
         cpu=assert(manager.machine.devices[":maincpu"],"No M68000")
         space=assert(cpu.spaces["program"],"No program space")
+        initial_cpu_pc=cpu.state.CURPC.value
         assert(space.data_width==16,"No native 16-bit CPU bus")
         ready=assert(manager.machine.devices[":"]:output("dana_guest_loaded"),
                      "No loader output")
@@ -126,14 +136,15 @@ emu.register_prestart(function()
         started=true
     end)
     if not ok then fail(err) end
-end)
+end
 subs[#subs+1]=emu.add_machine_reset_notifier(function()
     if cpu and not finished then cpu.debug:go(0xffffffff) end
 end)
 emu.register_periodic(function()
     if finished then return end
     local ok,err=pcall(function()
-        if not started then return end
+        if not started then initialize_after_autoboot() end
+        if finished or not started then return end
         if reason:match("^BLOCKED") then save(reason);manager.machine:exit();return end
         local now=emu.time()
         if ready:get()~=0 then loaded_seen=true;guest_state="ORIGINAL_QUICKLOAD_ACTIVE" end
