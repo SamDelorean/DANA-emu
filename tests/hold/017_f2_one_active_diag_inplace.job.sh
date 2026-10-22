@@ -160,6 +160,6 @@ finally:
   state["status"]="ROLLBACK_INTEGRITY_FAIL"
  save()
  lock.close()
-print(json.dumps({"status":state["status"],"record":str(REPORT),"native_F2":"PENDING"}))
+print(json.dumps({"status":state["status"],"record":str(REPORT),"native_F2":state["native_F2"]}))
 if state["status"] in ("BLOCKED","ROLLBACK_INTEGRITY_FAIL"):sys.exit(2)
 PY
