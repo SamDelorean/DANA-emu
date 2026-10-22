@@ -43,6 +43,7 @@ def cmd(label,args,**opts):
  save()
  if r:raise RuntimeError("FAILED_"+label+":"+str(r))
 oldsrc=None; oldobj=None; oldinternal=None; oldarchive=None; oldbin=None; obj=None
+dep=None; olddep=None; original_times={}
 OBS_PIN="c92b256c21161a00d07c29f5fd08a3fb84bee9e6"
 OBS_BLOB="a775debd5ac146e875a89d8c0f35024cfd6ee9ea"
 OBS_PATH=EV/"F2_native_mmio.lua"
@@ -56,12 +57,19 @@ try:
  if len(objects)!=1:raise RuntimeError("NOT_ONE_DANA_DRIVER_OBJECT")
  obj=objects[0]
  if obj.is_symlink():raise RuntimeError("OBJECT_IS_SYMLINK")
+ dep=obj.with_suffix(".d")
+ if dep.is_symlink():raise RuntimeError("OBJECT_DEPENDENCIES_ARE_SYMLINK")
+ olddep=dep.read_bytes() if dep.exists() else None
  # The existing repository is accessed read-only except fetching the pinned
  # commit, with no checkout, no branch switch and no second worktree.
  if subprocess.run(["git","-C",str(GIT),"cat-file","-e",PIN+"^{commit}"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
   cmd("fetch_existing_git",["git","-C",str(GIT),"fetch","--depth=1","origin",PIN],timeout=300)
  fresh=subprocess.check_output(["git","-C",str(GIT),"show",PIN+":src/mame/skeleton/alphasdana.cpp"])
  if hashbytes(fresh)!=F2 or b"UART1CTS" in fresh:raise RuntimeError("PINNED_F2_SOURCE_MISMATCH")
+ original_times={str(p):(p.stat().st_atime_ns,p.stat().st_mtime_ns)
+     for p in (SRC,obj,INTERNAL,ARCHIVE,BIN) }
+ if dep.exists():
+  original_times[str(dep)]=(dep.stat().st_atime_ns,dep.stat().st_mtime_ns)
  oldsrc,oldobj,oldinternal,oldarchive,oldbin=SRC.read_bytes(),obj.read_bytes(),INTERNAL.read_bytes(),ARCHIVE.read_bytes(),BIN.read_bytes()
  if not oldbin or hashbytes(oldbin)!=OLD_BIN:
   raise RuntimeError("INSTALL_DIAG_BACKUP_HASH_MISMATCH")
@@ -193,15 +201,30 @@ finally:
  if oldinternal is not None:INTERNAL.write_bytes(oldinternal)
  if oldarchive is not None:ARCHIVE.write_bytes(oldarchive)
  if oldbin is not None:BIN.write_bytes(oldbin)
+ if dep is not None:
+  if olddep is not None:dep.write_bytes(olddep)
+  elif oldobj is not None and dep.exists():dep.unlink()
+ # Metadata also matters: touching old source and old object leaves make
+ # dependency timestamps inconsistent, prompting unintended recompilation.
+ for path in (SRC,obj,INTERNAL,ARCHIVE,BIN,dep):
+  if path is not None and str(path) in original_times and path.exists():
+   os.utime(path,ns=original_times[str(path)])
  state["original_DIAG_binary_preserved"]=hashfile(BIN)==OLD_BIN
  state["original_DIAG_source_restored"]=hashfile(SRC)==OLD
  state["original_object_restored"]=(obj is None or oldobj is None or hashfile(obj)==hashbytes(oldobj))
  state["original_archive_restored"]=(oldarchive is None or hashfile(ARCHIVE)==hashbytes(oldarchive))
  state["original_linker_output_restored"]=(oldinternal is None or hashfile(INTERNAL)==hashbytes(oldinternal))
+ state["original_dependency_file_restored"]=(dep is None or
+     (olddep is None and not dep.exists()) or
+     (olddep is not None and dep.exists() and hashfile(dep)==hashbytes(olddep)))
+ state["original_build_timestamps_restored"]=all(
+      Path(p).exists() and Path(p).stat().st_mtime_ns==stamp[1]
+      for p,stamp in original_times.items())
  if oldbin is not None:state["binary_byte_for_byte_restored"]=(hashfile(BIN)==hashbytes(oldbin))
  else:state["binary_byte_for_byte_restored"]=True
  if not all(state[k] for k in ("binary_byte_for_byte_restored","original_DIAG_binary_preserved","original_DIAG_source_restored",
-       "original_object_restored","original_archive_restored","original_linker_output_restored")):
+       "original_object_restored","original_archive_restored","original_linker_output_restored",
+       "original_dependency_file_restored","original_build_timestamps_restored")):
   state["status"]="ROLLBACK_INTEGRITY_FAIL"
  save()
  lock.close()
