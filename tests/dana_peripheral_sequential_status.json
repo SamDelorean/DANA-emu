@@ -35,10 +35,10 @@
   "first_peripheral": {
     "id": "F2",
     "title": "Stylus touch input and SPI2 ADC",
-    "source_commit": "09f171b426c7180eea2c244861005176a9c5ac82",
+    "source_commit": "b2ef8cd99ea5553861a8fddb3c8d0f0182e41d17",
     "source_file": "src/mame/skeleton/alphasdana.cpp",
-    "source_blob_sha": "791926d45577a8adc407b0ada7e80e10d4c63c3f",
-    "source_sha256": "105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557",
+    "source_blob_sha": "a377eeabcbfded092a10085a9b88a756e3e2f90b",
+    "source_sha256": "f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f",
     "source_scope": {
       "real_native_baseline": "581601b49acb6603af2a100817d0f06fed17ed96",
       "baseline_driver_lines": 826,
@@ -174,7 +174,14 @@
       "Commander_cap_this_and_following_interventions": 5,
       "no_polling": true,
       "real_process_launch_verified": true,
-      "note": "The actual Clang link and host-initiated real MAME MMIO PASS are qualified only in their stated scope. It is NOT an EmuTOS CPU pen usage PASS. The prior accredited DIAG was restored after testing; no second version was left."
+      "note": "The actual Clang link and host-initiated real MAME MMIO PASS are qualified only in their stated scope. It is NOT an EmuTOS CPU pen usage PASS. The prior accredited DIAG was restored after testing; no second version was left.",
+      "current_revised_F2_source": "f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f",
+      "current_revised_source_compilation": "NOT_EXECUTED",
+      "previous_PASS_applies_to": "09f171b... previous input mapping and HOST_MMIO only; do not inherit GUI mouse PASS",
+      "next_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+      "next_job_commit": "4b1c39db60131298e397df5f85739cd5d8835829",
+      "expected_directed_cases": 3,
+      "release_to_STABLE": false
     },
     "native": {
       "status": "PASS_HOST_INITIATED_MAME_MMIO_NATURAL_EMUTOS_GUEST_CPU_PENDING",
@@ -256,6 +263,59 @@
         "rollback_entire_original_DIAG": true
       },
       "future_operation": "At next intervention with five-call cap, run existing job 017 only after static syntax/hash & five synthetic verifier unit controls pass. One short startup check, no recurring polling or automatic fallback. Guest code cannot be declared fully booted by touches alone."
+    },
+    "host_mouse_integration_20261022": {
+      "scope": "REUSE_EXISTING_MAME_SDL_ABSOLUTE_POINTER_TO_DANA_STYLUS",
+      "status": "SOURCE_IMPLEMENTED_STATIC_VERIFICATION_PREPARED_NATIVE_INTERACTIVE_NOT_PROVEN",
+      "driver_source_commit": "b2ef8cd99ea5553861a8fddb3c8d0f0182e41d17",
+      "driver_source_blob": "a377eeabcbfded092a10085a9b88a756e3e2f90b",
+      "driver_source_sha256": "f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f",
+      "required_source_change": "PEN button binding MOUSECODE_BUTTON1 -> GUNCODE_BUTTON1, PORT_PLAYER(1), matching existing IPT_LIGHTGUN_X/Y axes",
+      "extra_driver_or_emulator_created": 0,
+      "reused_components": [
+        "pinned MAME sdl_lightgun_device SDL_MOUSEMOTION/SDL_MOUSEBUTTONDOWN",
+        "MAME ioport absolute lightgun X/Y",
+        "original Dana PF1 PG2 SPI2 digitizer",
+        "original EmuTOS dana_poll_touchscreen/dana_ts_rawread/call_mousevec"
+      ],
+      "interactive_profile": [
+        "-noreadconfig",
+        "-window",
+        "-lightgun",
+        "-lightgun_device",
+        "lightgun",
+        "-lightgunprovider",
+        "sdl",
+        "-nomouse"
+      ],
+      "native_GUI_interactive_test": "NOT_RUN",
+      "F2_new_source_object_build": "NOT_RUN",
+      "MAME_guest_cursor_movement": "NOT_PROVEN",
+      "calibration_guest": {
+        "status": "NOT_PROVEN_INITIALISED",
+        "evidence": "EmuTOS screen_calibration[7] static; mouse packet generation uses transformed coordinates only when c[0] is nonzero; original ts_calibrate/dana_ts_calibrate copy coefficients",
+        "MAME_calibration_overlay": "NOT_INVENTED",
+        "ADC_endpoints": "provisional"
+      },
+      "one_tree_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+      "one_tree_job_commit": "4b1c39db60131298e397df5f85739cd5d8835829",
+      "one_tree_job_blob": "858bd5c955afb166c00db3eff71dc2d00b18af1d",
+      "source_tests_expected": 3,
+      "source_test_name": "test_sdl_pointer_reuses_single_absolute_lightgun_input",
+      "source_test_current_result": "NO_TERMINAL_RECEIPT_OBSERVED_ON_FIFTH_COMMANDER_CALL",
+      "previous_source_contract_test_failure": "PATTERN_ESCAPE_ONLY_FIXED_WITH_LITERAL_PORT_MARKERS; not a product hardware failure",
+      "guest_verifier_synthetic_tests": {
+        "executed": 5,
+        "passed": 5,
+        "failed": 0,
+        "type": "TEST_OF_CHECKER_NOT_EMULATOR_PASS"
+      },
+      "docs": "docs/F2_HOST_MOUSE_INPUT_CONTRACT.md",
+      "authorization": "Five Commander calls per intervention permitted; exhausted on this turn",
+      "commander_calls_this_intervention": 5,
+      "T_environment_mutation": "Only existing Git metadata fetch, no MAME/DIAG/source/binary mutation",
+      "no_duplicate_build_tree": true,
+      "no_GEM_injection": true
     }
   },
   "next_peripheral": {
@@ -315,7 +375,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Run the same 017 job after five explicit synthetic-only verifier preflight cases pass, then one GCC15 alphasdana.o+Clang link+host MMIO+original EmuTOS CPU pen probe on sole DIAG; classify NOT_REACHED separately from hardware error. Five Commander calls per intervention maximum, no polling.",
+  "next_action": "Reconcile terminal receipt of revised 3 directed F2 tests only in next authorized intervention; then, if tests pass, run same job 017 for one GCC15 driver object, Clang21 link, host MMIO and original EmuTOS CPU guest probe. After natural guest success, use one SDL lightgun pointer class on actual GUI, verify host click/drag, EmuTOS calibration/mousevec and 560x160 cursor. No new emulator/version. Five Commander calls maximum per intervention.",
   "compilation_replan_20261022": {
     "status": "GCC15_DRIVER_AND_ORIGINAL_CLANG_LINK_PASS_NO_FULL_REBUILD",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -405,17 +465,18 @@
     "no_unapproved_experiments": true
   },
   "latest_increment_20261022": {
-    "topic": "F2 original EmuTOS natural guest CPU pen proof",
-    "commander_calls_used": 5,
-    "commander_calls_limit": 5,
-    "operation": "read-only T guest/map inspection and static job/verifier syntax/fixtures; NO MAME, ROM or compiler run",
-    "results": [
-      "guest paths and hashes confirmed",
-      "actual touch function PC discovered from '_' symbols",
-      "Lua syntax PASSED via liblua5.4",
-      "initial synthetic verifier fixtures incomplete and corrected in committed 5-test file",
-      "same job prepared with precompile failure guard"
+    "topic": "F2 reuse pinned MAME SDL mouse pointer as a Dana stylus",
+    "changed": "one driver input-code binding + one directed source test + updated existing job 017 + documentary mouse integration contract",
+    "calls_used": 5,
+    "call_results": [
+      "wrong unfetched commit => no test",
+      "identified missing local Git pin",
+      "fetched correct exact Git pin; five synthetic verifier tests PASS",
+      "pointer contract false-negative from regex",
+      "revised three-test suite launched; returned only first test startup, terminal result UNKNOWN"
     ],
-    "remaining": "actual 5 synthetic unit tests and natural CPU test NOT RUN"
+    "no_native_driver_build": true,
+    "no_original_EmuTOS_guest_run": true,
+    "no_additional_emulator": true
   }
 }
