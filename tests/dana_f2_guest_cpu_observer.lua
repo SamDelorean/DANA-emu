@@ -5,7 +5,7 @@
 -- 17cc980e675e2e1b50e713b9029f6fc3e51d3e55392deb99d53552d4b3af3e68
 local output=assert(os.getenv("DANA_F2_GUEST_OBSERVATION"),"F2 guest receipt path missing")
 local cpu,space,ready,pen_field=nil,nil,nil,nil
-local started,finished,loaded_seen,host_field=false,false,false,false
+local started,finished,loaded_seen,host_field,pen_injected=false,false,false,false,false
 local taps,subs,events={},{},{}
 local max_events=20000
 local milestones={
@@ -49,6 +49,7 @@ local function save(final_reason)
         expected_guest_image_sha256="ba590da2661bc582c19bb24d65db04667daf37a17d7aa51fb462b945933ba0a3",
         expected_guest_package_sha256="c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d",
         event_count=#events,counters=counts,
+        pen_injected_once=pen_injected,
         events=events,
         no_guest_pass_in_lua=true
     }
@@ -136,9 +137,10 @@ emu.register_periodic(function()
         if reason:match("^BLOCKED") then save(reason);manager.machine:exit();return end
         local now=emu.time()
         if ready:get()~=0 then loaded_seen=true;guest_state="ORIGINAL_QUICKLOAD_ACTIVE" end
-        if loaded_seen and now>=3 and not host_field then
+        if loaded_seen and now>=3 and not pen_injected then
             -- Real input field, not a fabricated PF1 CPU bus read.
             host_field=true
+            pen_injected=true
             pen_field:set_value(1)
             counts.pen_input_events=counts.pen_input_events+1
             -- Capture the exact host-controlled ADC inputs, but never MMIO.
