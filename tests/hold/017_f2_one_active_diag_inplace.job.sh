@@ -7,8 +7,8 @@ fi
 exec python3 - <<'PY'
 import fcntl, hashlib, io, json, os, re, shlex, shutil, subprocess, sys, traceback, types, unittest
 from pathlib import Path
-PIN="09f171b426c7180eea2c244861005176a9c5ac82"
-F2="105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557"
+PIN="7514e96c9609b0427a2dae8920b544d80c66d397"
+F2="f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f"
 OLD="e8211be78dfb2bf4cdc0ccabd444c97d715dc37d189d4f113f2f1cbf05b573e2"
 OLD_BIN="caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37"
 BASE=Path("/home/spc/DANA_EMU_ISOLATED")
@@ -103,6 +103,21 @@ try:
  if obs_git_hash!=OBS_BLOB or b"PASS_HOST_NATIVE_MMIO_ONLY" not in obs_bytes or b"emu.add_machine_stop_notifier" not in obs_bytes or b"emu.register_stop" in obs_bytes:
   raise RuntimeError("F2_NATIVE_OBSERVER_IDENTITY_MISMATCH")
  OBS_PATH.write_bytes(obs_bytes)
+ # One SDL lightgun input class supplies PEN, X and Y.
+ # Existing SDL provider maps window pointer position and button events.
+ if b"PORT_CODE(GUNCODE_BUTTON1)" not in fresh or b"PORT_CODE(MOUSECODE_BUTTON1)" in fresh:
+  raise RuntimeError("F2_SINGLE_POINTER_TRIGGER_BINDING_NOT_PRESENT")
+ if b"IPT_LIGHTGUN_X" not in fresh or b"IPT_LIGHTGUN_Y" not in fresh:
+  raise RuntimeError("F2_ABSOLUTE_POINTER_AXES_MISSING")
+ sdl=MAME/"src/osd/modules/input/input_sdl.cpp"
+ if not sdl.is_file() or sdl.is_symlink():
+  raise RuntimeError("PINNED_MAME_SDL_POINTER_PROVIDER_MISSING")
+ sdl_text=sdl.read_text(errors="replace")
+ for contract in ("class sdl_lightgun_device", "SDL_MOUSEMOTION",
+                  "SDL_MOUSEBUTTONDOWN", "normalize_absolute_axis",
+                  "DEVICE_CLASS_LIGHTGUN"):
+  if contract not in sdl_text:raise RuntimeError("MAME_SDL_INPUT_CONTRACT_MISSING:"+contract)
+ state["host_pointer_contract"]="ONE_SDL_LIGHTGUN_CLASS_TRIGGER_AND_ABSOLUTE_AXES_STATIC_PASS"
  # Guest evidence is the original F1 immutable EmuTOS-Dana, not a rebuilt ROM
  # or synthesized subroutine call. Reject changed guest/map before the run.
  for p in (GUEST_DIR,GUEST_PKG,GUEST_IMG,GUEST_MAP,GUEST_MANIFEST):
@@ -283,7 +298,7 @@ try:
  exec(compile(testcode,module.__file__,"exec"),module.__dict__)
  module.DRIVER=SRC
  suite=unittest.defaultTestLoader.loadTestsFromTestCase(module.DanaF2FromQualified012C)
- if suite.countTestCases()!=2:raise RuntimeError("EXPECTED_2_TRUE_F2_DIRECTED_CASES")
+ if suite.countTestCases()!=3:raise RuntimeError("EXPECTED_3_TRUE_F2_DIRECTED_CASES")
  output=io.StringIO()
  result=unittest.TextTestRunner(stream=output,verbosity=2).run(suite)
  (EV/"F2_production_methods.log").write_text(output.getvalue())
