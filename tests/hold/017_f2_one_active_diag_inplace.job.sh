@@ -54,11 +54,13 @@ GUEST_PKG=GUEST_DIR/"emutos.dana"
 GUEST_IMG=GUEST_DIR/"emutos.img"
 GUEST_MAP=GUEST_DIR/"emutos.map"
 GUEST_MANIFEST=GUEST_DIR/"guest_manifest.json"
-GUEST_PIN="65fe6e9f5428fdc293bf32650ce44dacd3de5e18"
+GUEST_PIN="22b611f6fbaf06b241ac4ed42f280ceaab73ed41"
 GUEST_LUA_BLOB="f345b0f9c8b0915222d4ccee2459a71c249b50c1"
 GUEST_VERIFY_BLOB="45277d4f28c25672f6cfcc0738e7b1a7e89bbbcf"
+GUEST_TEST_BLOB="ff634b119e38c41e3560e1ebb7bb558d7c6a7eaf"
 GUEST_LUA=EV/"F2_guest_cpu_observer.lua"
-GUEST_VERIFY=EV/"F2_guest_cpu_verify.py"
+GUEST_VERIFY=EV/"dana_f2_guest_cpu_verify.py"
+GUEST_TEST=EV/"test_dana_f2_guest_cpu_verify.py"
 GUEST_RESULT=EV/"F2_guest_cpu_observation.json"
 GUEST_VERDICT=EV/"F2_guest_cpu_verdict.json"
 GUEST_PKG_SHA="c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d"
@@ -101,6 +103,48 @@ try:
  if obs_git_hash!=OBS_BLOB or b"PASS_HOST_NATIVE_MMIO_ONLY" not in obs_bytes or b"emu.add_machine_stop_notifier" not in obs_bytes or b"emu.register_stop" in obs_bytes:
   raise RuntimeError("F2_NATIVE_OBSERVER_IDENTITY_MISMATCH")
  OBS_PATH.write_bytes(obs_bytes)
+ # Guest evidence is the original F1 immutable EmuTOS-Dana, not a rebuilt ROM
+ # or synthesized subroutine call. Reject changed guest/map before the run.
+ for p in (GUEST_DIR,GUEST_PKG,GUEST_IMG,GUEST_MAP,GUEST_MANIFEST):
+  if not p.exists() or p.is_symlink():
+   raise RuntimeError("F2_GUEST_ARTIFACT_MISSING_OR_LINK:"+str(p))
+ for p,expected in ((GUEST_PKG,GUEST_PKG_SHA),(GUEST_IMG,GUEST_IMG_SHA),(GUEST_MAP,GUEST_MAP_SHA)):
+  if hashfile(p)!=expected:
+   raise RuntimeError("ORIGINAL_EMUTOS_GUEST_HASH_MISMATCH:"+p.name)
+ guest_manifest=json.loads(GUEST_MANIFEST.read_text())
+ required_symbols={"_os_header":0x2140,"_dana_init":0x827e}
+ if any(guest_manifest.get("symbols",{}).get(k)!=v for k,v in required_symbols.items()):
+  raise RuntimeError("GUEST_INITIAL_ENTRY_NOT_PINNED")
+ if guest_manifest.get("artifacts",{}).get("emutos.img",{}).get("sha256")!=GUEST_IMG_SHA or guest_manifest.get("package",{}).get("sha256")!=GUEST_PKG_SHA:
+  raise RuntimeError("GUEST_MANIFEST_IDENTITY_UNBOUND")
+ guest_map_text=GUEST_MAP.read_text(errors="replace")
+ expected_map_symbols={"_dana_ts_rawread":0x852c,"_dana_poll_touchscreen":0x86a4}
+ for name,address in expected_map_symbols.items():
+  lines=[line for line in guest_map_text.splitlines()
+        if re.search(r"\b"+re.escape(name)+r"$",line.strip())]
+  if len(lines)!=1 or not re.search(r"0x0*"+format(address,"x")+r"\s+"+re.escape(name)+r"$",lines[0].strip()):
+   raise RuntimeError("GUEST_SYMBOL_MAP_BINDING_MISMATCH:"+name)
+ if subprocess.run(["git","-C",str(GIT),"cat-file","-e",GUEST_PIN+"^{commit}"],
+                   stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
+  cmd("fetch_guest_observer_pin",["git","-C",str(GIT),"fetch","--depth=1","origin",GUEST_PIN],timeout=300)
+ for repo_path,blob,path in (
+    ("tests/dana_f2_guest_cpu_observer.lua",GUEST_LUA_BLOB,GUEST_LUA),
+    ("tests/dana_f2_guest_cpu_verify.py",GUEST_VERIFY_BLOB,GUEST_VERIFY),
+    ("tests/dana_f2_guest_cpu_verify_test.py",GUEST_TEST_BLOB,GUEST_TEST)):
+  payload=subprocess.check_output(["git","-C",str(GIT),"show",GUEST_PIN+":"+repo_path],timeout=30)
+  actual=subprocess.check_output(["git","-C",str(GIT),"hash-object","--stdin"],
+         input=payload).decode().strip()
+  if actual!=blob:raise RuntimeError("GUEST_INSTRUMENT_IDENTITY_MISMATCH:"+repo_path)
+  path.write_bytes(payload)
+ if "dana-f2-natural-guest-bus-v1" not in GUEST_LUA.read_text() or "PASS_GUEST_CPU_PEN_X_Y" not in GUEST_VERIFY.read_text():
+  raise RuntimeError("GUEST_OBSERVER_VERIFIER_SCOPE_MISMATCH")
+ # Synthetic verification of the VERIFIER, not an EmuTOS run or F2 PASS.
+ # Fail here without compiling any driver if the checker cannot distinguish
+ # complete, incomplete and tampered CPU data.
+ state["status"]="GUEST_MAP_AND_VERIFIER_STATIC_CHECK_RUNNING";save()
+ cmd("guest_verifier_unit_preflight",["python3","-m","unittest","-v",
+          "test_dana_f2_guest_cpu_verify"],cwd=EV,timeout=60)
+ state["status"]="GUEST_MAP_AND_VERIFIER_STATIC_PREFLIGHT_PASS";save()
  SRC.write_bytes(fresh)
  cc=shutil.which("clang-21") or shutil.which("clang")
  cxx=shutil.which("clang++-21") or shutil.which("clang++")
@@ -268,40 +312,6 @@ try:
  state["native_F2"]="PASS_HOST_NATIVE_MMIO_ONLY_NOT_GUEST"
  state["status"]="F2_COMPILE_SOURCE_TESTS_NATIVE_HOST_MMIO_PASS_NOT_GUEST"
  state["status"]="F2_COMPILE_SOURCE_TESTS_NATIVE_HOST_MMIO_PASS_GUEST_CPU_TEST_PREPARATION";save()
- # Guest evidence is the original F1 immutable EmuTOS-Dana, not a rebuilt ROM
- # or synthesized subroutine call. Reject changed guest/map before the run.
- for p in (GUEST_DIR,GUEST_PKG,GUEST_IMG,GUEST_MAP,GUEST_MANIFEST):
-  if not p.exists() or p.is_symlink():
-   raise RuntimeError("F2_GUEST_ARTIFACT_MISSING_OR_LINK:"+str(p))
- for p,expected in ((GUEST_PKG,GUEST_PKG_SHA),(GUEST_IMG,GUEST_IMG_SHA),(GUEST_MAP,GUEST_MAP_SHA)):
-  if hashfile(p)!=expected:
-   raise RuntimeError("ORIGINAL_EMUTOS_GUEST_HASH_MISMATCH:"+p.name)
- guest_manifest=json.loads(GUEST_MANIFEST.read_text())
- required_symbols={"_os_header":0x2140,"_dana_init":0x827e}
- if any(guest_manifest.get("symbols",{}).get(k)!=v for k,v in required_symbols.items()):
-  raise RuntimeError("GUEST_INITIAL_ENTRY_NOT_PINNED")
- if guest_manifest.get("artifacts",{}).get("emutos.img",{}).get("sha256")!=GUEST_IMG_SHA or guest_manifest.get("package",{}).get("sha256")!=GUEST_PKG_SHA:
-  raise RuntimeError("GUEST_MANIFEST_IDENTITY_UNBOUND")
- guest_map_text=GUEST_MAP.read_text(errors="replace")
- expected_map_symbols={"_dana_ts_rawread":0x852c,"_dana_poll_touchscreen":0x86a4}
- for name,address in expected_map_symbols.items():
-  lines=[line for line in guest_map_text.splitlines()
-        if re.search(r"\b"+re.escape(name)+r"$",line.strip())]
-  if len(lines)!=1 or not re.search(r"0x0*"+format(address,"x")+r"\s+"+re.escape(name)+r"$",lines[0].strip()):
-   raise RuntimeError("GUEST_SYMBOL_MAP_BINDING_MISMATCH:"+name)
- if subprocess.run(["git","-C",str(GIT),"cat-file","-e",GUEST_PIN+"^{commit}"],
-                   stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
-  cmd("fetch_guest_observer_pin",["git","-C",str(GIT),"fetch","--depth=1","origin",GUEST_PIN],timeout=300)
- for repo_path,blob,path in (
-    ("tests/dana_f2_guest_cpu_observer.lua",GUEST_LUA_BLOB,GUEST_LUA),
-    ("tests/dana_f2_guest_cpu_verify.py",GUEST_VERIFY_BLOB,GUEST_VERIFY)):
-  payload=subprocess.check_output(["git","-C",str(GIT),"show",GUEST_PIN+":"+repo_path],timeout=30)
-  actual=subprocess.check_output(["git","-C",str(GIT),"hash-object","--stdin"],
-         input=payload).decode().strip()
-  if actual!=blob:raise RuntimeError("GUEST_INSTRUMENT_IDENTITY_MISMATCH:"+repo_path)
-  path.write_bytes(payload)
- if "dana-f2-natural-guest-bus-v1" not in GUEST_LUA.read_text() or "PASS_GUEST_CPU_PEN_X_Y" not in GUEST_VERIFY.read_text():
-  raise RuntimeError("GUEST_OBSERVER_VERIFIER_SCOPE_MISMATCH")
  # F1 already established -quickload, debugger and real CPU bus taps. Never
  # change the guest PC, call a function, or inject synthetic MMIO responses.
  for p in (GUEST_RESULT,GUEST_VERDICT):
