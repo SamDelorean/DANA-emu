@@ -257,7 +257,7 @@ try:
     # compiler workaround to the ONLY object rebuilt. Never mutate cached
     # object flags, global toolchains, or the donor. Link with the real Clang.
     wrapper=root/'driver_cxx_no_slp.sh'
-    wrapper.write_text('#!/bin/sh\\nexec '+cxx+' -fno-slp-vectorize "$@"\\n')
+    wrapper.write_text('#!/bin/sh\nexec '+cxx+' -fno-slp-vectorize "$@"\n')
     wrapper.chmod(0o755)
     summary['compiler_workaround']=dict(
         trigger='CLANG21_1_8_O3_SLP_VECTORIZER_EXIT_139',
