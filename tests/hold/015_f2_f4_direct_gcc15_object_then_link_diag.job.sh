@@ -281,7 +281,7 @@ try:
     plan=evidence/'plan-driver-only.log'
     if plan.stat().st_size>33554432:raise RuntimeError('BLOCKED_BUILD_PLAN_BOUND')
     planned=[line for line in plan.read_text(errors='replace').splitlines()
-             if re.search(r'(?:^|\\s)-c(?:\\s|$)',line)]
+             if re.search(r'(?:^|\s)-c(?:\s|$)',line)]
     if len(planned)!=1 or 'alphasdana.cpp' not in planned[0]:
         raise RuntimeError('BLOCKED_PLAN_IS_NOT_EXACTLY_ONE_DANA_DRIVER')
     summary['incremental_build']['planned_compilation_units']=len(planned)
@@ -346,7 +346,7 @@ try:
     stage('compile-dana-object-gcc15',translated,cwd=project_dir,timeout=1200,env=build_env)
     if not output_obj.is_file() or digest(output_obj)==old_obj_sha:
         raise RuntimeError('BLOCKED_NO_NEW_DANA_OBJECT')
-    if output_obj.read_bytes()[:4]!=b'\\x7fELF':
+    if output_obj.read_bytes()[:4]!=b'\x7fELF':
         raise RuntimeError('BLOCKED_NOT_ELF_DANA_OBJECT')
     summary['incremental_build']['direct_object_sha256']=digest(output_obj)
     save()
@@ -355,7 +355,7 @@ try:
     # Zero further C/C++ compilations allowed; never auto-regenerate MAME.
     stage('plan-link-only',['make','-n']+command[1:],cwd=mame,timeout=300,env=build_env)
     post=(evidence/'plan-link-only.log').read_text(errors='replace').splitlines()
-    if any(re.search(r'(?:^|\\s)-c(?:\\s|$)',line) for line in post):
+    if any(re.search(r'(?:^|\s)-c(?:\s|$)',line) for line in post):
         raise RuntimeError('BLOCKED_LINK_WOULD_RECOMPILE_OTHER_OBJECTS')
     if not any('danadiagd' in line for line in post):
         raise RuntimeError('BLOCKED_NO_DANA_DIAG_LINK_PLANNED')
