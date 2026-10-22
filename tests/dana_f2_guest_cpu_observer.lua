@@ -24,7 +24,7 @@ local initial_cpu_pc=nil
 local initial_receipt=assert(io.open(output,"wb"))
 initial_receipt:write('{"schema":"dana-f2-natural-guest-bus-v1","status":"OBSERVER_LUA_LOADED_NOT_INITIALIZED","origin":"M68000_CPU_TAPS_AND_DEBUGGER_BREAKPOINTS"}\n')
 initial_receipt:close()
-local function json(v)
+local function json(v,as_array)
     local t=type(v)
     if t=="string" then
         return string.format("%q",v):gsub("\\\n","\\n")
@@ -32,14 +32,14 @@ local function json(v)
         return tostring(v)
     elseif t=="table" then
         local a={}
-        if #v>0 then
+        if as_array or #v>0 then
             for _,x in ipairs(v) do a[#a+1]=json(x) end
             return "["..table.concat(a,",").."]"
         end
         local keys={}
         for k in pairs(v) do keys[#keys+1]=k end
         table.sort(keys)
-        for _,k in ipairs(keys) do a[#a+1]=json(k)..":"..json(v[k]) end
+        for _,k in ipairs(keys) do a[#a+1]=json(k)..":"..json(v[k],k=="events") end
         return "{"..table.concat(a,",").."}"
     end
     return "null"
