@@ -123,7 +123,11 @@ def evaluate(receipt):
         return verdict("PARTIAL_CPU_TOUCH","NO_CPU_PF1_ACTIVE_LOW_READ_IN_GUEST_TOUCH_POLL",
                        milestones=milestones)
     def matches(e,kind,addr,value=None,check=None):
-        if e["kind"]!=kind or e["address"]!=addr or e["mask"]!=0xffff and addr in (DATA,CTRL):
+        if kind is None and addr is None:
+            return check is not None and check(e)
+        if e["kind"]!=kind or e["address"]!=addr:
+            return False
+        if addr in (DATA,CTRL) and e["mask"]!=0xffff:
             return False
         return (check(e["data"]) if check is not None else
                 value is None or e["data"]==value)
