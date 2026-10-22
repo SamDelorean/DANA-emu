@@ -1,0 +1,28 @@
+{
+  "schema": "dana-f3-product-v1",
+  "branch": "codex/dana-d1-2-ram-bus",
+  "product": "src/mame/skeleton/alphasdana.cpp",
+  "source_commits": [
+    "b6dca55f61beec2315a6e309607cca7ade68c149",
+    "ec3c36bf158b657172494c700ce40cf57ace7f31"
+  ],
+  "regression_commit": "d1ca6559dd40f606b7eb2d4709d093e62550f346",
+  "reference": "docs/F3_UART1_CTS_PRODUCT.md",
+  "source_fixed_emutos": "davidgiven/emutos@9c42ef0f2c2fa9d1e217fced9da68901b2326e8b:bios/dana.c",
+  "manufacturer": "NXP MC68VZ328UM UART CTS1 on PE7 active low; UTX1.CTS_STAT bit9 and UTX1.NOCTS bit11",
+  "product_change": "Real UART1 virtual receiver CTS, UTX live CTS status, control-only NOCTS releases queued data, debugger read no side effects",
+  "native_existing_pass_count": 10,
+  "native_existing_driver_commit": "80cbfecab4df3c4412e370974295ac8a2f336fc1",
+  "status": "F3_SOURCE_IMPLEMENTED_EQUIVALENT_CPP20_ASAN_UBSAN_PASS_NATIVE_PENDING",
+  "qualification": {
+    "source_review": "PASS",
+    "equivalent_focus_cpp20_asan_ubsan": "PASS",
+    "actual_committed_extraction_test": "NOT_EXECUTED",
+    "full_mame_compile": "NOT_EXECUTED",
+    "emutos_guest_run": "NOT_EXECUTED"
+  },
+  "commander_calls": 0,
+  "native_attempts_new": 0,
+  "full_boot_claim": false,
+  "followup": "Build the changed DIAG source under a fresh bounded authorization and verify real UART frame completions/forward progress; do not re-run historic successful tests."
+}
