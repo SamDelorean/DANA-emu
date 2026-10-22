@@ -5,7 +5,7 @@ if [[ "$(printenv DANA_F2_INPLACE_AUTHORIZED 2>/dev/null || true)" != YES ]]; th
   echo "HOLD: new T/Commander authorization required"; exit 2
 fi
 exec python3 - <<'PY'
-import fcntl, hashlib, io, json, os, re, shutil, subprocess, sys, traceback, types, unittest
+import fcntl, hashlib, io, json, os, re, shlex, shutil, subprocess, sys, traceback, types, unittest
 from pathlib import Path
 PIN="09f171b426c7180eea2c244861005176a9c5ac82"
 F2="105f882f77251ac3be4ee988f982ed88e64e6baadc775ca02fcd497a8f0df557"
@@ -92,8 +92,53 @@ try:
           if re.search(r"(?:^|\s)-c(?:\s|$)",line)]
  if len(planned)!=1 or "alphasdana.cpp" not in planned[0]:
   raise RuntimeError("NOT_ONE_INCREMENTAL_OBJECT")
- state["status"]="BUILD_STARTED";save()
- cmd("compile_and_link",make,cwd=MAME,env=env,timeout=5400)
+ # Reuse the exact generated 012-C MAME compile command. Global OPTIMIZE=0
+ # regenerates/changes more project settings, so NEVER pass it to make.
+ # Substitute ONLY -O3 -> -O0 for this one driver translation unit.
+ gmake_dir=MAME/"build/dana-diag/projects/sdl/mamedanadiag/gmake-linux-clang"
+ if not gmake_dir.is_dir() or gmake_dir.is_symlink():
+  raise RuntimeError("GENERATED_GMAKE_DIRECTORY_NOT_FOUND")
+ driver_cmd=shlex.split(planned[0])
+ if len(driver_cmd)>180 or len(driver_cmd)<25:
+  raise RuntimeError("DRIVER_COMMAND_UNEXPECTED_SIZE")
+ if Path(driver_cmd[0]).resolve()!=Path(cxx).resolve():
+  raise RuntimeError("DRIVER_COMPILER_UNEXPECTED")
+ if driver_cmd.count("-c")!=1 or driver_cmd.count("-o")!=1:
+  raise RuntimeError("DRIVER_C_OR_O_ARGUMENT_MISSING")
+ if driver_cmd.count("-O3")!=1 or any(flag in driver_cmd for flag in ("-O0","-O1","-O2","-Os","-Oz")):
+  raise RuntimeError("EXPECTED_EXACTLY_ONE_O3_OPTIMIZATION_FLAG")
+ if (gmake_dir/driver_cmd[driver_cmd.index("-c")+1]).resolve()!=SRC.resolve():
+  raise RuntimeError("DRIVER_C_SOURCE_NOT_CANONICAL")
+ if (gmake_dir/driver_cmd[driver_cmd.index("-o")+1]).resolve()!=obj.resolve():
+  raise RuntimeError("DRIVER_OUTPUT_NOT_CANONICAL_OBJECT")
+ if not all(flag in driver_cmd for flag in ("-MMD","-MP","-std=c++20")):
+  raise RuntimeError("MAME_COMPILER_DEPENDENCY_OR_ABI_OPTIONS_MISSING")
+ # Replace exactly one optimization token; every include path, generated flag,
+ # C++ ABI option, object destination and input remains byte-for-byte equal.
+ driver_o0=driver_cmd.copy()
+ driver_o0[driver_o0.index("-O3")]="-O0"
+ state["exact_driver_compile_changes"]=[{"before":"-O3","after":"-O0"}]
+ state["driver_command_O0"]=driver_o0
+ state["status"]="CLANG21_ONLY_ALPHASDANA_O0_STARTED";save()
+ cmd("compile_driver_O0_only",driver_o0,cwd=gmake_dir,env=env,timeout=1800)
+ if hashfile(obj)==hashbytes(oldobj):
+  raise RuntimeError("NO_NEW_F2_OBJECT_AFTER_DRIVER_O0")
+ # A second read-only Make plan must have ZERO C++ source compiles, i.e.,
+ # only the existing archive and linker work may be required.
+ cmd("post_driver_dryrun",["make","-n"]+make[1:],cwd=MAME,env=env,timeout=300)
+ remaining=(EV/"F2_post_driver_dryrun.log").read_text(errors="replace")
+ recompiles=[line for line in remaining.splitlines()
+    if re.search(r"(?:^|\s)-c(?:\s|$)",line)]
+ if recompiles:
+  raise RuntimeError("POST_DRIVER_PLAN_WOULD_COMPILE_MORE_OBJECTS")
+ if "Archiving libmame_danadiag.a" not in remaining:
+  raise RuntimeError("EXPECTED_ONE_DRIVER_ARCHIVE_REBUILD_NOT_PLANNED")
+ state["status"]="CLANG21_O0_DRIVER_PASS_LINK_EXISTING_DIAG_STARTED";save()
+ cmd("archive_and_link_only",make,cwd=MAME,env=env,timeout=1800)
+ link_log=(EV/"F2_archive_and_link_only.log").read_text(errors="replace")
+ if "Compiling src/mame/skeleton/alphasdana.cpp" in link_log:
+  raise RuntimeError("UNEXPECTED_DRIVER_RECOMPILATION_IN_LINK_STAGE")
+ state["compiler_optimization_override"]="DRIVER_ONLY_O0_OTHER_OBJECTS_UNCHANGED"
  if hashfile(obj)==hashbytes(oldobj) or hashfile(INTERNAL)==hashbytes(oldinternal):
   raise RuntimeError("NO_NEW_F2_OBJECT_OR_DIAG")
  if hashfile(ARCHIVE)==hashbytes(oldarchive):
