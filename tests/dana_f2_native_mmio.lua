@@ -96,6 +96,6 @@ emu.register_periodic(function()
     if not ok then save("FAIL_HOST_NATIVE_MMIO",err) end
 end)
 
-emu.register_stop(function()
+local native_stop_notifier=emu.add_machine_stop_notifier(function()
     if not finished then save("BLOCKED_NO_NATIVE_PEN_SAMPLE","MAME stopped before two periodic callbacks") end
 end)
