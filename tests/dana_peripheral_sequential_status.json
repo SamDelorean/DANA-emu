@@ -315,7 +315,14 @@
       "commander_calls_this_intervention": 5,
       "T_environment_mutation": "Only existing Git metadata fetch, no MAME/DIAG/source/binary mutation",
       "no_duplicate_build_tree": true,
-      "no_GEM_injection": true
+      "no_GEM_injection": true,
+      "control_sheet": {
+        "drive_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+        "status": "NOT_SYNCHRONIZED_THIS_INCREMENT",
+        "reason": "Connector metadata confirms an Office workbook, not a native Google Sheet; do not blindly convert or rewrite original",
+        "git_status_authoritative": "tests/dana_peripheral_sequential_status.json",
+        "next": "Use an Office-aware explicit workbook edit workflow if requested; preserve original Office file"
+      }
     }
   },
   "next_peripheral": {
