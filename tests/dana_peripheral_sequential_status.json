@@ -49,7 +49,7 @@
       "previous_F2_source_test": "ALREADY_EXISTED_AT_PINNED_F2_COMMIT_NOT_REQUALIFIED_HERE"
     },
     "build": {
-      "status": "LAUNCHED_UNSUPERVISED_RESULT_NOT_YET_RETRIEVED",
+      "status": "BLOCKED_CLANG21_BACKEND_CRASH_AFTER_REAL_COMPILER_LAUNCH",
       "previous_job": "tests/hold/016_f2_stylus_only_diag.job.sh",
       "previous_job_status": "RETIRED_DUPLICATE_MAME_TREE",
       "current_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
@@ -61,7 +61,7 @@
       "compiler_changes": 0,
       "ROM_builds": 0,
       "active_binary_overwrites": 0,
-      "T_run": "STARTED_NO_POLLING",
+      "T_run": "COMPLETED_EXIT_2",
       "authorization": "NEW_EXPLICIT_T_COMMANDER_AUTHORIZATION_REQUIRED",
       "native_F2_probe": "NOT_PREPARED_OR_EXECUTED_DO_NOT_CLAIM_PASS",
       "launcher_pid": 98536,
@@ -72,20 +72,56 @@
       "log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_one_active_diag_launch.log",
       "Commander_calls_for_launch": 1,
       "unattended": true,
-      "compiler_build_status": "UNKNOWN_UNTIL_JOB_REPORT",
+      "compiler_build_status": "FAIL",
       "runtime_f2_status": "NOT_PROVEN",
       "full_builds": 0,
-      "duplicate_trees": 0
+      "duplicate_trees": 0,
+      "stage_results": [
+        {
+          "name": "fetch_existing_git",
+          "exit": 0
+        },
+        {
+          "name": "switch_existing_checkout",
+          "exit": 0
+        },
+        {
+          "name": "dryrun",
+          "exit": 0
+        },
+        {
+          "name": "compile_and_link",
+          "exit": 2
+        }
+      ],
+      "observed_compiler": "clang++-21 version 21.1.8",
+      "failure_type": "LLVM_SELECTION_DAG_INTERNAL_CRASH",
+      "failure_function": "device_finder<dana_vz_cpu_device,false>::device_finder",
+      "compiler_failure_exit": 139,
+      "failure_source_path": "src/mame/skeleton/alphasdana.cpp",
+      "result_path": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+      "compile_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
+      "evidence_read_method": "ONE_READ_ONLY_MULTIFILE_CALL_NO_POLLING",
+      "real_work_started_verified": true,
+      "dryrun_planned_compilation_units": 1,
+      "new_binary_generated": false,
+      "source_directed_tests_executed": 0,
+      "native_runs": 0,
+      "old_DIAG_binary_preserved": true,
+      "old_DIAG_source_restored": true,
+      "extra_worktrees_created": 0,
+      "ROM_rebuilds": 0,
+      "further_auto_retries": 0
     },
     "native": {
-      "status": "PENDING_UNTIL_GUEST_PEN_SPI2_REAL_OBSERVATION",
-      "guest": "Existing EmuTOS original reused"
+      "status": "NOT_RUN_BUILD_FAILED",
+      "guest": "Existing EmuTOS original unchanged"
     }
   },
   "next_peripheral": {
     "id": "F3",
     "title": "UART1 external CTS",
-    "status": "PENDING_F2_BUILD_AND_NATIVE_EVIDENCE",
+    "status": "HOLD_F2_COMPILE_FAILURE_NO_UNQUALIFIED_F3",
     "source_available_in_original_branch": true
   },
   "then": {
@@ -139,5 +175,5 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Run one authorized unattended in-place F2 compile and six directed tests. Independently implement authentic MAME pen-contact/SPI2 native observation before declaring F2 functionally PASS. No F3 changes before F2 qualification."
+  "next_action": "Do not repeat Clang21 job. Review minimal F2 code interaction and prior proven driver to eliminate trigger if possible before considering an alternate compiler. Prepare one coherent targeted source change; no expanded environment or new DIAG worktrees."
 }
