@@ -24,5 +24,14 @@
   "commander_calls": 0,
   "native_attempts_new": 0,
   "full_boot_claim": false,
-  "followup": "Build the changed DIAG source under a fresh bounded authorization and verify real UART frame completions/forward progress; do not re-run historic successful tests."
+  "followup": "Build the changed DIAG source under a fresh bounded authorization and verify real UART frame completions/forward progress; do not re-run historic successful tests.",
+  "workbook": {
+    "original_drive_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "version": "2.4",
+    "synced_verified_bytes": 80737,
+    "historical_native_pass_count": 10,
+    "historical_native_attempts": 3,
+    "new_native_attempts": 0,
+    "commander_calls_this_increment": 0
+  }
 }
