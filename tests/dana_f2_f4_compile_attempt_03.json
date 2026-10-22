@@ -1,0 +1,57 @@
+{
+  "schema": "dana-f2-f4-compile-attempt-v3",
+  "project": "DANA-emu",
+  "objective_id": "DANA-F2F4-NEW-DIAG-COMPILE",
+  "attempt_ordinal": 3,
+  "supervision": "EXPLICIT_HUMAN_AUTHORIZATION_AFTER_TWO_FAILS; STOP_AFTER_THIRD",
+  "authorization": "User: Realízalo following max 10 Commander calls; previous 5 calls + this iteration 4 = 9/10 used",
+  "source_pin": "87e26793ff4743d5fef5539def994872e2291739",
+  "driver_sha256": "c10fa1303eb9f608e219bc9c9afa7ea6f8f4afd37c34526e3a523b5f8b6fe578",
+  "executed_job_commit": "fc1ffd30200d6d08668d56c28e255f87ea97bbfd",
+  "executed_job_sha256": "fd3963d8a26401750aae3c27f08c4175ebc0e3d0073a74443ff3f8ff2f2776f1",
+  "device": "HP t640 canonical T",
+  "process_pid": 81264,
+  "outcome": "FAILED_COMPILER_INTERNAL_LLVM21_SELECTIONDAG_CODEGEN_SIGSEGV",
+  "stages": {
+    "git_checkout": 0,
+    "donor_pin": 0,
+    "copy_012C_compiled_cache": 0,
+    "plan_diag": 0,
+    "build_diag": 2,
+    "compiled_binary_sha256": null,
+    "emutos_guest_processes": 0,
+    "rom_builds": 0,
+    "produced_new_diag": false
+  },
+  "effective_flags": {
+    "compiler": "/usr/bin/clang++-21",
+    "source_flags": [
+      "-O3",
+      "-O1",
+      "-fno-slp-vectorize"
+    ],
+    "override_confirmed": true,
+    "main_backend": "SelectionDAGISel X86 DAG->DAG Instruction Selection",
+    "failing_symbol": "device_finder<dana_vz_cpu_device,false>::device_finder(device_t&,char const*)",
+    "frontend_exit": 139,
+    "meaning": "The workaround reached compiler argv but did not prevent LLVM21 backend crash. Compiler/toolchain change is required, not another identical retry."
+  },
+  "latest_executed_source_regressions": {
+    "status": "PASS_7_OF_7_PREVIOUS_CONTROLLED_ATTEMPT",
+    "this_run": "NOT_RUN_BECAUSE_BUILD_FAILED"
+  },
+  "archive": {
+    "path": "/home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_p3yg_1t9/dana_integrated_hardware_p3yg_1t9.tar.gz",
+    "sha256": "cebea7b44cd69141600d2b701d3940126a519edaede462f87134e635fa7295b1"
+  },
+  "commander": {
+    "historic_calls_under_current_budget_before_this_attempt": 5,
+    "this_attempt_calls": 4,
+    "total_current_budget": 9,
+    "maximum": 10,
+    "remaining": 1,
+    "no_polling_after_completion": true
+  },
+  "native_test_attempts_legacy_012e": 3,
+  "next": "Stop repeated Clang21 attempts. Before further run, select a different verified compiler for only the changed object using the already-generated compile recipe and unchanged old object cache; validate link ABI and require new explicit authorization. No new native guest launched."
+}
