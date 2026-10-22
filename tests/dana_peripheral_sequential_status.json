@@ -192,7 +192,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Prepare real F2-only delta from compiled 012-C pin 581601, retaining unrelated UART/ST/LCD/Timer1/SPI2 behavior. Repair archive .a rollback; run only after explicit authorization.",
+  "next_action": "Before next F2 compile: static scope reduction to compiled 012-C + F2 only, explicitly resolve SPI2 gate 0x2100 vs 0x0300 and IRQ4 test assumptions, align EmuTOS exact transfer/write order, make full in-place .a rollback, and prepare genuine native pen probe. Do not perform blind builds.",
   "compilation_replan_20261022": {
     "status": "COMPILER_BACKEND_CRASH_CONFIRMED_EXACT_TRIGGER_NOT_ISOLATED",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -212,5 +212,30 @@
     ],
     "memo": "docs/F2_CLANG21_BACKEND_CRASH_OPTIONS_20261022.md",
     "spi2_semantics_dependency_note": "Existing compiled 012-C SPI2 transfer gate & 0x2100; later uncompiled 80cb gate & 0x0300. They differ; preserve 012-C behavior and test separately if needed, do not silently conflate with pen"
+  },
+  "documentation_prebuild_policy": {
+    "mandatory": true,
+    "status": "AUDITED_RELEVANT_PINNED_SOURCES_DISCREPANCIES_OPEN",
+    "new_review_doc": "docs/F2_MANDATORY_SOURCE_CONTRAST_AND_NO_BLIND_TESTING_20261022.md",
+    "sources": [
+      "MC68VZ328UM/D sections 13.5 and 13.6 and addendum",
+      "EmuTOS dana.c pinned 9c42ef0",
+      "POSE VZ registers pinned 97b10711",
+      "Retro68 Dana/ADS784x pinned d917b67",
+      "MAME devfind/build pinned c4e48388",
+      "Project main GENERAL_WORK_PLAN and DANA_DIAG_EXCLUSIVE_TEST_POLICY",
+      "Project D0.2 contract and integrated-hardware spec",
+      "012-C compiled source 581601b49 and F2 pin 78be96c5",
+      "Real Clang21 crash log and F2 tests"
+    ],
+    "new_discrepancies": [
+      "SPI2 hardware enable 0x0200 + XCH 0x0100; 012-C gate erroneously also requires speed bit 0x2000; guest rates mask bug",
+      "EmuTOS exact pen transaction has SPI2 enable setup and 8+16 phase under one PG2 CS window; current test skips intermediate writes",
+      "Existing F2 source test expects update_irq_lines/IRQ4 from uncompiled parent, cannot be inherited in true 012-C-plus-F2 without separate contract",
+      "Existing F2 script 017 does not restore libmame_danadiag.a upon successful compilation",
+      "Native pen SPI2 stimulus observation absent"
+    ],
+    "planned_build_approval": "NOT_AUTHORIZED_FRESH; NO_BUILD_BEFORE_SOURCE_DELTA_AND_ASSERTIONS_AUDITED",
+    "honesty": "Specific relevant public primary sources/documents reviewed, not all historic Drive source bytes reverified"
   }
 }
