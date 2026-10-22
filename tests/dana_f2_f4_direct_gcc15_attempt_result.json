@@ -1,0 +1,44 @@
+{
+  "schema": "dana-f2-f4-replan-v1",
+  "objective": "Build one current dana-diag product and run pinned EmuTOS, with no image rebuild",
+  "authorization": "User allowed one next attempt; if it failed, replan and do not retry",
+  "source_pin": "87e26793ff4743d5fef5539def994872e2291739",
+  "driver_sha256": "c10fa1303eb9f608e219bc9c9afa7ea6f8f4afd37c34526e3a523b5f8b6fe578",
+  "executed_job_commit": "836ebf28da619acaebb82346bb305acbe0dca62c",
+  "executed_job_sha256": "26a3c1f56d255070960ada3e2abc68621e12f945a731209fbadc9b937eb5a80b",
+  "device": "HP t640 canonical T",
+  "job_pid": 93161,
+  "status": "BLOCKED_PREBUILD_RECIPE_TRANSLATION",
+  "reason": "BLOCKED_UNKNOWN_DRIVER_FLAG:-fdiagnostics-show-note-include-stack",
+  "fact": "This is a known Clang-only flag in the generated MAME recipe. The translator rejected the flag instead of filtering it, so this is a preparation defect and NOT a GCC, linker or emulator compilation failure.",
+  "passed": [
+    "job verified SHA256",
+    "shell syntax PASS",
+    "embedded Python AST PASS",
+    "source pin and guest validation",
+    "old compiled cache copied immutably",
+    "make -n plan-driver-only exit 0"
+  ],
+  "actual_object_compilations": 0,
+  "actual_link_attempts": 0,
+  "new_DIAG_binary": false,
+  "native_EmuTOS_processes": 0,
+  "ROM_rebuilds": 0,
+  "commander_calls_this_intervention": 2,
+  "new_012E_native_attempts": 0,
+  "evidence": {
+    "archive": "/home/spc/DANA_EMU_ISOLATED/dana_integrated_hardware_o72eo0y9/dana_integrated_hardware_o72eo0y9.tar.gz",
+    "sha256": "9a67ffabf3ac03f7251cd9b755b4b84fc40ea3df9c3a87228dca24e5101daefa",
+    "json": "evidence/job_result.json",
+    "plan": "evidence/plan-driver-only.log"
+  },
+  "decision": "STOP. No more automatic attempts and no relabeling of same compile objective. Switch from hand-translating Clang cached build recipes to a coherent GCC-only MAME build environment, with one target and pinned sources, reusing exact guest/ROM and all hardware code.",
+  "preferred_strategy": "Validate clean build plan and project generation for GCC 15 on existing source/donor snapshot without changing guest; if a complete one-time GCC object rebuild is required, explicitly account for it instead of falsely promising one changed Clang cache object. Then one authorized diag build and guest test.",
+  "constraints": {
+    "old_012C_cache": "PRESERVE",
+    "previous_native_PASS": "HISTORICAL_ONLY",
+    "no_stable_native_tests": true,
+    "no_commander_further": true,
+    "no_gate_naming_reset": true
+  }
+}
