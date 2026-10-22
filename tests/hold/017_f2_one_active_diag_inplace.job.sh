@@ -42,7 +42,11 @@ def cmd(label,args,**opts):
  state["tests"].append({"name":label,"exit":r,"log":str(log)})
  save()
  if r:raise RuntimeError("FAILED_"+label+":"+str(r))
-oldsrc=None; oldobj=None; oldinternal=None; oldarchive=None; obj=None
+oldsrc=None; oldobj=None; oldinternal=None; oldarchive=None; oldbin=None; obj=None
+OBS_PIN="c92b256c21161a00d07c29f5fd08a3fb84bee9e6"
+OBS_BLOB="a775debd5ac146e875a89d8c0f35024cfd6ee9ea"
+OBS_PATH=EV/"F2_native_mmio.lua"
+OBS_RESULT=EV/"F2_native_mmio_result.txt"
 try:
  for p in (WORK,MAME,SRC,BIN,INTERNAL,ARCHIVE,GIT):
   if not p.exists() or p.is_symlink():raise RuntimeError("UNEXPECTED_CANONICAL_PATH:"+str(p))
@@ -58,7 +62,21 @@ try:
   cmd("fetch_existing_git",["git","-C",str(GIT),"fetch","--depth=1","origin",PIN],timeout=300)
  fresh=subprocess.check_output(["git","-C",str(GIT),"show",PIN+":src/mame/skeleton/alphasdana.cpp"])
  if hashbytes(fresh)!=F2 or b"UART1CTS" in fresh:raise RuntimeError("PINNED_F2_SOURCE_MISMATCH")
- oldsrc,oldobj,oldinternal,oldarchive=SRC.read_bytes(),obj.read_bytes(),INTERNAL.read_bytes(),ARCHIVE.read_bytes()
+ oldsrc,oldobj,oldinternal,oldarchive,oldbin=SRC.read_bytes(),obj.read_bytes(),INTERNAL.read_bytes(),ARCHIVE.read_bytes(),BIN.read_bytes()
+ if not oldbin or hashbytes(oldbin)!=OLD_BIN:
+  raise RuntimeError("INSTALL_DIAG_BACKUP_HASH_MISMATCH")
+ # Pin the diagnostic Lua code to a known independent Git commit and verify
+ # Git blob identity. This is an observer, NOT another emulator binary.
+ if subprocess.run(["git","-C",str(GIT),"cat-file","-e",OBS_PIN+"^{commit}"],
+                   stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
+  cmd("fetch_observer_pin",["git","-C",str(GIT),"fetch","--depth=1","origin",OBS_PIN],timeout=300)
+ obs_bytes=subprocess.check_output(["git","-C",str(GIT),"show",
+     OBS_PIN+":tests/dana_f2_native_mmio.lua"])
+ obs_git_hash=subprocess.check_output(["git","-C",str(GIT),"hash-object","--stdin"],
+     input=obs_bytes,text=False).decode().strip()
+ if obs_git_hash!=OBS_BLOB or b"PASS_HOST_NATIVE_MMIO_ONLY" not in obs_bytes:
+  raise RuntimeError("F2_NATIVE_OBSERVER_IDENTITY_MISMATCH")
+ OBS_PATH.write_bytes(obs_bytes)
  SRC.write_bytes(fresh)
  cc=shutil.which("clang-21") or shutil.which("clang")
  cxx=shutil.which("clang++-21") or shutil.which("clang++")
@@ -96,23 +114,48 @@ try:
  (EV/"F2_production_methods.log").write_text(output.getvalue())
  state["directed_tests"]={"cases":result.testsRun,"failures":len(result.failures),"errors":len(result.errors)}
  if not result.wasSuccessful():raise RuntimeError("F2_DIRECTED_TEST_FAIL")
- state["status"]="F2_012C_COMPILE_AND_TWO_SOURCE_TESTS_PASS_NATIVE_PENDING"
+ state["status"]="F2_COMPILED_SOURCE_TEST_PASS_NATIVE_MMIO_STARTING";save()
+ # Use the ONE canonical installed DIAG path for a native hardware run.
+ # All original binary bytes were retained in memory. No second version.
+ BIN.write_bytes(INTERNAL.read_bytes())
+ if hashfile(BIN)!=hashfile(INTERNAL):
+  raise RuntimeError("CANDIDATE_NOT_INSTALLED_IN_CANONICAL_DIAG")
+ if OBS_RESULT.exists():OBS_RESULT.unlink()
+ run_env=dict(os.environ,DANA_F2_MMIO_RESULT=str(OBS_RESULT))
+ native=[str(BIN),"asmdana","-noreadconfig","-autoboot_script",str(OBS_PATH),
+         "-video","none","-sound","none","-skip_gameinfo","-seconds_to_run","2"]
+ state["native_command"]=native
+ state["native_binary_sha256"]=hashfile(BIN)
+ save()
+ cmd("native_mmio",native,cwd=EV,env=run_env,timeout=120)
+ if not OBS_RESULT.is_file():
+  raise RuntimeError("NO_REAL_MAME_LUA_MMIO_RESULT")
+ reported=OBS_RESULT.read_text()
+ state["native_mmio_receipt"]=reported[:3000]
+ if "status=PASS_HOST_NATIVE_MMIO_ONLY" not in reported or "origin=HOST_LUA_NOT_GUEST_CPU" not in reported:
+  raise RuntimeError("REAL_NATIVE_MMIO_NOT_QUALIFIED")
+ state["native_F2"]="PASS_HOST_NATIVE_MMIO_ONLY_NOT_GUEST"
+ state["status"]="F2_COMPILE_SOURCE_TESTS_NATIVE_HOST_MMIO_PASS_NOT_GUEST"
+
 except Exception as error:
  state["status"]="BLOCKED";state["error"]=str(error)
  (EV/"F2_error_trace.log").write_text(traceback.format_exc()[-24000:])
 finally:
- # Back up only in RAM, restore the SAME canonical binary/object/source.
+ # Restore the SAME canonical DIAG source/object/archive/linker output/installed binary in RAM.
  # F2 is not promoted without native pen-contact and ADC observation.
  if oldsrc is not None:SRC.write_bytes(oldsrc)
  if oldobj is not None:obj.write_bytes(oldobj)
  if oldinternal is not None:INTERNAL.write_bytes(oldinternal)
  if oldarchive is not None:ARCHIVE.write_bytes(oldarchive)
+ if oldbin is not None:BIN.write_bytes(oldbin)
  state["original_DIAG_binary_preserved"]=hashfile(BIN)==OLD_BIN
  state["original_DIAG_source_restored"]=hashfile(SRC)==OLD
  state["original_object_restored"]=(obj is None or oldobj is None or hashfile(obj)==hashbytes(oldobj))
  state["original_archive_restored"]=(oldarchive is None or hashfile(ARCHIVE)==hashbytes(oldarchive))
  state["original_linker_output_restored"]=(oldinternal is None or hashfile(INTERNAL)==hashbytes(oldinternal))
- if not all(state[k] for k in ("original_DIAG_binary_preserved","original_DIAG_source_restored",
+ if oldbin is not None:state["binary_byte_for_byte_restored"]=(hashfile(BIN)==hashbytes(oldbin))
+ else:state["binary_byte_for_byte_restored"]=True
+ if not all(state[k] for k in ("binary_byte_for_byte_restored","original_DIAG_binary_preserved","original_DIAG_source_restored",
        "original_object_restored","original_archive_restored","original_linker_output_restored")):
   state["status"]="ROLLBACK_INTEGRITY_FAIL"
  save()
