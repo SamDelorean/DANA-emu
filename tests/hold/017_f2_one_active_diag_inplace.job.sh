@@ -100,14 +100,13 @@ try:
           if re.search(r"(?:^|\s)-c(?:\s|$)",line)]
  if len(planned)!=1 or "alphasdana.cpp" not in planned[0]:
   raise RuntimeError("NOT_ONE_INCREMENTAL_OBJECT")
- # Reuse the exact generated 012-C MAME compile command. Global OPTIMIZE=0
- # regenerates/changes more project settings, so NEVER pass it to make.
- # Substitute ONLY -O3 -> -O0 for this one driver translation unit.
+ # Use the unchanged MAME-generated Clang command for inputs and linker.
+ # GCC15 replaces only the driver .o compiler, not the existing DIAG toolchain.
  gmake_dir=MAME/"build/dana-diag/projects/sdl/mamedanadiag/gmake-linux-clang"
  if not gmake_dir.is_dir() or gmake_dir.is_symlink():
   raise RuntimeError("GENERATED_GMAKE_DIRECTORY_NOT_FOUND")
  driver_cmd=shlex.split(planned[0])
- if len(driver_cmd)>180 or len(driver_cmd)<25:
+ if not (25<=len(driver_cmd)<=180):
   raise RuntimeError("DRIVER_COMMAND_UNEXPECTED_SIZE")
  if Path(driver_cmd[0]).resolve()!=Path(cxx).resolve():
   raise RuntimeError("DRIVER_COMPILER_UNEXPECTED")
@@ -119,18 +118,81 @@ try:
   raise RuntimeError("DRIVER_C_SOURCE_NOT_CANONICAL")
  if (gmake_dir/driver_cmd[driver_cmd.index("-o")+1]).resolve()!=obj.resolve():
   raise RuntimeError("DRIVER_OUTPUT_NOT_CANONICAL_OBJECT")
- if not all(flag in driver_cmd for flag in ("-MMD","-MP","-std=c++20")):
-  raise RuntimeError("MAME_COMPILER_DEPENDENCY_OR_ABI_OPTIONS_MISSING")
- # Replace exactly one optimization token; every include path, generated flag,
- # C++ ABI option, object destination and input remains byte-for-byte equal.
- driver_o0=driver_cmd.copy()
- driver_o0[driver_o0.index("-O3")]="-O0"
- state["exact_driver_compile_changes"]=[{"before":"-O3","after":"-O0"}]
- state["driver_command_O0"]=driver_o0
- state["status"]="CLANG21_ONLY_ALPHASDANA_O0_STARTED";save()
- cmd("compile_driver_O0_only",driver_o0,cwd=gmake_dir,env=env,timeout=1800)
+ if not all(flag in driver_cmd for flag in ("-MMD","-MP","-std=c++20","-m64","-fno-strict-aliasing")):
+  raise RuntimeError("MAME_COMPILER_ABI_OR_DEPENDENCY_OPTIONS_MISSING")
+ abi_switches=[x for x in driver_cmd if x.startswith((
+       "-D_GLIBCXX_USE_CXX11_ABI","-stdlib=","-fabi-version=",
+       "-fno-exceptions","-fno-rtti","-flto","-march=","-mcpu=",
+       "-D_LIBCPP_VERSION"))]
+ if abi_switches:
+  raise RuntimeError("REVIEW_UNEXPECTED_ABI_FLAGS:"+repr(abi_switches))
+ gcc=shutil.which("g++-15")
+ if not gcc or not subprocess.check_output([gcc,"-dumpfullversion"],text=True,timeout=10).strip().startswith("15."):
+  raise RuntimeError("INSTALLED_GCC15_MISSING_OR_CHANGED")
+ for compiler in (gcc,cxx):
+  if subprocess.check_output([compiler,"-dumpmachine"],text=True,timeout=10).strip().split("-")[0]!="x86_64":
+   raise RuntimeError("COMPILER_TARGET_NOT_X86_64:"+compiler)
+ # Read-only preprocessor macro check: no C++ source object is compiled.
+ headers="#include <string>\n#include <list>\n"
+ keys=("_GLIBCXX_USE_CXX11_ABI","_GLIBCXX_RELEASE","__GLIBCXX__",
+       "__SIZEOF_POINTER__","__EXCEPTIONS","__GXX_RTTI","__BYTE_ORDER__")
+ def abi_macros(compiler):
+  out=subprocess.check_output([compiler,"-std=c++20","-dM","-E","-x","c++","-"],
+       input=headers,text=True,timeout=45)
+  m={}
+  for line in out.splitlines():
+   if line.startswith("#define "):
+    parts=line[len("#define "):].split(maxsplit=1)
+    if len(parts)==2:m[parts[0]]=parts[1]
+  return {key:m.get(key) for key in keys}
+ clang_abi=abi_macros(cxx)
+ gcc_abi=abi_macros(gcc)
+ if any(clang_abi[k] is None or gcc_abi[k] is None or clang_abi[k]!=gcc_abi[k] for k in keys):
+  state.update(clang_abi_macros=clang_abi,gcc_abi_macros=gcc_abi)
+  save()
+  raise RuntimeError("CLANG_GCC15_CPP_ABI_MACRO_MISMATCH")
+ def stdcpp_link(compiler):
+  out=subprocess.check_output([compiler,"-print-file-name=libstdc++.so"],
+         text=True,timeout=10).strip()
+  p=Path(out)
+  if not p.is_absolute() or not p.exists():
+   raise RuntimeError("LIBSTDCXX_NOT_RESOLVED:"+compiler+":"+out)
+  return str(p.resolve())
+ clang_stdcpp=stdcpp_link(cxx)
+ gcc_stdcpp=stdcpp_link(gcc)
+ if clang_stdcpp!=gcc_stdcpp:
+  raise RuntimeError("DIFFERENT_CXX_LINK_LIBRARY:"+clang_stdcpp+":"+gcc_stdcpp)
+ old_header=oldobj[:20]
+ if old_header[:6]!=bytes((127,69,76,70,2,1)) or int.from_bytes(old_header[18:20],"little")!=62:
+  raise RuntimeError("BASELINE_OBJECT_NOT_ELF64_X86_64")
+ # Remove only the Clang-only flags present in the observed original command.
+ # Keep -O3, defines, includes, -Werror, ABI flags and one exact output.
+ clang_only=("-fdiagnostics-show-note-include-stack",
+      "-Wno-unknown-warning-option","-Wno-constant-logical-operand",
+      "-Wno-extern-c-compat","-Wno-pragma-pack","-Wno-unknown-attributes",
+      "-Wno-xor-used-as-pow","-Wno-bitwise-instead-of-logical")
+ if driver_cmd.count("-fdiagnostics-show-note-include-stack")!=1:
+  raise RuntimeError("EXPECTED_CLANG_DIAGNOSTIC_FLAG_ABSENT")
+ gcc_cmd=[gcc]+[x for x in driver_cmd[1:] if x not in clang_only]
+ removed=[x for x in driver_cmd[1:] if x in clang_only]
+ if gcc_cmd.count("-O3")!=1 or gcc_cmd.count("-c")!=1 or gcc_cmd.count("-o")!=1:
+  raise RuntimeError("GCC15_COMMAND_SCOPE_ALTERED")
+ for sw in ("-c","-o"):
+  if gcc_cmd[gcc_cmd.index(sw)+1]!=driver_cmd[driver_cmd.index(sw)+1]:
+   raise RuntimeError("GCC15_INPUT_OR_OUTPUT_ALTERED")
+ state["gcc15_preflight"]={"compiler":gcc,"compiler_version":subprocess.check_output(
+    [gcc,"-dumpfullversion"],text=True,timeout=10).strip(),
+    "clang_only_flags_removed":removed,"optimization_retained":"-O3",
+    "same_libstdcxx":clang_stdcpp,"same_abi_macros":gcc_abi,
+    "only_driver_object":str(obj),"new_worktrees":0}
+ state["gcc15_driver_command"]=gcc_cmd
+ state["status"]="GCC15_ABI_PREFLIGHT_PASS_SINGLE_OBJECT_STARTED";save()
+ cmd("compile_driver_GCC15_only",gcc_cmd,cwd=gmake_dir,env=env,timeout=1800)
  if hashfile(obj)==hashbytes(oldobj):
-  raise RuntimeError("NO_NEW_F2_OBJECT_AFTER_DRIVER_O0")
+  raise RuntimeError("GCC15_DRIVER_OBJECT_NOT_REPLACED")
+ new_header=obj.read_bytes()[:20]
+ if new_header[:6]!=old_header[:6] or new_header[18:20]!=old_header[18:20]:
+  raise RuntimeError("GCC15_OBJECT_ELF_CLASS_ENDIAN_OR_ARCH_MISMATCH")
  # A second read-only Make plan must have ZERO C++ source compiles, i.e.,
  # only the existing archive and linker work may be required.
  cmd("post_driver_dryrun",["make","-n"]+make[1:],cwd=MAME,env=env,timeout=300)
@@ -141,12 +203,12 @@ try:
   raise RuntimeError("POST_DRIVER_PLAN_WOULD_COMPILE_MORE_OBJECTS")
  if "Archiving libmame_danadiag.a" not in remaining:
   raise RuntimeError("EXPECTED_ONE_DRIVER_ARCHIVE_REBUILD_NOT_PLANNED")
- state["status"]="CLANG21_O0_DRIVER_PASS_LINK_EXISTING_DIAG_STARTED";save()
+ state["status"]="GCC15_DRIVER_PASS_CLANG_LINK_EXISTING_DIAG_STARTED";save()
  cmd("archive_and_link_only",make,cwd=MAME,env=env,timeout=1800)
  link_log=(EV/"F2_archive_and_link_only.log").read_text(errors="replace")
  if "Compiling src/mame/skeleton/alphasdana.cpp" in link_log:
   raise RuntimeError("UNEXPECTED_DRIVER_RECOMPILATION_IN_LINK_STAGE")
- state["compiler_optimization_override"]="DRIVER_ONLY_O0_OTHER_OBJECTS_UNCHANGED"
+ state["compiler_optimization_override"]="SINGLE_GCC15_DRIVER_O3_OTHER_OBJECTS_UNCHANGED"
  if hashfile(obj)==hashbytes(oldobj) or hashfile(INTERNAL)==hashbytes(oldinternal):
   raise RuntimeError("NO_NEW_F2_OBJECT_OR_DIAG")
  if hashfile(ARCHIVE)==hashbytes(oldarchive):
