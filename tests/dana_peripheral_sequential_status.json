@@ -69,9 +69,9 @@
         "test_f2_scope_and_pinned_guest_contract",
         "test_exact_EmuTOS_pen_spi2_and_existing_st_slave"
       ],
-      "new_source_tests_execution": "PASS_2_OF_2",
+      "new_source_tests_execution": "PASS_3_OF_3_THIS_RUN",
       "previous_F2_suite": "PRESERVED_AS_HISTORICAL_ONLY_NOT_APPLICABLE_TO_012C_BASE",
-      "native_f2": "PASS_HOST_ORIGIN_MMIO_ONLY",
+      "native_f2": "PASS_HOST_NATIVE_MMIO_ONLY_THIS_RUN",
       "guest_exact_control_sequences": [
         "0x2247",
         "0x2347",
@@ -80,10 +80,10 @@
       ],
       "rate_independent_SPI2_enable": true,
       "irq4_assertion_removed_from_new_F2_tests": true,
-      "guest_pen_cpu": "NOT_TESTED"
+      "guest_pen_cpu": "NOT_PROVEN_NO_OBSERVATION_RECEIPT"
     },
     "build": {
-      "status": "PASS_GCC15_SINGLE_OBJECT_CLANG_LINK_AND_NATIVE_HOST_MMIO_ONLY",
+      "status": "GCC15_DRIVER_CLANG_LINK_3_SOURCE_TESTS_HOST_NATIVE_MMIO_PASS_GUEST_RECEIPT_MISSING",
       "job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
       "job_commit": "fc36f5e54dcfc341b145d3b824d837e083973199",
       "job_blob_sha": "6e8551980ced43a4b68e9bb01d4e66c2f1114995",
@@ -91,8 +91,8 @@
       "compiled_driver_object_sha256": "695845b0b632c6812da70700c7a17a8e2e0f184198377435273525a4fc1c2abf",
       "candidate_linked_diag_sha256": "fb8400e35e0db3b91edeee83466dcb120505c373fd9786222842498a2656d75e",
       "original_qualified_diag_sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
-      "compiler": "GCC 15.2.0 solely for alphasdana.o",
-      "linker": "Clang 21.1.8 unchanged for cached full MAME link",
+      "compiler": "GCC15 15.2 driver only -O3",
+      "linker": "Clang21 cached",
       "optimization": "-O3 retained",
       "cpp_standard": "C++20",
       "abi_verification": {
@@ -139,18 +139,7 @@
         "errors": 0,
         "status": "PASS"
       },
-      "native_host_MMIO": {
-        "status": "PASS_HOST_NATIVE_MMIO_ONLY",
-        "origin": "HOST_LUA_NOT_GUEST_CPU",
-        "periodic_ticks": 2,
-        "PF1": "PASS",
-        "PG2": "PASS",
-        "SPI2_8_and_16": "PASS",
-        "X": "0x7E90",
-        "Y": "0x7850",
-        "rate_independence": "PASS",
-        "keyboard_chip_select_separation": "PASS"
-      },
+      "native_host_MMIO": "PASS_HOST_NATIVE_MMIO_ONLY",
       "EmuTOS_pen_CPU_execution": "NOT_TESTED_NO_GUEST_BOOT_IN_THIS_TEST",
       "candidate_promotion": "NOT_PROMOTED_POST_TEST_ROLLBACK",
       "rollback_verified": {
@@ -181,10 +170,16 @@
       "next_job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
       "next_job_commit": "4b1c39db60131298e397df5f85739cd5d8835829",
       "expected_directed_cases": 3,
-      "release_to_STABLE": false
+      "release_to_STABLE": false,
+      "candidate_DIAG_sha256": "a894e1f6910d0c548f345e49f0cf1a31004d41336a48ed943f9bcf6a6adcf851",
+      "source_pin": "7514e96c9609b0427a2dae8920b544d80c66d397",
+      "three_directed_tests": "PASS_3_OF_3",
+      "natural_guest": "BLOCKED_NO_GUEST_OBSERVATION_RECEIPT",
+      "original_DIAG_restored": true,
+      "no_auto_retry": true
     },
     "native": {
-      "status": "PASS_HOST_INITIATED_MAME_MMIO_NATURAL_EMUTOS_GUEST_CPU_PENDING",
+      "status": "PASS_HOST_MMIO_NATURAL_GUEST_CPU_UNPROVEN_MISSING_RECEIPT",
       "origin": "HOST_LUA_NOT_GUEST_CPU",
       "observer": "tests/dana_f2_native_mmio.lua",
       "reporter": "F2_native_mmio_result.txt",
@@ -203,7 +198,10 @@
       ],
       "candidate_uninstalled_and_previous_diag_restored": true,
       "natural_guest_cpu_observer_prepared": true,
-      "natural_guest_cpu_executed": false
+      "natural_guest_cpu_executed": false,
+      "observer_executed_confirmed": false,
+      "native_guest_process_exit": 0,
+      "guest_log_pending_exact_read": true
     },
     "guest_cpu_validation": {
       "status": "ORIGINAL_EMUTOS_GUEST_CPU_OBSERVER_AND_INDEPENDENT_VERIFIER_PREPARED_NOT_RUN",
@@ -266,7 +264,7 @@
     },
     "host_mouse_integration_20261022": {
       "scope": "REUSE_EXISTING_MAME_SDL_ABSOLUTE_POINTER_TO_DANA_STYLUS",
-      "status": "SOURCE_IMPLEMENTED_STATIC_VERIFICATION_PREPARED_NATIVE_INTERACTIVE_NOT_PROVEN",
+      "status": "SINGLE_POINTER_SOURCE_COMPILED_LINKED_AND_NATIVE_HOST_MMIO_PASS; GUEST_CPU_PENDING",
       "driver_source_commit": "b2ef8cd99ea5553861a8fddb3c8d0f0182e41d17",
       "driver_source_blob": "a377eeabcbfded092a10085a9b88a756e3e2f90b",
       "driver_source_sha256": "f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f",
@@ -289,7 +287,7 @@
         "-nomouse"
       ],
       "native_GUI_interactive_test": "NOT_RUN",
-      "F2_new_source_object_build": "NOT_RUN",
+      "F2_new_source_object_build": "PASS_GCC15_AND_CLANG21_LINK",
       "MAME_guest_cursor_movement": "NOT_PROVEN",
       "calibration_guest": {
         "status": "NOT_PROVEN_INITIALISED",
@@ -302,7 +300,7 @@
       "one_tree_job_blob": "858bd5c955afb166c00db3eff71dc2d00b18af1d",
       "source_tests_expected": 3,
       "source_test_name": "test_sdl_pointer_reuses_single_absolute_lightgun_input",
-      "source_test_current_result": "NO_TERMINAL_RECEIPT_OBSERVED_ON_FIFTH_COMMANDER_CALL",
+      "source_test_current_result": "PASS_3_OF_3",
       "previous_source_contract_test_failure": "PATTERN_ESCAPE_ONLY_FIXED_WITH_LITERAL_PORT_MARKERS; not a product hardware failure",
       "guest_verifier_synthetic_tests": {
         "executed": 5,
@@ -322,7 +320,94 @@
         "reason": "Connector metadata confirms an Office workbook, not a native Google Sheet; do not blindly convert or rewrite original",
         "git_status_authoritative": "tests/dana_peripheral_sequential_status.json",
         "next": "Use an Office-aware explicit workbook edit workflow if requested; preserve original Office file"
-      }
+      },
+      "candidate_binary_sha256": "a894e1f6910d0c548f345e49f0cf1a31004d41336a48ed943f9bcf6a6adcf851"
+    },
+    "latest_full_native_F2": {
+      "status": "GCC15_DRIVER_CLANG_LINK_3_SOURCE_TESTS_HOST_NATIVE_MMIO_PASS_GUEST_RECEIPT_MISSING",
+      "date": "2026-10-22",
+      "source_git_pin": "7514e96c9609b0427a2dae8920b544d80c66d397",
+      "source_sha256": "f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f",
+      "job_git_pin": "3b4146ed363960a84b85262aa9f42a1a3d9ac398",
+      "job_blob": "a3e9ff5fbe5288abaa9ea78b7f45037be4b8511a",
+      "generated_candidate_diag_sha256": "a894e1f6910d0c548f345e49f0cf1a31004d41336a48ed943f9bcf6a6adcf851",
+      "driver_object_sha256": "20645119990f1ffd5da2d7ec0c56adbf34b9b7cf75fe234fa0f19b08151fa928",
+      "compiler": "GCC 15.2 driver only -O3",
+      "linker": "Original Clang21",
+      "stages": [
+        [
+          "fetch_guest_observer_pin",
+          0
+        ],
+        [
+          "guest_verifier_unit_preflight",
+          0
+        ],
+        [
+          "dryrun",
+          0
+        ],
+        [
+          "compile_driver_GCC15_only",
+          0
+        ],
+        [
+          "post_driver_dryrun",
+          0
+        ],
+        [
+          "archive_and_link_only",
+          0
+        ],
+        [
+          "native_mmio",
+          0
+        ],
+        [
+          "native_guest_cpu",
+          0
+        ]
+      ],
+      "directed_tests": {
+        "cases": 3,
+        "errors": 0,
+        "failures": 0
+      },
+      "native_host_MMIO": {
+        "origin": "HOST_LUA_NOT_GUEST_CPU",
+        "status": "PASS_HOST_NATIVE_MMIO_ONLY",
+        "sample_X": "0x7E90",
+        "sample_Y": "0x7850",
+        "timing": "2 periodic ticks"
+      },
+      "natural_guest": {
+        "process_exit": 0,
+        "expected_observation": "F2_guest_cpu_observation.json",
+        "observation_file": "MISSING",
+        "verdict_file": "MISSING",
+        "status": "BLOCKED_NO_F2_GUEST_CPU_OBSERVATION_RECEIPT",
+        "interpretation": "CPU F2 behavior NOT OBSERVED; no guest PASS and no claim of reached touchscreen routine",
+        "first_evidence_to_inspect": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_native_guest_cpu.log"
+      },
+      "qualified_DIAG_rollback": {
+        "original_binary": true,
+        "source": true,
+        "object": true,
+        "archive": true,
+        "dependency_file": true,
+        "linker_output": true,
+        "all_original_timestamps": true
+      },
+      "one_active_diag": true,
+      "additional_mame_trees": 0,
+      "ROM_rebuilds": 0,
+      "full_MAME_rebuilds": 0,
+      "Commander_calls_used": 5,
+      "Commander_calls_max_per_intervention": 5,
+      "no_retries": true,
+      "tool_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+      "error_trace": "RuntimeError: NO_F2_GUEST_CPU_OBSERVATION_RECEIPT",
+      "next": "Next intervention: read exact native_guest_cpu.log only, identify whether Lua parser/bootstrap/API/startup caused missing receipt, fix evidence instrument from cited log. Do not recompilate F2 until instrument repaired. Reuse same DIAG/job without duplicate trees."
     }
   },
   "next_peripheral": {
@@ -382,7 +467,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Reconcile terminal receipt of revised 3 directed F2 tests only in next authorized intervention; then, if tests pass, run same job 017 for one GCC15 driver object, Clang21 link, host MMIO and original EmuTOS CPU guest probe. After natural guest success, use one SDL lightgun pointer class on actual GUI, verify host click/drag, EmuTOS calibration/mousevec and 560x160 cursor. No new emulator/version. Five Commander calls maximum per intervention.",
+  "next_action": "Read existing F2_native_guest_cpu.log to diagnose why original guest CPU observer produced no JSON despite MAME exit 0. Repair observation instrument only if log supports diagnosis; do not redo known-passing GCC15 object build blindly. Preserve sole DIAG and 5 Commander calls per intervention.",
   "compilation_replan_20261022": {
     "status": "GCC15_DRIVER_AND_ORIGINAL_CLANG_LINK_PASS_NO_FULL_REBUILD",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -472,18 +557,12 @@
     "no_unapproved_experiments": true
   },
   "latest_increment_20261022": {
-    "topic": "F2 reuse pinned MAME SDL mouse pointer as a Dana stylus",
-    "changed": "one driver input-code binding + one directed source test + updated existing job 017 + documentary mouse integration contract",
-    "calls_used": 5,
-    "call_results": [
-      "wrong unfetched commit => no test",
-      "identified missing local Git pin",
-      "fetched correct exact Git pin; five synthetic verifier tests PASS",
-      "pointer contract false-negative from regex",
-      "revised three-test suite launched; returned only first test startup, terminal result UNKNOWN"
-    ],
-    "no_native_driver_build": true,
-    "no_original_EmuTOS_guest_run": true,
-    "no_additional_emulator": true
+    "topic": "F2 SDL single-class mouse mapping native compilation + original guest CPU observer",
+    "commander_calls_used": 5,
+    "commander_calls_max": 5,
+    "result": "GCC15 one object PASS; original Clang link PASS; directed tests 3/3 PASS; MAME host MMIO PASS; guest process exit0 but no observer receipt; original DIAG completely restored",
+    "log_first_to_read": "F2_native_guest_cpu.log",
+    "missing_guest_receipt": true,
+    "additional_instances": 0
   }
 }
