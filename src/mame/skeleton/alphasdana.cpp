@@ -916,8 +916,11 @@ void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
     {
         m_uart_tx_fifo[(m_uart_tx_head+m_uart_tx_count)%8]=data;
         ++m_uart_tx_count;
-        uart1_start_tx();
     }
+    // A control-only UTX write (NOCTS) must also release an already queued
+    // byte. The previous implementation retried only on NEW data writes,
+    // leaving an existing full FIFO stalled after software enabled NOCTS.
+    uart1_start_tx();
     uart1_update_irq();
 }
 
