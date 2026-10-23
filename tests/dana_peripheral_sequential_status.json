@@ -509,7 +509,7 @@
   "next_peripheral": {
     "id": "F3",
     "title": "UART1 external CTS",
-    "status": "HOLD_F2_COMPILE_FAILURE_NO_UNQUALIFIED_F3",
+    "status": "F3_SOURCE_AVAILABLE_FOR_STATIC_REUSE_INTEGRATION__NATIVE_NOT_RUN",
     "source_available_in_original_branch": true
   },
   "then": {
@@ -520,12 +520,13 @@
   },
   "last_compiler_crash_scope": "Prior compiled unsuccessful F2+F3+F4 aggregate, not proof F2-only crashes",
   "excel_rector": {
-    "version": "2.9",
+    "version": "3.3",
     "same_original_file_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
-    "size_bytes": 91426,
-    "status": "SYNC_CONFIRMED",
+    "size_bytes": 96992,
+    "status": "SYNC_CONFIRMED_IN_PLACE_VERIFIED_20261023",
     "new_sheet": "SECUENCIA_PERIFERICOS",
-    "source": "https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit"
+    "source": "https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit",
+    "last_entry": "AUD-030"
   },
   "universal_override_20261022": {
     "only_active_emulator": "dana-diag",
@@ -563,7 +564,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Next intervention run the SAME guarded 017 job once with CPU observer bounded to the first real 0x90/0xD0 SPI2 DATA reads. Its independent verifier must prove both axes from the naturally executed EmuTOS CPU and no dropped events; do not reinterpret earlier overflow as PASS. Keep one dana-diag and five Commander calls per intervention maximum.",
+  "next_action": "Review the already implemented F3 UART1 CTS code at ec3c36bf against the isolated F2 driver and qualified 012-C history. Reuse exact working functions with no rewrite, prepare one coherent production delta and source regressions; no native build without new user authorization. F2 guest CPU X/Y remains job017 reported verifier PASS, with raw JSON audit pending; calibrated GUI requires an authentic TOS PRG execution path not provided by current F2 .dana-only quickload or SD.",
   "compilation_replan_20261022": {
     "status": "GCC15_DRIVER_AND_ORIGINAL_CLANG_LINK_PASS_NO_FULL_REBUILD",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -717,5 +718,27 @@
     "historical_remote_exit_discrepancy": "UNRESOLVED",
     "next_single_functional_action": "Use real EmuTOS calibration facility and one bounded GUI acceptance on the same F2 DIAG only after T/display authorization; verify artifact/loading path first, no invented SD support",
     "source_audit_doc": "docs/F2_HOST_MOUSE_INPUT_CONTRACT.md"
+  },
+  "current_authoritative_state_20261023": {
+    "status": "F2_GUEST_CPU_XY_VERIFIER_PASS_REPORTED__GUI_APP_LOADING_DEFERRED_NONBLOCKING__F3_SOURCE_NEXT",
+    "source_audit_commit": "da3118bc0fae08cf896a07ecd14e87adb340525f",
+    "evidence": {
+      "cpu_read": "PINNED_GUEST_CPU_PASS_REPORTED_FROM_JOB017",
+      "report_json": "NOT_INDEPENDENTLY_AUDITED",
+      "isolated_driver_guest_package": "ONLY_DANARAM1_WITH_DANA_EXTENSION",
+      "native_tos_prg_loader": "NOT_IMPLEMENTED_IN_ACTIVE_F2",
+      "native_spi1_sd": "NOT_IMPLEMENTED_IN_ACTIVE_F2",
+      "original_guest_tool": "danacal.c; PRG on TOS SD per source README",
+      "graphical_mouse_movement_click_drag": "NOT_RUN",
+      "F3_product": "PREVIOUSLY_IMPLEMENTED_ON_COMBINED_F2F3F4_SOURCE_NOT_YET_ADAPTED_TO_F2_ISOLATED",
+      "new_T_calls": 0,
+      "new_MAME_or_ROM_builds": 0,
+      "new_guest_runs": 0
+    },
+    "decision": "Do not gate independently testable UART1 CTS F3 behind guest TOS application loading/GUI calibration. Do not reopen F2 CPU XY, invent PRG loader or card, or declare GUI PASS.",
+    "next": "F3 UART1 CTS isolated incremental source contrast on existing driver, no T without renewed approval",
+    "excel_rector_version": "3.3",
+    "excel_original_file_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "excel_verified_bytes": 96992
   }
 }
