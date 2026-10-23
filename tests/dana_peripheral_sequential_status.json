@@ -690,5 +690,32 @@
       "FIRST_NO_CPU_RECEIPT",
       "SECOND_RAW_EVENT_BUDGET_EXHAUSTED"
     ]
+  },
+  "latest_f2_gui_calibration_source_audit_20261023": {
+    "scope": "F2_EXISTING_EMUTOS_GUI_CALIBRATION_CONTRACT_NO_NEW_PERIPHERAL",
+    "status": "SOURCE_DEPENDENCY_CONFIRMED__NATIVE_GUI_NOT_RUN",
+    "original_guest_pin": "davidgiven/emutos@9c42ef0f2c2fa9d1e217fced9da68901b2326e8b",
+    "source_files": [
+      "bios/dana.c",
+      "bios/xbios.c",
+      "bios/mouse.c",
+      "tools/danacal.c",
+      "doc/readme-dana.txt"
+    ],
+    "guest_touchscreen_poll": "dana_poll_touchscreen reads authentic F2 pen X/Y but updates sx/sy only if screen_calibration[0] != 0; otherwise sends mousevec without useful absolute coordinate update",
+    "original_calibration_tool": "tools/danacal.c; native guest XBIOS 0x8e samples raw and 0x8f installs seven affine coefficients",
+    "artifact_in_project_Drive": "NO_DANACAL_PRG_FOUND_IN_DRIVE_SEARCH_NOT_EVIDENCE_OF_T_ABSENCE",
+    "gui_runtime": "NOT_RUN",
+    "mouse_motion": "NOT_RUN",
+    "mouse_click": "NOT_RUN",
+    "mouse_drag": "NOT_RUN",
+    "input_media_delivery": "NOT_PROVEN_ON_THIS_F2_DIAG",
+    "new_guest_or_emulator": "NONE",
+    "T_Commander_calls_this_increment": 0,
+    "builds_or_emutos_runs_this_increment": 0,
+    "historical_guest_pen_XY_status": "JOB017_NATIVE_VERIFIER_PASS_REPORTED_RAW_JSON_UNAUDITED",
+    "historical_remote_exit_discrepancy": "UNRESOLVED",
+    "next_single_functional_action": "Use real EmuTOS calibration facility and one bounded GUI acceptance on the same F2 DIAG only after T/display authorization; verify artifact/loading path first, no invented SD support",
+    "source_audit_doc": "docs/F2_HOST_MOUSE_INPUT_CONTRACT.md"
   }
 }
