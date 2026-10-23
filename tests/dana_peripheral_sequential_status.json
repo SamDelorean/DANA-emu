@@ -179,7 +179,7 @@
       "no_auto_retry": true
     },
     "native": {
-      "status": "PASS_HOST_MMIO_NATURAL_GUEST_CPU_UNPROVEN_MISSING_RECEIPT",
+      "status": "HOST_MMIO_PASS_ORIGINAL_GUEST_PEN_CPU_PENDING_OBSERVER_LIFECYCLE_REPAIRED",
       "origin": "HOST_LUA_NOT_GUEST_CPU",
       "observer": "tests/dana_f2_native_mmio.lua",
       "reporter": "F2_native_mmio_result.txt",
@@ -204,7 +204,7 @@
       "guest_log_pending_exact_read": true
     },
     "guest_cpu_validation": {
-      "status": "ORIGINAL_EMUTOS_GUEST_CPU_OBSERVER_AND_INDEPENDENT_VERIFIER_PREPARED_NOT_RUN",
+      "status": "GUEST_OBSERVER_LIFECYCLE_DEFECT_REPAIRED_AND_BASELINE_RECEIPT_CONFIRMED_F2_GUEST_STILL_PENDING",
       "source_observer": "tests/dana_f2_guest_cpu_observer.lua",
       "source_verifier": "tests/dana_f2_guest_cpu_verify.py",
       "synthetic_unit_tests": "tests/dana_f2_guest_cpu_verify_test.py",
@@ -260,7 +260,31 @@
         "one_driver_recompile_if_preflight_passes": true,
         "rollback_entire_original_DIAG": true
       },
-      "future_operation": "At next intervention with five-call cap, run existing job 017 only after static syntax/hash & five synthetic verifier unit controls pass. One short startup check, no recurring polling or automatic fallback. Guest code cannot be declared fully booted by touches alone."
+      "future_operation": "At next intervention with five-call cap, run existing job 017 only after static syntax/hash & five synthetic verifier unit controls pass. One short startup check, no recurring polling or automatic fallback. Guest code cannot be declared fully booted by touches alone.",
+      "observer_source_commit": "8c46900622214f4890bef751f972d2e73c7c492e",
+      "observer_blob": "173a026b9635988a9b850958767a2a9d1a0b3dee",
+      "job_pin": "6a68bd309dde0b7bedaa61cf128675ebd8834b02",
+      "lifecycle_diagnosis": "Pinned MAME mame.cpp executes -autoboot_script from reset-scheduled autoboot_callback; Lua register_prestart installed by that script misses prior prestart event and did not initialize.",
+      "baseline_test": {
+        "status": "RECEIPT_AND_INITIALIZATION_CONFIRMED_STRICT_TEXT_ASSERTION_FAILED",
+        "base_executable_sha256": "caad0206386d6f3039b836d20198d850bc0911f546963df43f3f4be2f6e48f37",
+        "base_emutos_sha256": "c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d",
+        "actual_lua_parser": "PASS_liblua5_4",
+        "native_MAME_process_exit": 0,
+        "receipt_status": "CAPTURED",
+        "observer_initialized_cpu_pc": "0x2140",
+        "empty_guest_events_serialized_as_array": true,
+        "expected_missing_F2_port": ":PEN",
+        "printed_reason": "BLOCKED_HARNESS: attempt to index a nil value (field ':PEN')",
+        "cause_of_final_python_assertion": "Not determined; string-specific postcondition returned AssertionError after all preceding printed values.",
+        "overall_baseline_probe_pass": false,
+        "scope": "Original qualified 012-C lacks PEN; this verifies observer lifecycle and receipt only, not F2 guest hardware.",
+        "evidence_files": [
+          "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_guest_cpu_lifecycle_probe.json",
+          "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_guest_cpu_lifecycle_probe.log"
+        ]
+      },
+      "native_guest_compiled_candidate_run_after_fix": false
     },
     "host_mouse_integration_20261022": {
       "scope": "REUSE_EXISTING_MAME_SDL_ABSOLUTE_POINTER_TO_DANA_STYLUS",
@@ -467,7 +491,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "Read existing F2_native_guest_cpu.log to diagnose why original guest CPU observer produced no JSON despite MAME exit 0. Repair observation instrument only if log supports diagnosis; do not redo known-passing GCC15 object build blindly. Preserve sole DIAG and 5 Commander calls per intervention.",
+  "next_action": "With new intervention, first resolve strict baseline-probe assertion via reading exact JSON structure only; then run the existing job 017 once on the sole DIAG (GCC15 one object and Clang link because candidate restored) and review genuine EmuTOS CPU-PF1/PG2/SPI2 evidence. Do not claim PASS before independent verifier.",
   "compilation_replan_20261022": {
     "status": "GCC15_DRIVER_AND_ORIGINAL_CLANG_LINK_PASS_NO_FULL_REBUILD",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -557,12 +581,13 @@
     "no_unapproved_experiments": true
   },
   "latest_increment_20261022": {
-    "topic": "F2 SDL single-class mouse mapping native compilation + original guest CPU observer",
+    "topic": "F2 guest Lua lifecycle fault diagnosis and correction on one DIAG",
     "commander_calls_used": 5,
     "commander_calls_max": 5,
-    "result": "GCC15 one object PASS; original Clang link PASS; directed tests 3/3 PASS; MAME host MMIO PASS; guest process exit0 but no observer receipt; original DIAG completely restored",
-    "log_first_to_read": "F2_native_guest_cpu.log",
-    "missing_guest_receipt": true,
-    "additional_instances": 0
+    "status": "GUEST_OBSERVER_LIFECYCLE_DEFECT_REPAIRED_AND_BASELINE_RECEIPT_CONFIRMED_F2_GUEST_STILL_PENDING",
+    "local_baseline_only": true,
+    "detected_mame_autoboot_semantics": true,
+    "repaired_observer_commit": "8c46900622214f4890bef751f972d2e73c7c492e",
+    "strict_followup_assertion_failed": true
   }
 }
