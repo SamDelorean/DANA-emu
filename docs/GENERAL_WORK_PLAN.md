@@ -53,6 +53,19 @@ The first guest reference is **EmuTOS-Dana loaded into RAM**.
 
 Not required for the first functional emulator: complete Palm OS emulation, authentic physical Flash/cold boot, a full MAME distribution, upstream MAME acceptance, a polished daily-use UI, or every optional Dana peripheral.
 
+### Explicit future objective: physical Dana-to-EmuTOS boot fidelity (user directive, 2026-10-23)
+
+**Committed future product scope, DEFERRED / NOT IMPLEMENTED.** After the current native EmuTOS desktop keyboard-and-stylus interaction milestone, evolve the SAME Dana hardware model and the SAME `dana-diag` development executable to reproduce the original machine's complete boot and OS transition, as faithfully as available hardware evidence permits. This supersedes the historical "optional" status of D8.5; it does **not** move the current execution cursor, authorize Commander, or create a prerequisite to finish interactive EmuTOS.
+
+Expected real-hardware sequence (separate **physical-boot** profile):
+1. Hardware-equivalent VZ reset, initial vectors, RAM/Flash/chip-select decode, peripherals, timing and firmware entry; avoid host-only jumps into EmuTOS.
+2. Run genuine, lawfully obtained **Dana-specific Palm OS firmware** from an appropriately modeled virtual Flash/storage environment, until its launcher and required services work through actual guest CPU/peripheral execution.
+3. Launch the authentic **DanaRun.prc** application under Palm OS; provide compatible SD/VFS media with `/kernel.img` (EmuTOS-Dana bootloader package), as in the original project.
+4. Verify actual DanaRun RAM block loading, Palm-to-supervisor transfer via trap #0, embedded `danaboot.S` relocation of `emutos.img` to `0x00002140`, and real CPU execution of the relocated guest.
+5. Demonstrate the resulting EmuTOS LCD desktop, keyboard, stylus and required storage behavior and compare meaningful checkpoints against sourced original hardware behavior; preserve authentic cold reset to Palm OS.
+
+**Acceptance is end-to-end observed CPU/bus/firmware execution, not a scripted state change or direct-RAM shortcut relabeled as a physical boot.** Keep the already-qualified **direct post-bootstrap RAM mode** as a fast, independent DIAG profile for focused regressions. Reuse proven shared peripherals; do not create a second emulator or isolated MAME tree. Original commercial ROMs/Flash dumps and any private user data must remain outside public Git; firmware availability, permissions, dump provenance and licensing are separately checked when activating this future task. Formalize functional increments under D8.5 only after the current interactive GUI task; do not create speculative gates now.
+
 ## 2. Governing source material — reuse is mandatory
 
 Before writing a hardware implementation, compare the desired behavior against **the already completed D0.1–D0.6 research** and the exact pinned sources in [research/sources.lock.json](../research/sources.lock.json). Those documentary increments remain **SPEC_READY**; do not repeat their research absent concrete contradictory evidence.
