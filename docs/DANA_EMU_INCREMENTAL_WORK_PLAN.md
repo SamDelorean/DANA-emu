@@ -159,7 +159,7 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 | **D7.4** | Guest filesystem integration | EmuTOS mounts and reads a known file from virtual SD |
 | **D7.5** | Optional protected writes and recovery | Disposable image/copy tests without real-media damage, failure handling |
 
-### D8 — Separately scoped optional extensions
+### D8 — Separately scoped extensions; D8.5 now a committed deferred product objective
 
 | ID | Scope | Activation condition |
 |---|---|---|
@@ -167,9 +167,9 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 | **D8.2** | RTC, power management and virtual suspend | Validated mapping and RAM/clock consistency criteria |
 | **D8.3** | Second SD, USB, IR and other peripherals | Hardware evidence and firmware requirement |
 | **D8.4** | Expanded RAM and full chip-select configuration | Documented physical model; do not assume 8/16 MiB from rumor |
-| **D8.5** | Actual Palm/Flash boot and updater diagnostics | Verified physical regions, reset, bootloader and ROM coverage |
+| **D8.5** | **Full physical Dana boot: VZ reset/Flash → real Palm OS → DanaRun.prc reading SD `/kernel.img` → trap #0 → EmuTOS relocation at `0x2140` → interactive EmuTOS** | **COMMITTED FUTURE / DEFERRED** by user 2026-10-23; activate after genuine keyboard + stylus interaction is accredited in the existing `dana-diag` |
 
-D8.x items are **independent and optional**, not prerequisites for usable DANA-stable.
+D8.1–D8.4 remain independently scoped extensions, not default prerequisites for interactive EmuTOS. **D8.5 is no longer optional as a project objective, but it is not an active development gate**. The physical-boot profile must execute the actual guest firmware and complete chain, without silently using the direct-RAM handoff. Preserve the current post-bootstrap RAM mode as a separate fast diagnostic profile, keep the same DIAG tree/executable, reuse qualified devices, and compare against sourced physical Dana behavior. Commercial Palm/Flash images remain private and legally sourced, not committed to Git. Detailed source/hardware feasibility and testing contracts belong to the later D8.5 implementation phase, not the current interactive-GUI increment. See [General Work Plan](GENERAL_WORK_PLAN.md).
 
 ### O0 — DANA-OS3K firmware support
 
