@@ -660,5 +660,35 @@
     "formal_result": "BLOCKED_EVIDENCE due 20k event limit and counters recorded after drops, NOT product failure or final guest PASS",
     "changed_after_run": "Only guest Lua evidence observer and PIN in existing 017 job; no new F2 code, ROM, MAME binary or trees",
     "next": "single bounded first-pair capture verification in next authorized intervention"
+  },
+  "latest_job017_authorized_run_20261022": {
+    "objective": "DANA-F2-GUEST-XY",
+    "historical_attempt_number": 3,
+    "human_authorization": "User: Autorizo, 2026-10-22",
+    "commander_calls_this_run": 3,
+    "commander_budget_consumed": true,
+    "machine": "spc-HP-t640-Thin-Client",
+    "session_pid": 127497,
+    "elapsed_seconds_reported": 25.41,
+    "job": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+    "job_pin": "c651057fa3fb5641e01b2c9ffad79d20ee175801",
+    "job_git_blob": "c72e58b7992412b106f29aa77f5ab65f05253514",
+    "stdout_native_F2": "PASS_GUEST_CPU_PEN_X_Y",
+    "stdout_job_status": "F2_COMPILED_LINKED_METHODS_HOST_MMIO_AND_ORIGINAL_GUEST_CPU_PASS",
+    "stdout_job_exit": 0,
+    "enclosing_remote_process_exit": 1,
+    "classification": "NATIVE_JOB_VERIFIER_PASS_REPORTED__EXTERNAL_TERMINAL_EXIT_MISMATCH_UNRESOLVED",
+    "evidence_receipt_on_T": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
+    "independent_receipt_audit": "PENDING_NO_REMOTE_BUDGET",
+    "original_diag_rollback": "REQUIRED_BY_JOB_PASS_PREDICATE__RECEIPT_NOT_INDEPENDENTLY_READ",
+    "graphical_pointer_motion": "NOT_TESTED",
+    "graphical_click": "NOT_TESTED",
+    "graphical_drag": "NOT_TESTED",
+    "full_emutos_boot": "NOT_CLAIMED",
+    "additional_reruns_authorized": 0,
+    "historical_earlier_attempts": [
+      "FIRST_NO_CPU_RECEIPT",
+      "SECOND_RAW_EVENT_BUDGET_EXHAUSTED"
+    ]
   }
 }
