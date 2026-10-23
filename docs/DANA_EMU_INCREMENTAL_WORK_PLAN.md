@@ -155,9 +155,11 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 |---|---|---|
 | **D7.1** | SD0 power, insertion and CS GPIO | Guest-recognized transitions and detectable card absence |
 | **D7.2** | SPI1 and low-speed SD negotiation | Guest command/response sequence without intercepting GEMDOS |
-| **D7.3** | Read sectors from SD image | Reproducible sector read and checksum from isolated test image |
+| **D7.3** | Read sectors from a host-selected raw SD image in first emulated slot | Guest SPI/SD sector read and checksum match the selected image; absent card and incorrect image fail visibly, without host filesystem emulation |
 | **D7.4** | Guest filesystem integration | EmuTOS mounts and reads a known file from virtual SD |
-| **D7.5** | Optional protected writes and recovery | Disposable image/copy tests without real-media damage, failure handling |
+| **D7.5** | Safe image writes, host open/eject and per-slot media configuration | Read-only/read-write policy, safe flush/replacement, image path and insertion state persist across launches; destructive tests use disposable copies |
+
+**Dual-slot user-facing requirement (2026-10-23):** The final physical-boot emulator must offer **two independent host GUI image selectors**, one for each original Dana SD slot, with user-selected raw sector-image path, insert/eject status, read-only/read-write policy, safe write flush and remembered assignments. Emulated card behavior is exposed to guest firmware through actual SPI/card-select/GPIO/presence signals; validate physical left/right-to-controller mapping using source and hardware evidence. The original EmuTOS-Dana port documents access to only one slot; emulation of both physical slots does not claim both will be supported automatically by that EmuTOS build. D7 implements and verifies the first slot; D8.3 brings in the second for D8.5. Image-file selection must not be confused with the separate Flash/Palm firmware image or with the direct `.dana` RAM-loader. **Deferred, not a gate for current EmuTOS GUI interaction.**
 
 ### D8 — Separately scoped extensions; D8.5 now a committed deferred product objective
 
@@ -165,11 +167,11 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 |---|---|---|
 | **D8.1** | SPI2 ADC/touchscreen | Guest UI requirement and controller contract |
 | **D8.2** | RTC, power management and virtual suspend | Validated mapping and RAM/clock consistency criteria |
-| **D8.3** | Second SD, USB, IR and other peripherals | Hardware evidence and firmware requirement |
+| **D8.3** | Second independent SD slot with its own host-selected image, actual slot-specific CS/detect hardware and separate media state; USB/IR remain optional subfeatures | **Second SD required by future D8.5**, not by current GUI milestone; validate physical wiring and independently addressable guest sector I/O |
 | **D8.4** | Expanded RAM and full chip-select configuration | Documented physical model; do not assume 8/16 MiB from rumor |
-| **D8.5** | **Full physical Dana boot: VZ reset/Flash → real Palm OS → DanaRun.prc reading SD `/kernel.img` → trap #0 → EmuTOS relocation at `0x2140` → interactive EmuTOS** | **COMMITTED FUTURE / DEFERRED** by user 2026-10-23; activate after genuine keyboard + stylus interaction is accredited in the existing `dana-diag` |
+| **D8.5** | **Full Dana boot: VZ reset/Flash → Palm OS → DanaRun.prc loading `/kernel.img` from left-slot SD image → trap #0 → EmuTOS at `0x2140` with separate right-slot TOS SD image** | **COMMITTED FUTURE / DEFERRED**; select, insert/eject and persist **both** card images independently in the same `dana-diag`, and prove guest-visible I/O and authentic end-to-end transition after current keyboard + stylus milestone |
 
-D8.1–D8.4 remain independently scoped extensions, not default prerequisites for interactive EmuTOS. **D8.5 is no longer optional as a project objective, but it is not an active development gate**. The physical-boot profile must execute the actual guest firmware and complete chain, without silently using the direct-RAM handoff. Preserve the current post-bootstrap RAM mode as a separate fast diagnostic profile, keep the same DIAG tree/executable, reuse qualified devices, and compare against sourced physical Dana behavior. Commercial Palm/Flash images remain private and legally sourced, not committed to Git. Detailed source/hardware feasibility and testing contracts belong to the later D8.5 implementation phase, not the current interactive-GUI increment. See [General Work Plan](GENERAL_WORK_PLAN.md).
+D8.1, D8.2, D8.4 and the non-SD portions of D8.3 remain separately scoped extensions, not default prerequisites for interactive EmuTOS. The **second SD slot within D8.3 is required for committed D8.5** but is not an active development gate. **D8.5 is no longer optional as a project objective.** The physical-boot profile must execute the actual guest firmware and complete chain, without silently using the direct-RAM handoff. Preserve the current post-bootstrap RAM mode as a separate fast diagnostic profile, keep the same DIAG tree/executable, reuse qualified devices, and compare against sourced physical Dana behavior. Commercial Palm/Flash images remain private and legally sourced, not committed to Git. Detailed source/hardware feasibility and testing contracts belong to the later D8.5 implementation phase, not the current interactive-GUI increment. See [General Work Plan](GENERAL_WORK_PLAN.md).
 
 ### O0 — DANA-OS3K firmware support
 
