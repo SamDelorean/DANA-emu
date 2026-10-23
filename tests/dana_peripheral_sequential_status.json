@@ -179,7 +179,7 @@
       "no_auto_retry": true
     },
     "native": {
-      "status": "HOST_MMIO_PASS_ORIGINAL_GUEST_PEN_CPU_PENDING_OBSERVER_LIFECYCLE_REPAIRED",
+      "status": "EMUTOS_REAL_CPU_PEN_ROUTINES_AND_XY_WORDS_OBSERVED_FORMAL_FAIL_EVENT_BUDGET",
       "origin": "HOST_LUA_NOT_GUEST_CPU",
       "observer": "tests/dana_f2_native_mmio.lua",
       "reporter": "F2_native_mmio_result.txt",
@@ -201,10 +201,44 @@
       "natural_guest_cpu_executed": false,
       "observer_executed_confirmed": false,
       "native_guest_process_exit": 0,
-      "guest_log_pending_exact_read": true
+      "guest_log_pending_exact_read": true,
+      "observed_guest_symbols": [
+        [
+          "_os_header",
+          "0x2140",
+          0
+        ],
+        [
+          "_dana_init",
+          "0x827E",
+          1
+        ],
+        [
+          "_dana_kbd_init",
+          "0x8428",
+          20
+        ],
+        [
+          "_dana_poll_touchscreen",
+          "0x86A4",
+          33
+        ],
+        [
+          "_dana_ts_rawread",
+          "0x852C",
+          35
+        ]
+      ],
+      "observed_guest_xy": [
+        "0x7E90",
+        "0x7850"
+      ],
+      "formal_pass": false,
+      "reason": "BLOCKED_EVENT_BUDGET_COUNTERS_DO_NOT_MATCH_EVENTS",
+      "next_observer_pin": "643449d5a4c9390e47b2ec032b99d4c0f2412c00"
     },
     "guest_cpu_validation": {
-      "status": "GUEST_OBSERVER_LIFECYCLE_DEFECT_REPAIRED_AND_BASELINE_RECEIPT_CONFIRMED_F2_GUEST_STILL_PENDING",
+      "status": "NATURAL_EMUTOS_CPU_TOUCH_FUNCTIONS_REACHED_X_AND_Y_BUS_SAMPLES_OBSERVED_BUT_VERIFIER_REJECTED_OVERFLOW",
       "source_observer": "tests/dana_f2_guest_cpu_observer.lua",
       "source_verifier": "tests/dana_f2_guest_cpu_verify.py",
       "synthetic_unit_tests": "tests/dana_f2_guest_cpu_verify_test.py",
@@ -284,7 +318,11 @@
           "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_guest_cpu_lifecycle_probe.log"
         ]
       },
-      "native_guest_compiled_candidate_run_after_fix": false
+      "native_guest_compiled_candidate_run_after_fix": false,
+      "native_guest_both_axes_observed": true,
+      "native_guest_independent_VERIFIER_PASS": false,
+      "next_job_commit": "c651057fa3fb5641e01b2c9ffad79d20ee175801",
+      "next_observer_commit": "643449d5a4c9390e47b2ec032b99d4c0f2412c00"
     },
     "host_mouse_integration_20261022": {
       "scope": "REUSE_EXISTING_MAME_SDL_ABSOLUTE_POINTER_TO_DANA_STYLUS",
@@ -348,90 +386,124 @@
       "candidate_binary_sha256": "a894e1f6910d0c548f345e49f0cf1a31004d41336a48ed943f9bcf6a6adcf851"
     },
     "latest_full_native_F2": {
-      "status": "GCC15_DRIVER_CLANG_LINK_3_SOURCE_TESTS_HOST_NATIVE_MMIO_PASS_GUEST_RECEIPT_MISSING",
+      "status": "NATURAL_EMUTOS_CPU_TOUCH_FUNCTIONS_REACHED_X_AND_Y_BUS_SAMPLES_OBSERVED_BUT_VERIFIER_REJECTED_OVERFLOW",
       "date": "2026-10-22",
-      "source_git_pin": "7514e96c9609b0427a2dae8920b544d80c66d397",
-      "source_sha256": "f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f",
-      "job_git_pin": "3b4146ed363960a84b85262aa9f42a1a3d9ac398",
-      "job_blob": "a3e9ff5fbe5288abaa9ea78b7f45037be4b8511a",
-      "generated_candidate_diag_sha256": "a894e1f6910d0c548f345e49f0cf1a31004d41336a48ed943f9bcf6a6adcf851",
-      "driver_object_sha256": "20645119990f1ffd5da2d7ec0c56adbf34b9b7cf75fe234fa0f19b08151fa928",
-      "compiler": "GCC 15.2 driver only -O3",
-      "linker": "Original Clang21",
-      "stages": [
-        [
-          "fetch_guest_observer_pin",
-          0
+      "run_job_commit": "6a68bd309dde0b7bedaa61cf128675ebd8834b02",
+      "run_observer_pin": "8c46900622214f4890bef751f972d2e73c7c492e",
+      "compiled_candidate_source_sha256": "f1f3c58efcc51f0f8b190c5d9672c502fbb7d6cddef33a8694d6c1ce7702c42f",
+      "one_driver_gcc15_compile": "PASS",
+      "existing_clang21_link": "PASS",
+      "three_directed_method_tests": "PASS_3_OF_3",
+      "native_host_mmio": "PASS_HOST_LUA_ONLY",
+      "native_guest_cpu": {
+        "actual_process_exit": 0,
+        "raw_receipt_status": "CAPTURED",
+        "original_emutos_loaded": "ORIGINAL_QUICKLOAD_ACTIVE",
+        "initial_cpu_pc": "0x2140",
+        "milestones": [
+          [
+            "_os_header",
+            "0x2140",
+            0
+          ],
+          [
+            "_dana_init",
+            "0x827E",
+            1
+          ],
+          [
+            "_dana_kbd_init",
+            "0x8428",
+            20
+          ],
+          [
+            "_dana_poll_touchscreen",
+            "0x86A4",
+            33
+          ],
+          [
+            "_dana_ts_rawread",
+            "0x852C",
+            35
+          ]
         ],
-        [
-          "guest_verifier_unit_preflight",
-          0
-        ],
-        [
-          "dryrun",
-          0
-        ],
-        [
-          "compile_driver_GCC15_only",
-          0
-        ],
-        [
-          "post_driver_dryrun",
-          0
-        ],
-        [
-          "archive_and_link_only",
-          0
-        ],
-        [
-          "native_mmio",
-          0
-        ],
-        [
-          "native_guest_cpu",
-          0
-        ]
-      ],
-      "directed_tests": {
-        "cases": 3,
-        "errors": 0,
-        "failures": 0
+        "pen_injections": 1,
+        "pen_down_event_seq": 4076,
+        "pen_down_virtual_time_seconds": 3,
+        "penx_raw": 32768,
+        "peny_raw": 32768,
+        "pf1_cpu_read_after_pen": {
+          "seq": 4082,
+          "PC": "0x86AC",
+          "data": "0x4C",
+          "contact_active_low": true
+        },
+        "actual_first_x_spi_command": {
+          "seq": 4085,
+          "CPU_PC": "0x81C6",
+          "data": "0x90"
+        },
+        "actual_first_x_spi_word": {
+          "seq": 4096,
+          "CPU_PC": "0x820A",
+          "data": "0x7E90"
+        },
+        "actual_first_y_spi_command": {
+          "seq": 4098,
+          "CPU_PC": "0x81C6",
+          "data": "0xD0"
+        },
+        "actual_first_y_spi_word": {
+          "seq": 4109,
+          "CPU_PC": "0x820A",
+          "data": "0x7850"
+        },
+        "observed_spi2_sequence": "PF1 active, CTRL 2247, DATA 90/D0, PG2 low 19, CTRL 2347 status ready, DATA 0, CTRL 224F, CTRL 234F status ready, PG2 high 1D, DATA 7E90/7850",
+        "expected_samples_match_observed": true,
+        "event_count": 20000,
+        "max_events": 20000,
+        "overflow_attempts": 177,
+        "original_counts": {
+          "cpu_pf1_reads": 1572,
+          "cpu_pg2_writes": 2688,
+          "cpu_spi2_reads": 8944,
+          "cpu_spi2_writes": 17448,
+          "pen_input_events": 1
+        },
+        "derived_stored_event_counts": {
+          "cpu_pf1_reads": 1559,
+          "cpu_pg2_writes": 2663,
+          "cpu_spi2_reads": 8866,
+          "cpu_spi2_writes": 17298,
+          "pen_input_events": 1
+        },
+        "original_exit_reason": "BLOCKED_EVENT_BUDGET",
+        "verifier_status": "BLOCKED_EVIDENCE",
+        "verifier_reason": "COUNTERS_DO_NOT_MATCH_EVENTS",
+        "formal_guest_PASS": false,
+        "explanation": "The unbounded trace hit 20000 events before the 12 s observation limit, and counters continued increasing for 177 dropped taps. The independent verifier correctly rejected incomplete raw evidence even though the first exact X and Y ADC transactions are present.",
+        "raw_receipt_sha256": "3452a323c4e3cf54dcdd68be2d3b29075e7777ab95b4498f156e9b877ecc0797",
+        "path": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_guest_cpu_observation.json",
+        "verdict_path": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_guest_cpu_verdict.json"
       },
-      "native_host_MMIO": {
-        "origin": "HOST_LUA_NOT_GUEST_CPU",
-        "status": "PASS_HOST_NATIVE_MMIO_ONLY",
-        "sample_X": "0x7E90",
-        "sample_Y": "0x7850",
-        "timing": "2 periodic ticks"
-      },
-      "natural_guest": {
-        "process_exit": 0,
-        "expected_observation": "F2_guest_cpu_observation.json",
-        "observation_file": "MISSING",
-        "verdict_file": "MISSING",
-        "status": "BLOCKED_NO_F2_GUEST_CPU_OBSERVATION_RECEIPT",
-        "interpretation": "CPU F2 behavior NOT OBSERVED; no guest PASS and no claim of reached touchscreen routine",
-        "first_evidence_to_inspect": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_native_guest_cpu.log"
-      },
-      "qualified_DIAG_rollback": {
-        "original_binary": true,
-        "source": true,
-        "object": true,
-        "archive": true,
-        "dependency_file": true,
-        "linker_output": true,
-        "all_original_timestamps": true
-      },
-      "one_active_diag": true,
-      "additional_mame_trees": 0,
+      "restored_original_DIAG": true,
+      "rollback_source_object_archive_dep_link_and_times": "ALL_TRUE",
+      "additional_MAME_trees": 0,
       "ROM_rebuilds": 0,
-      "full_MAME_rebuilds": 0,
-      "Commander_calls_used": 5,
-      "Commander_calls_max_per_intervention": 5,
-      "no_retries": true,
-      "tool_receipt": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_ONE_ACTIVE_DIAG_RESULT.json",
-      "error_trace": "RuntimeError: NO_F2_GUEST_CPU_OBSERVATION_RECEIPT",
-      "next": "Next intervention: read exact native_guest_cpu.log only, identify whether Lua parser/bootstrap/API/startup caused missing receipt, fix evidence instrument from cited log. Do not recompilate F2 until instrument repaired. Reuse same DIAG/job without duplicate trees."
+      "corrected_next_observer": {
+        "commit": "643449d5a4c9390e47b2ec032b99d4c0f2412c00",
+        "blob": "2fc510bb21a0ba3c77fa4af0dd58ebcee0bf2dcb",
+        "stop": "BOUNDED_AFTER_FIRST_CPU_X_Y_READS",
+        "semantics": "Stop recording only after real CPU 0x90 and 0xD0 SPI2 DATA reads after PEN_DOWN; do not stop emulator inside tap; return on periodic; keep independent Python verification; retain overflow abort if no samples"
+      },
+      "next_job": {
+        "commit": "c651057fa3fb5641e01b2c9ffad79d20ee175801",
+        "blob": "c72e58b7992412b106f29aa77f5ab65f05253514",
+        "existing_path": "tests/hold/017_f2_one_active_diag_inplace.job.sh",
+        "executed": false
+      },
+      "commander_calls_used": 5,
+      "commander_calls_max": 5
     }
   },
   "next_peripheral": {
@@ -491,7 +563,7 @@
     "runtime_pass_created": false,
     "policy": "ONE_ACTIVE_DANA_DIAG_SOURCE_BUILD_TREE_ONLY"
   },
-  "next_action": "With new intervention, first resolve strict baseline-probe assertion via reading exact JSON structure only; then run the existing job 017 once on the sole DIAG (GCC15 one object and Clang link because candidate restored) and review genuine EmuTOS CPU-PF1/PG2/SPI2 evidence. Do not claim PASS before independent verifier.",
+  "next_action": "Next intervention run the SAME guarded 017 job once with CPU observer bounded to the first real 0x90/0xD0 SPI2 DATA reads. Its independent verifier must prove both axes from the naturally executed EmuTOS CPU and no dropped events; do not reinterpret earlier overflow as PASS. Keep one dana-diag and five Commander calls per intervention maximum.",
   "compilation_replan_20261022": {
     "status": "GCC15_DRIVER_AND_ORIGINAL_CLANG_LINK_PASS_NO_FULL_REBUILD",
     "inspected_log": "/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/F2_compile_and_link.log",
@@ -581,13 +653,12 @@
     "no_unapproved_experiments": true
   },
   "latest_increment_20261022": {
-    "topic": "F2 guest Lua lifecycle fault diagnosis and correction on one DIAG",
-    "commander_calls_used": 5,
-    "commander_calls_max": 5,
-    "status": "GUEST_OBSERVER_LIFECYCLE_DEFECT_REPAIRED_AND_BASELINE_RECEIPT_CONFIRMED_F2_GUEST_STILL_PENDING",
-    "local_baseline_only": true,
-    "detected_mame_autoboot_semantics": true,
-    "repaired_observer_commit": "8c46900622214f4890bef751f972d2e73c7c492e",
-    "strict_followup_assertion_failed": true
+    "topic": "F2 genuine EmuTOS CPU bus capture and event budget optimization",
+    "calls_used": 5,
+    "calls_cap": 5,
+    "evidence": "Real guest CPU reached _dana_poll_touchscreen and _dana_ts_rawread, PF1 active-low, native SPI2 commands 0x90/0xd0 and read words 0x7E90/0x7850",
+    "formal_result": "BLOCKED_EVIDENCE due 20k event limit and counters recorded after drops, NOT product failure or final guest PASS",
+    "changed_after_run": "Only guest Lua evidence observer and PIN in existing 017 job; no new F2 code, ROM, MAME binary or trees",
+    "next": "single bounded first-pair capture verification in next authorized intervention"
   }
 }
