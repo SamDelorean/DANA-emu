@@ -145,9 +145,9 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 | **D6.3** | Automate headless smoke/regressions | Script reproduces D1–D5 cases and reports structured results per case |
 | **D6.4** | Save and restore complete state | CPU/RAM/peripheral checkpoint and deterministic continuation after restore |
 | **D6.5** | Harden loader and error reporting | Missing/corrupt image, invalid RAM, truncation and restart fail in controlled ways |
-| **D6.6** | Stable lightweight interface and installation | Selector, reset, save/delete, scale and user-environment launch; clean-install smoke test |
+| **D6.6** | AS2K-analog Dana GTK frontend and eventual stable packaging, derived from the single verified DIAG hardware model | Dana 560x160 LCD, mapped physical and virtual Dana keys/pen, `Archivo/Máquina/Ver/Configuración/Ayuda`, 100/200/300% and fullscreen, screenshot/recording where adapted, ROM/guest/SD selectors, reset and persistent configuration/RAM plus recoverable state; visible interaction and clean-install evidence; no AS2K-only hardware/key assumptions |
 
-**DIAG must not require another 68k engine or EmuTOS patches.** Headless mode can precede GUI; do not delay testing for presentation.
+**DIAG must not require another 68k engine or EmuTOS patches.** Headless mode can precede GUI; do not delay testing for presentation. This final user-facing GUI is a committed product requirement, but **not a gate for the current native EmuTOS keyboard/stylus task**. UI implementation must reuse compatible GTK/session patterns from `SamDelorean/AS2K-Emulator` (`stable/frontend/as2k_ui.py`, `stable/frontend/as2k_session.py`, `stable/docs/UI_CONTRACT.md`) and expose only Dana-real mappings; `dana-stable` is activated later only by separate authorization.
 
 ### D7 — SD0 storage (after base emulator)
 
@@ -161,7 +161,7 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 
 **Dual-slot user-facing requirement (2026-10-23):** The final physical-boot emulator must offer **two independent host GUI image selectors**, one for each original Dana SD slot, with user-selected raw sector-image path, insert/eject status, read-only/read-write policy, safe write flush and remembered assignments. Emulated card behavior is exposed to guest firmware through actual SPI/card-select/GPIO/presence signals; validate physical left/right-to-controller mapping using source and hardware evidence. The original EmuTOS-Dana port documents access to only one slot; emulation of both physical slots does not claim both will be supported automatically by that EmuTOS build. D7 implements and verifies the first slot; D8.3 brings in the second for D8.5. Image-file selection must not be confused with the separate Flash/Palm firmware image or with the direct `.dana` RAM-loader. **Deferred, not a gate for current EmuTOS GUI interaction.**
 
-### D8 — Separately scoped extensions; D8.5 now a committed deferred product objective
+### D8 — Separately scoped extensions; full boot and diagnostic ROM now committed deferred objectives
 
 | ID | Scope | Activation condition |
 |---|---|---|
@@ -170,8 +170,9 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 | **D8.3** | Second independent SD slot with its own host-selected image, actual slot-specific CS/detect hardware and separate media state; USB/IR remain optional subfeatures | **Second SD required by future D8.5**, not by current GUI milestone; validate physical wiring and independently addressable guest sector I/O |
 | **D8.4** | Expanded RAM and full chip-select configuration | Documented physical model; do not assume 8/16 MiB from rumor |
 | **D8.5** | **Full Dana boot: VZ reset/Flash → Palm OS → DanaRun.prc loading `/kernel.img` from left-slot SD image → trap #0 → EmuTOS at `0x2140` with separate right-slot TOS SD image** | **COMMITTED FUTURE / DEFERRED**; select, insert/eject and persist **both** card images independently in the same `dana-diag`, and prove guest-visible I/O and authentic end-to-end transition after current keyboard + stylus milestone |
+| **D8.6** | **AS2K-analog Dana diagnostic bootstrap and selectable diagnostic ROM/payload**; explicitly supported VZ/Flash boot or labeled synthetic RAM loader with immutable SHA/layout/entry/vector/stack manifest, bounded guest-origin diagnostics and normal reset restoration | **COMMITTED FUTURE / DEFERRED**; select a diagnostic image through the AS2K-style frontend; CPU executes real 68k diagnostic firmware; record guest PC/SP/SR, memory/IRQ/MMIO and PASS/FAIL. Never assume VZ provides HC11 Special Bootstrap; never pretend a host-assisted loader is physical boot or patch commercial Palm firmware |
 
-D8.1, D8.2, D8.4 and the non-SD portions of D8.3 remain separately scoped extensions, not default prerequisites for interactive EmuTOS. The **second SD slot within D8.3 is required for committed D8.5** but is not an active development gate. **D8.5 is no longer optional as a project objective.** The physical-boot profile must execute the actual guest firmware and complete chain, without silently using the direct-RAM handoff. Preserve the current post-bootstrap RAM mode as a separate fast diagnostic profile, keep the same DIAG tree/executable, reuse qualified devices, and compare against sourced physical Dana behavior. Commercial Palm/Flash images remain private and legally sourced, not committed to Git. Detailed source/hardware feasibility and testing contracts belong to the later D8.5 implementation phase, not the current interactive-GUI increment. See [General Work Plan](GENERAL_WORK_PLAN.md).
+D8.1, D8.2, D8.4 and the non-SD portions of D8.3 remain separately scoped extensions, not default prerequisites for interactive EmuTOS. The **second SD slot within D8.3 is required for committed D8.5** but is not an active development gate. **D8.5 (full Palm-to-EmuTOS boot) and D8.6 (diagnostic ROM/bootstrap) are committed final-product objectives, not optional and not active development gates.** The physical-boot profile must execute the actual guest firmware and complete chain, without silently using the direct-RAM handoff. Preserve the current post-bootstrap RAM mode as a separate fast diagnostic profile, keep the same DIAG tree/executable, reuse qualified devices, and compare against sourced physical Dana behavior. Commercial Palm/Flash images remain private and legally sourced, not committed to Git. Detailed source/hardware feasibility and testing contracts belong to the later D8.5 implementation phase, not the current interactive-GUI increment. See [General Work Plan](GENERAL_WORK_PLAN.md).
 
 ### O0 — DANA-OS3K firmware support
 
@@ -204,7 +205,7 @@ Only when an adapted OS3K binary with defined provenance and mapping exists: cre
 | D5.1–D5.5 | **PENDING** | Only after D4 |
 | D6.1–D6.6 | **PENDING** | Only after D5 |
 | D7.1–D7.5 | **PENDING** | Only after D6 |
-| D8.1–D8.5 and O0 | **PENDING / conditional** | Only when explicitly needed |
+| D8.1–D8.6 and O0 | **PENDING / conditional** | D8.5/D8.6 required final scope but deferred until current interactive GUI task is proven; other extensions conditional |
 
 **Never bypass a blocker using a stub that reports artificial success.** If evidence is insufficient, record the exact missing register, event, file or signal, investigate the pinned source material, and resume the *same* increment. Any reordering requires an explicit, reasoned, traceable change to this plan.
 
