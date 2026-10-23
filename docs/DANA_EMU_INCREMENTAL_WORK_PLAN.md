@@ -1,5 +1,8 @@
 # DANA-emu — incremental development and qualification master plan
 
+> **2026-10-23 FINAL PRODUCT DIRECTIVE / COMMITTED SCOPE:** The primary and ultimate project objective is **running and validating future OS3K-Dana firmware**, adapted from NEO/OS3K to replace Palm OS on Dana. EmuTOS is the already proven bring-up guest and Palm OS is a reference/physical-boot target, **not the ultimate OS**. The finished emulator must let the user choose the emulated **internal ROM/Flash firmware image and boot profile** for Palm OS or OS3K-Dana, choose EmuTOS through its genuine RAM/DanaRun mechanisms, and run a separately selected diagnostic ROM/bootstrap profile. Menu selection, ROM validation and controlled reset must preserve the two independently selectable SD cards and per-profile persistent state. See [General Work Plan](GENERAL_WORK_PLAN.md), and [DANA-OS3K's documented purpose](https://github.com/SamDelorean/Dana-OS3K). **All of this is future scope, not implementation PASS.** The active product cursor remains genuine keyboard + stylus interaction in the one installed `dana-diag` after verified GUI-020. No T/Commander authorization follows from this plan.
+
+
 > **2026-10-16 D1.3.1 static source audit:** documentation **PASS only**; [native VZ MMIO decode contract](D1_3_1_VZ_MMIO_ADDRESS_DECODE_CONTRACT.md) confirms the MAME standalone 24-bit vs canonical 32-bit VZ address issue, the manufacturer conditional DMAP alias and first guest IVR `0xFFFFF300` 8-bit fixture. **NEXT D1.3.1-B:** implement narrow 32-bit-aware IVR decoding and MMIO-01 guest real-bus proof, retaining D1.2 closed RAM and DIAG-only policy. Functional D1.3.1 remains PENDING; no Commander used by static audit. [Authoritative plan](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
 
 
@@ -18,7 +21,7 @@
 
 ## 1. Objective and products
 
-Build **DANA-stable** (daily use) and **DANA-diag** (instrumentation, automated execution, replay and evidence) **from one shared reduced MAME engine**, with a faithful MC68VZ328/Dana hardware model. Run the EmuTOS-Dana port as the first reference guest, **then** test patched OS3K firmware from DANA-OS3K. The primary purpose is an independent engineering test bench; contributing to upstream MAME is entirely optional.
+**Ultimate target: an OS3K-Dana development and validation platform** based on one faithfully emulated MC68VZ328/Dana hardware model from MAME. EmuTOS-Dana is the first real bring-up/reference guest and Palm OS a stock-fidelity guest; the product must ultimately boot and validate adapted OS3K/NEO firmware supplied by the separate `SamDelorean/Dana-OS3K` workstream. Future everyday-use packaging and diagnostic capabilities share this hardware model. During present development **only one installed `dana-diag` executable/tree is active**; the historical dual-build evidence and stable product plans do not authorize separate emulator variants.
 
 - **Stable:** simple UI and execution, 560×160 LCD, keyboard, image selector, pause/reset, save/restore, installation and error handling. Advertise only services actually verified.
 - **Diag:** identical hardware model with CPU, MMIO, IRQ, timer, SPI, UART and framebuffer tracing; opt-in probes, headless runs, checkpoints and reproducible artifacts.
@@ -145,7 +148,7 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 | **D6.3** | Automate headless smoke/regressions | Script reproduces D1–D5 cases and reports structured results per case |
 | **D6.4** | Save and restore complete state | CPU/RAM/peripheral checkpoint and deterministic continuation after restore |
 | **D6.5** | Harden loader and error reporting | Missing/corrupt image, invalid RAM, truncation and restart fail in controlled ways |
-| **D6.6** | AS2K-analog Dana GTK frontend and eventual stable packaging, derived from the single verified DIAG hardware model | Dana 560x160 LCD, mapped physical and virtual Dana keys/pen, `Archivo/Máquina/Ver/Configuración/Ayuda`, 100/200/300% and fullscreen, screenshot/recording where adapted, ROM/guest/SD selectors, reset and persistent configuration/RAM plus recoverable state; visible interaction and clean-install evidence; no AS2K-only hardware/key assumptions |
+| **D6.6** | AS2K-analog Dana GTK frontend with a **first-class internal ROM/Flash image chooser and OS boot-profile selector**, eventually packaged for everyday use | Choose Palm OS or OS3K-Dana firmware images for a valid internal-Flash cold-boot profile, or choose EmuTOS in direct-RAM / authentic Palm-DanaRun modes, plus separate diagnostic ROM; show active vs next-reset selection and image validation/error state. Preserve correct Dana 560x160 LCD, mapped keys/pen, `Archivo/Máquina/Ver/Configuración/Ayuda`, 100/200/300%/fullscreen, independent left/right SD selectors, optional capture, controlled reset, per-OS RAM/session persistence. Only host controls are copied from AS2K; no AS2K-only hardware assumptions or false firmware boot claims. |
 
 **DIAG must not require another 68k engine or EmuTOS patches.** Headless mode can precede GUI; do not delay testing for presentation. This final user-facing GUI is a committed product requirement, but **not a gate for the current native EmuTOS keyboard/stylus task**. UI implementation must reuse compatible GTK/session patterns from `SamDelorean/AS2K-Emulator` (`stable/frontend/as2k_ui.py`, `stable/frontend/as2k_session.py`, `stable/docs/UI_CONTRACT.md`) and expose only Dana-real mappings; `dana-stable` is activated later only by separate authorization.
 
@@ -174,9 +177,21 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 
 D8.1, D8.2, D8.4 and the non-SD portions of D8.3 remain separately scoped extensions, not default prerequisites for interactive EmuTOS. The **second SD slot within D8.3 is required for committed D8.5** but is not an active development gate. **D8.5 (full Palm-to-EmuTOS boot) and D8.6 (diagnostic ROM/bootstrap) are committed final-product objectives, not optional and not active development gates.** The physical-boot profile must execute the actual guest firmware and complete chain, without silently using the direct-RAM handoff. Preserve the current post-bootstrap RAM mode as a separate fast diagnostic profile, keep the same DIAG tree/executable, reuse qualified devices, and compare against sourced physical Dana behavior. Commercial Palm/Flash images remain private and legally sourced, not committed to Git. Detailed source/hardware feasibility and testing contracts belong to the later D8.5 implementation phase, not the current interactive-GUI increment. See [General Work Plan](GENERAL_WORK_PLAN.md).
 
-### O0 — DANA-OS3K firmware support
+### O0 — OS3K-Dana is the ultimate guest/firmware acceptance target (COMMITTED, pending genuine patched image)
 
-Only when an adapted OS3K binary with defined provenance and mapping exists: create a **hardware compatibility suite** on the previously qualified emulator. OS3K firmware architecture and implementation belong to DANA-OS3K, **not this repository**. If a test fails, isolate the violated hardware contract before modifying the engine.
+**Primary mission, not a merely optional extension.** The adapted NEO/OS3K firmware itself is produced, versioned and validated for provenance in `SamDelorean/Dana-OS3K`; the emulator must support and qualify it against the same real virtual Dana hardware that runs the reference guests. **OS3K-Dana is intended to replace Palm OS as its own guest operating environment**, not to run as an app inside Palm/EmuTOS, and should not be forced to traverse DanaRun. Do not create a false prerequisite requiring all Palm/EmuTOS startup features when a real OS3K execution trace only needs a smaller validated set of VZ devices.
+
+| ID | Committed OS3K-Dana emulator capability | Evidence/acceptance |
+|---|---|---|
+| **O0.1** | Select `OS3K-Dana` as an internal-firmware profile, browse a user-supplied patched image, verify format/identity/size/entry, map Flash/ROM or documented RAM loader from the firmware's actual build contract | Source-identifiable image manifest and correct guest CPU reset/entry/vector/stack; never guess Flash offsets, nor treat an updater fragment as a complete dump |
+| **O0.2** | Execute genuine OS3K-Dana guest startup on the virtual DragonBall VZ | Guest PC/exception/MMIO/IRQ/RAM evidence and progress to independently identified OS3K initialization code, not host-side hooks or prepainted screens |
+| **O0.3** | Reach the OS3K-Dana native UI with real Dana LCD/keyboard/pen and applicable storage | Visible guest-created screen and causal user-input response with correct emulated hardware events |
+| **O0.4** | Test the adapted OS3K file/application interfaces and supported SmartApplets | Verified compatible program execution and regression evidence; incompatibilities separately classified, without claiming original NEO hardware can be run unchanged |
+| **O0.5** | Preserve system choice, selected firmware and independent per-OS nonvolatile guest state through close/reopen/reset; offer recoverable state and diagnostic trace selection | Re-open OS3K image deliberately without accidentally entering Palm/EmuTOS, keep virtual SD media and other OS images intact, demonstrate safe error handling and rollback |
+
+**Boot/media distinction:** `Archivo → Abrir imagen ROM/Flash interna…` is the explicit guest firmware image selector; `Máquina → Sistema de arranque` chooses Palm OS, OS3K-Dana, EmuTOS-Dana or Diagnostic ROM. Palm/OS3K use compatible internal-firmware mappings; EmuTOS normally uses RAM direct or Palm→DanaRun→SD and is **not** misreported as flash-resident. Applying a different image is an explicit reset with state-protection rules, not live replacement of guest PC. Commercial Palm ROM and any private/derived ROMs remain off public Git.
+
+**Activation and precedence:** initial EmuTOS GUI input remains the immediate next result in DIAG; O0 functional tests become executable only after a real adapted binary exists with its own mapping/entry specification. O0 is nonetheless a *required final-product capability*. Develop only in the single existing DIAG until separately authorized transition to any stable package; no automatic Commander rights.
 
 ## 5. Regression and parity policy
 
@@ -205,7 +220,7 @@ Only when an adapted OS3K binary with defined provenance and mapping exists: cre
 | D5.1–D5.5 | **PENDING** | Only after D4 |
 | D6.1–D6.6 | **PENDING** | Only after D5 |
 | D7.1–D7.5 | **PENDING** | Only after D6 |
-| D8.1–D8.6 and O0 | **PENDING / conditional** | D8.5/D8.6 required final scope but deferred until current interactive GUI task is proven; other extensions conditional |
+| D8.1–D8.6 and O0 | **PENDING** | D8.5 full physical Palm→EmuTOS and D8.6 diagnostic ROM required final scope; **O0.1–O0.5 OS3K-Dana is the definitive acceptance goal** once an adapted firmware image exists; all remain deferred behind the current DIAG keyboard/pen GUI task, with optional hardware extensions only when genuinely needed |
 
 **Never bypass a blocker using a stub that reports artificial success.** If evidence is insufficient, record the exact missing register, event, file or signal, investigate the pinned source material, and resume the *same* increment. Any reordering requires an explicit, reasoned, traceable change to this plan.
 
