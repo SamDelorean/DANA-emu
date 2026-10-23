@@ -1,5 +1,23 @@
 # F2 — Host mouse as Dana stylus: native MAME input route
 
+## 2026-10-23 — Original EmuTOS calibration dependency for F2 GUI (source-only)
+
+**Concrete source finding, not a new gate or peripheral.** The pinned original EmuTOS-Dana source `davidgiven/emutos@9c42ef0f2c2fa9d1e217fced9da68901b2326e8b` defines `static LONG screen_calibration[7]` in `bios/dana.c:114`. At `dana_poll_touchscreen()` (lines 497–565), genuine pen contact invokes `dana_ts_rawread()`, but sets screen position `sx/sy` from the new X/Y **only if `c[0]` is nonzero**. The routine still emits `call_mousevec(packet)` while pressed/released. Until a calibration is installed, authentic PF1/SPI2 X/Y and button events therefore do **not** establish correct cursor motion; this is a potential future GUI symptom, not an observed hardware failure.
+
+**Already implemented original guest route.** The source package explicitly contains `tools/danacal.c`; `doc/readme-dana.txt` describes compiling/running the optional `danacal.prg` from EmuCON or with keyboard mouse emulation. Its original guest code acquires three raw pen points via XBIOS `0x8e`, computes seven affine coefficients, and installs them via XBIOS `0x8f`. `bios/xbios.c:1551–1552` dispatches to `ts_rawread`/`ts_calibrate`, and `bios/mouse.c` forwards to `dana_ts_rawread`/`dana_ts_calibrate`. Prefer this real guest utility; do **not** synthesize host mouse packets, forge MMIO, patch the original EmuTOS image, or invent calibration coefficients. The donor tool is GPL-licensed: link to its source rather than merging it into the MAME driver.
+
+**Availability is still unproven.** No `danacal.prg` appeared in a project Drive file search. This does not establish whether it exists on T. The guest program-loading route in the present F2-only DIAG is also unverified; do not silently assume an emulated SD slot, request unrelated SPI1 development, or mislabel missing guest media as a stylus failure.
+
+**One subsequent bounded interactive GUI campaign, only after separate native authorization:**
+
+1. Use the **same existing** `dana-diag` tree and the actual compiled F2 candidate. The existing accredited 012-C executable was restored by job017 and does not permanently include F2. No second emulator, stable version, ROM rebuild, or blind replay of job017.
+2. Use an already-supported genuine EmuTOS loading route for `danacal.prg` if the tool is available; calibrate at three distinct host positions through XBIOS `0x8e/0x8f`. Require guest `c[0] != 0` before attributing a lack of movement to the mouse hardware. If the utility cannot be loaded, record `BLOCKED_INPUT_CALIBRATION`, not `F2_FAIL`.
+3. Exercise three separated pointer positions, button down/up and held drag, with MAME SDL's **single** lightgun-class input. Require real guest `dana_poll_touchscreen`→`call_mousevec` effects and visible framebuffer/cursor changes at 560×160. Source mapping or MAME exit code alone is not a GUI PASS.
+4. Report per-case PASS/FAIL/PARTIAL, preserve historical job017 X/Y evidence, and return source/object/library/linker/binary/dependency/mtime to the qualified DIAG state.
+5. This source-only increment used **zero T/Commander calls, compilations, MAME guest executions, or new job scripts**. `PASS_GUEST_CPU_PEN_X_Y` remains reported by job017, with independent receipt audit and enclosing remote-exit discrepancy still unresolved.
+
+Primary sources: [original Dana BIOS](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/dana.c), [XBIOS dispatcher](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/xbios.c), [mouse hooks](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/bios/mouse.c), [original calibration tool](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/tools/danacal.c), and [README](https://github.com/davidgiven/emutos/blob/9c42ef0f2c2fa9d1e217fced9da68901b2326e8b/doc/readme-dana.txt).
+
 ## 2026-10-23 — Post-job-017 static evidence audit; no new native execution
 
 - Current authorized F2 campaign was job `017_f2_one_active_diag_inplace.job.sh` at pin `c651057fa3fb5641e01b2c9ffad79d20ee175801`, blob `c72e58b7992412b106f29aa77f5ab65f05253514`, executed once on canonical HP t640 in session PID 127497. Its nested stdout reported `F2_COMPILED_LINKED_METHODS_HOST_MMIO_AND_ORIGINAL_GUEST_CPU_PASS`, `PASS_GUEST_CPU_PEN_X_Y`, and `JOB017_FINAL_EXIT=0`; the enclosing remote session separately reported exit 1. Do not silently reconcile these statuses or treat the latter as evidence of a hardware defect.
