@@ -1,5 +1,18 @@
 # F2 — Host mouse as Dana stylus: native MAME input route
 
+## 2026-10-23 — F2 guest application-load feasibility, scope decision (static, no T)
+
+**Verified with the current isolated F2 production driver, not the broader uncompiled F2–F4 branch:**
+
+- `src/mame/skeleton/alphasdana.cpp::guest_load()` accepts only a `DANARAM1` image envelope, with exact linked EmuTOS entry `0x2140`, a 64-byte header, sha1-bounded original guest image and R-direct RAM bootstrap. The sole `QUICKLOAD` device advertises extension `dana`. It **does not load Atari executable `.PRG` files**. `tools/f1_guest.py` builds and validates that precise, already qualified image; do not reinterpret it as a TOS filesystem or program installer.
+- The active F2 `program_map()` has **no SPI1 SD register implementation or storage device**. The richer integrated F2–F4 candidate has only an empty-slot SPI1 poll with no virtual card/media; it is not the active F2 isolated driver. Neither qualifies an SD-based TOS application loader.
+- The original `davidgiven/emutos@9c42ef0` `doc/readme-dana.txt` instructs copying the optional `danacal.prg` to a **TOS-formatted SD card**, running it from EmuCON or guest GUI, and calibrating three coordinates. `tools/danacal.c` calls AES/VDI and XBIOS traps `0x8e/0x8f`, so its source alone is not an executable guest calibration path. Project Drive search yielded no independent `danacal.prg` artifact; this does not assert absence from T.
+- The pinned EmuTOS `bios/dana.c::dana_poll_touchscreen()` only updates guest cursor coordinates if `screen_calibration[0] != 0`. Without an approved guest-side executable/calibration route, a GUI motion failure **cannot** invalidate already observed hardware PF1/PG2/SPI2 X/Y reads.
+
+**Resolution, applying the standing anti-gate rule:** treat F2 as **guest hardware X/Y verifier-PASS reported, independent JSON audit pending**; leave **calibrated GUI mouse movement/click/drag unqualified** and mark its *app-loading/calibration dependency* as a separate **nonblocking deferred integration capability**, not a new F2 hardware defect. Do not automatically implement SD, invent a `.PRG` quickload, rebuild EmuTOS, patch `screen_calibration`, inject MMIO, or fabricate guest `call_mousevec` packets. Native F2 hardware qualification does **not** depend on an optional OS GUI application.
+
+**Next productive independent work:** proceed to existing F3 UART1 source integration/reuse on the same 012-C DIAG line after the F2 CPU evidence boundary is preserved; no need to reopen F2 or develop media to work on F3. For later GUI closure, first use an independently authorized read-only inspection of existing T receipts and determine a *real supported TOS application-loading path*, then one bounded actual SDL window run. Until then, status remains `F2_CPU_XY_PASS_REPORTED__GUI_DEFERRED_APP_LOAD_NOT_AVAILABLE_IN_CURRENT_DRIVER`. **0 Commander / 0 new jobs / 0 MAME build / 0 guest execution in this increment.**
+
 ## 2026-10-23 — Original EmuTOS calibration dependency for F2 GUI (source-only)
 
 **Concrete source finding, not a new gate or peripheral.** The pinned original EmuTOS-Dana source `davidgiven/emutos@9c42ef0f2c2fa9d1e217fced9da68901b2326e8b` defines `static LONG screen_calibration[7]` in `bios/dana.c:114`. At `dana_poll_touchscreen()` (lines 497–565), genuine pen contact invokes `dana_ts_rawread()`, but sets screen position `sx/sy` from the new X/Y **only if `c[0]` is nonzero**. The routine still emits `call_mousevec(packet)` while pressed/released. Until a calibration is installed, authentic PF1/SPI2 X/Y and button events therefore do **not** establish correct cursor motion; this is a potential future GUI symptom, not an observed hardware failure.
