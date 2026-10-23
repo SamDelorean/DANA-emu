@@ -8,6 +8,12 @@ local cpu,space,ready,pen_field=nil,nil,nil,nil
 local started,finished,loaded_seen,host_field,pen_injected=false,false,false,false,false
 local taps,subs,events={},{},{}
 local max_events=20000
+-- Scope the evidence to the first CPU-origin 0x90/0xD0 conversion pair.
+-- Do NOT terminate MAME or mutate MMIO from within an address-space tap.
+local first_pair_recorded=false
+local pending_axis=nil
+local first_axis_seen=false
+local second_axis_seen=false
 local milestones={
     [0x2140]="_os_header",[0x827e]="_dana_init",
     [0x8428]="_dana_kbd_init",[0x852c]="_dana_ts_rawread",
@@ -59,6 +65,7 @@ local function save(final_reason)
         event_count=#events,counters=counts,
         initialization_cpu_pc=initial_cpu_pc,
         pen_injected_once=pen_injected,
+        first_pair_recorded=first_pair_recorded,
         events=events,
         no_guest_pass_in_lua=true
     }
@@ -92,7 +99,7 @@ end
 local function traced(kind,lo,hi)
     taps[#taps+1]=space["install_"..kind.."_tap"](space,lo,hi,"f2_guest_"..kind,
         function(address,data,mask)
-            if finished or not ready or ready:get()==0 or host_field
+            if finished or first_pair_recorded or not ready or ready:get()==0 or host_field
                     or manager.machine:side_effects_disabled() then return end
             local ok,err=pcall(function()
                 local selected=bytes_for(address,mask)
@@ -107,6 +114,21 @@ local function traced(kind,lo,hi)
                     if 0xfffff800<=a and a<=0xfffff803 then
                         if kind=="read" then counts.cpu_spi2_reads=counts.cpu_spi2_reads+1
                         else counts.cpu_spi2_writes=counts.cpu_spi2_writes+1 end
+                    end
+                end
+                -- Only capture actual CPU SPI2 data exchanges, never
+                -- synthesized responses. The independent Python verifier
+                -- still checks PF1, PG2, exact controls, order and X/Y.
+                if pen_injected and address==0xfffff800 and mask==0xffff then
+                    if kind=="write" and (data==0x90 or data==0xd0) then
+                        pending_axis=data
+                    elseif kind=="read" and pending_axis then
+                        if pending_axis==0x90 then first_axis_seen=true end
+                        if pending_axis==0xd0 then second_axis_seen=true end
+                        pending_axis=nil
+                        if first_axis_seen and second_axis_seen then
+                            first_pair_recorded=true
+                        end
                     end
                 end
             end)
@@ -145,6 +167,11 @@ emu.register_periodic(function()
     local ok,err=pcall(function()
         if not started then initialize_after_autoboot() end
         if finished or not started then return end
+        if first_pair_recorded then
+            save("BOUNDED_AFTER_FIRST_CPU_X_Y_READS")
+            manager.machine:exit()
+            return
+        end
         if reason:match("^BLOCKED") then save(reason);manager.machine:exit();return end
         local now=emu.time()
         if ready:get()~=0 then loaded_seen=true;guest_state="ORIGINAL_QUICKLOAD_ACTIVE" end
