@@ -5,6 +5,8 @@
 **Technical foundation:** MAME, Motorola MC68VZ328 (DragonBall VZ)  
 **Document purpose:** Permanent project direction, development methodology, responsibilities, functional roadmap, and non-negotiable controls  
 **Established:** 2026-10-17  
+
+**Cross-project direction (2026-10-23):** [OS3K-Dana Integrated Master Work Plan](https://github.com/SamDelorean/Dana-OS3K/blob/main/docs/INTEGRATED_MASTER_WORK_PLAN.md) is the single product-level map joining Dana OS3K, emulator, AS2K/Pro bootstrap reuse, SD/backup, power and safe installation. This repository continues to own **only emulator implementation and DIAG qualification**, and its strict single-DIAG/Commander/functional evidence rules are not overridden by cross-project architecture. This is conceptual scope only.
 **Status:** General plan. Live results, open blockers, binary identities, and the next authorized action belong in the current [DIAG-FIRST execution ledger](DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md), not in this document.
 
 ## Binding emulator-testing exclusivity — 2026-10-17 (user directive)
