@@ -202,7 +202,7 @@ emu.register_frame_done(function()
             for _,image in pairs(machine.images) do if image.image_type_name=="sdcard" then image:unload() end end
         end
         local file=assert(io.open({json.dumps(str(result),ensure_ascii=False)},"w"))
-        file:write(string.format('{{"marker":%d,"pc":%d,"sr":%d,"sp":%d,"spi_cpu_writes":%d,"token":%d,"busy_samples":%d,"buffers":[',value,cpu.state["PC"].value,cpu.state["SR"].value,cpu.state["A7"].value,transactions,memory:read_u16({MARKER+4}),memory:read_u16({MARKER+8})))
+        file:write(string.format('{{"marker":%d,"pc":%d,"sr":%d,"sp":%d,"spi_cpu_writes":%d,"token":%d,"busy_samples":%d,"buffers":[',value,cpu.state["PC"].value,cpu.state["SR"].value,cpu.state["SP"].value,transactions,memory:read_u16({MARKER+4}),memory:read_u16({MARKER+8})))
         local ranges={{{','.join('{'+str(a)+','+str(n)+'}' for a,n in buffers)}}}
         for j,range in ipairs(ranges) do
             if j>1 then file:write(',') end
