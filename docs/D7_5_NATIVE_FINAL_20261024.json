@@ -1,0 +1,291 @@
+{
+  "date": "2026-10-24",
+  "increment": "D7.5",
+  "single_canonical_DIAG": true,
+  "existing_D7_5_native_binary_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+  "deployed": "NO",
+  "installed_bin_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
+  "script_revision": "fa3f2084c22020e0ba1cd19403de8fd154289bea",
+  "remote_rc": 1,
+  "media": "Disposable generated SD0/SD1 raw 16KiB only",
+  "power_loss_durability": "NOT_CLAIMED_NO_FSYNC",
+  "qualification": {
+    "increment": "D7.5",
+    "status": "FAIL",
+    "cases": [
+      {
+        "case": "protected",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 20282,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 2325,
+          "token": 13,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "case": "crc",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 20282,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 2325,
+          "token": 11,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "case": "partial",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 12514,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 765,
+          "token": 0,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "case": "power_partial",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 12530,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 765,
+          "token": 0,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "case": "eject_partial",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 11108,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 491,
+          "token": 0,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "case": "close_partial",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 11108,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 491,
+          "token": 0,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "case": "reset_partial",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 11138,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 0,
+          "token": 0,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "case": "io_error",
+        "process_rc": 0,
+        "diag_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+        "before": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "after": [
+          "dffb468c8b41f81358bbbf9d710036419a36818ac662481720a665ea5b410073",
+          "efd58b6ac0db97681dab89131b254a0de19f70288d676d3f613a3e176ec16c63"
+        ],
+        "cpu": {
+          "marker": 42330,
+          "pc": 20282,
+          "sr": 9984,
+          "sp": 4096,
+          "spi_cpu_writes": 2325,
+          "token": 13,
+          "busy_samples": 0,
+          "buffers": []
+        },
+        "status": "PASS"
+      },
+      {
+        "error": "Real backend failure was not observed",
+        "status": "FAIL"
+      }
+    ],
+    "power_loss_durability": "UNQUALIFIED_NO_FSYNC"
+  },
+  "log_tail": [],
+  "case_log_tails": {
+    "close_partial": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=2746 sha1=5e4ada3aa3c330179d9befb266f6c5bc28ee84fb profile=R-direct phystop=00400000",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ],
+    "crc": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=11908 sha1=08cb6006377fa4dba0d499296c1b90dcce81da7f profile=R-direct phystop=00400000",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ],
+    "eject_partial": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=2746 sha1=5e4ada3aa3c330179d9befb266f6c5bc28ee84fb profile=R-direct phystop=00400000",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ],
+    "io_error": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=11908 sha1=2519236a60b33ccda55ae43c5c22e81399b46255 profile=R-direct phystop=00400000",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ],
+    "partial": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=4140 sha1=e1142a8194c949b66c3c7d1f64ced6e48628e940 profile=R-direct phystop=00400000",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ],
+    "power_partial": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=4156 sha1=5ae4474bf2ce2041bd7c9fdd9af52455fe45276e profile=R-direct phystop=00400000",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ],
+    "protected": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=11908 sha1=140bf8e5c392e17d9f6befead0a23e85d909de4a profile=R-direct phystop=00400000",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ],
+    "reset_partial": [
+      "Warning: -video none doesn't make much sense without -seconds_to_run",
+      "[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 backend_read_only=0 policy=runtime",
+      "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 backend_read_only=0 policy=runtime",
+      "Soft reset",
+      "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=2764 sha1=fcd5b0b6f5554a26ce844d59dc72a47e6b99f5ab profile=R-direct phystop=00400000",
+      "Soft reset",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1"
+    ]
+  }
+}
