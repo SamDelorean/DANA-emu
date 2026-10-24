@@ -4,6 +4,8 @@
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
 #include "imagedev/snapquik.h"
+#include "bus/generic/slot.h"
+#include "bus/generic/carts.h"
 #include "screen.h"
 #include "util/hashing.h"
 
@@ -46,6 +48,8 @@ public:
         , m_pen_contact(*this, "PEN")
         , m_pen_x(*this, "PENX")
         , m_pen_y(*this, "PENY")
+        , m_firmware(*this, "firmware")
+        , m_boot_memory(*this, "boot_memory")
     {
     }
 
@@ -56,6 +60,42 @@ protected:
     virtual void machine_reset() override ATTR_COLD;
 
 private:
+    // D8.5: one CPU, two exclusive memory profiles. The firmware socket owns
+    // unchanged raw bus-order bytes, never a fabricated reset stack or PC.
+    DECLARE_DEVICE_IMAGE_LOAD_MEMBER(firmware_load);
+    void firmware_unload(device_image_interface &image);
+    void physical_reset();
+    void boot_postload();
+    void physical_block(const char *reason, u32 address, u16 data=0);
+    u16 physical_r(offs_t offset);
+    u16 physical_mmio_r(offs_t offset, u16 mem_mask);
+    void physical_mmio_w(offs_t offset, u16 data, u16 mem_mask);
+    void physical_w(offs_t offset, u16 data, u16 mem_mask);
+    u32 cs_base(unsigned group) const { return u32(m_cs_base[group] & 0xfffe) << 13; }
+    u32 cs_size(unsigned group) const { return (group<2 ? 0x20000U : 0x8000U) << ((m_cs_select[group] >> 1) & 7); }
+    bool cs_hit(unsigned group, u32 address) const
+    { return (m_cs_select[group] & 1) && !(cs_base(group) & (cs_size(group)-1)) && address>=cs_base(group) && u64(address)<u64(cs_base(group))+cs_size(group); }
+    bool physical_ram_ready() const
+    { return !(m_cs_select[3] & 0x0200) || ((m_dram[1] | m_dram[2]) & 0x8000); }
+    u8 scr_r() { return m_scr; }
+    void scr_w(u8 data);
+    u16 cs_r(offs_t offset);
+    void cs_w(offs_t offset, u16 data, u16 mem_mask);
+    u16 cs_select_r(offs_t offset) { return m_cs_select[offset]; }
+    void cs_select_w(offs_t offset, u16 data, u16 mem_mask) { COMBINE_DATA(&m_cs_select[offset]); }
+    u16 emucs_r() { return m_emucs; }
+    void emucs_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_emucs); }
+    u16 cs_control3_r() { return m_cs_control[2]; }
+    void cs_control3_w(offs_t, u16 data, u16 mem_mask);
+    u16 dram_r(offs_t offset) { return m_dram[offset]; }
+    void dram_w(offs_t offset, u16 data, u16 mem_mask) { COMBINE_DATA(&m_dram[offset]); }
+    static bool firmware_header_valid(const u8 *rom)
+    {
+        u32 const pc=(u32(rom[4])<<24) | (u32(rom[5])<<16) | (u32(rom[6])<<8) | rom[7];
+        return rom[8]==0xfe && rom[9]==0xed && rom[10]==0xbe && rom[11]==0xef
+            && pc && !(pc & 1) && pc<0xfffff000;
+    }
+    static bool firmware_size_valid(u32 size) { return size>=0x20000 && size<=0x1000000 && !(size & (size-1)); }
     void program_map(address_map &map) ATTR_COLD;
     void cpu_space_map(address_map &map) ATTR_COLD;
     void update_irq_lines();
@@ -203,6 +243,13 @@ private:
     required_ioport m_pen_contact;
     required_ioport m_pen_x;
     required_ioport m_pen_y;
+    required_device<generic_socket_device> m_firmware;
+    memory_view m_boot_memory;
+    bool m_physical_boot=false, m_physical_blocked=false;
+    u8 m_scr=0x1c, m_flash_sha1[20]={};
+    u16 m_cs_base[4]={}, m_cs_select[4]={};
+    u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
+    u16 m_dram[4]={};
     emu_timer *m_clk32_timer = nullptr;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
@@ -283,12 +330,18 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_lgpmr));
     save_item(NAME(m_lrra));
     save_item(NAME(m_pwmr));
+    save_item(NAME(m_physical_boot)); save_item(NAME(m_physical_blocked));
+    save_item(NAME(m_scr)); save_item(NAME(m_flash_sha1));
+    save_item(NAME(m_cs_base)); save_item(NAME(m_cs_select));
+    save_item(NAME(m_cs_upper)); save_item(NAME(m_cs_control));
+    save_item(NAME(m_emucs)); save_item(NAME(m_dram));
+    machine().save().register_postload(save_prepost_delegate(FUNC(alphasdana_state::boot_postload),this));
     m_guest_ready = 0;
 }
 
 void alphasdana_state::machine_reset()
 {
-    // Defined register reset only; full VZ cold-reset decoding is not modeled.
+    // Existing peripheral implementation is shared by both boot profiles.
     // Motorola MC68VZ328UM 4.4.2: actual VZ reset, not MAME EZ/POSE 0x0123.
     m_pllfsr = 0x0347;
     m_clk32_high = false;
@@ -315,11 +368,222 @@ void alphasdana_state::machine_reset()
     st_input_reset();
     m_pen_command=0; m_pen_sample=0;
     lcd_bootstrap_reset();
+    m_physical_boot=m_firmware->exists();
+    if (m_physical_boot && m_guest->exists())
+        fatalerror("Select either raw firmware (-rom) or DANARAM1 (-quickload), never both");
+    m_boot_memory.select(m_physical_boot ? 1 : 0);
+    if (m_physical_boot)
+    {
+        physical_reset();
+        return; // CPU device reset fetches the firmware vectors through AS_PROGRAM.
+    }
     // Quickload is timer-driven. Suppress *all* CPU fetches until validation
     // and the complete RAM/bootstrap seed have succeeded. No-image tests keep
     // their independently qualified native reset path unchanged.
     if (m_guest->exists() && !m_guest_loaded)
         m_maincpu->suspend(SUSPEND_REASON_DISABLE, true);
+}
+
+
+
+DEVICE_IMAGE_LOAD_MEMBER(alphasdana_state::firmware_load)
+{
+    if (m_guest->exists())
+        return std::make_pair(image_error::INVALIDIMAGE,std::string("Firmware and DANARAM1 are mutually exclusive"));
+    if (!image.loaded_through_softlist() && image.length()>0x1000000)
+        return std::make_pair(image_error::INVALIDLENGTH,std::string("Firmware exceeds VZ CSA maximum decode"));
+    u32 const size=m_firmware->common_get_size("rom");
+    if (!firmware_size_valid(size))
+        return std::make_pair(image_error::INVALIDLENGTH,std::string("Supply a complete power-of-two raw Flash array (128 KiB to 16 MiB), not an updater/PRC"));
+    // Byte storage prevents implicit host-endian swapping. No padding, header
+    // removal, updater reconstruction, relocation or vector substitution.
+    m_firmware->rom_alloc(size,GENERIC_ROM8_WIDTH,ENDIANNESS_LITTLE);
+    u8 *const rom=m_firmware->get_rom_base();
+    if (!rom || m_firmware->get_rom_size()!=size)
+        return std::make_pair(image_error::INVALIDIMAGE,std::string("Restart with the selected Flash geometry"));
+    if (image.loaded_through_softlist())
+        m_firmware->common_load_rom(rom,size,"rom");
+    else if (image.fread(rom,size)!=size)
+        return std::make_pair(image_error::INVALIDIMAGE,std::string("Short physical Flash read"));
+    if (!std::memcmp(rom,"DANARAM1",8) || !firmware_header_valid(rom))
+        return std::make_pair(image_error::INVALIDIMAGE,std::string("Expected raw PalmCard Flash bytes with original vectors at offset zero"));
+    auto const hash=util::sha1_creator::simple(rom,size);
+    std::copy(std::begin(hash.m_raw),std::end(hash.m_raw),std::begin(m_flash_sha1));
+    logerror("DANA_PHYSICAL_IMAGE bytes=%u sha1=%s read_only=1 topology=linear_array_unqualified\n",size,hash.as_string());
+    return std::make_pair(std::error_condition(),std::string());
+}
+
+void alphasdana_state::firmware_unload(device_image_interface &)
+{
+    // No hot fallback into old RAM or stale ROM bytes. Restart with one image.
+    m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
+    m_guest_ready=0;
+}
+
+void alphasdana_state::physical_reset()
+{
+    m_physical_blocked=false;
+    m_guest_loaded=false;
+    m_guest_ready=0;
+    m_scr=0x1c;
+    std::fill(std::begin(m_cs_base),std::end(m_cs_base),0);
+    m_cs_upper=0;
+    m_cs_select[0]=0x00b0; m_cs_select[1]=0;
+    m_cs_select[2]=0; m_cs_select[3]=0x0200;
+    // VZ UM + addendum, D0.2: do not inherit POSE's zero CTRL2/CTRL3.
+    m_cs_control[0]=0; m_cs_control[1]=0x1000; m_cs_control[2]=0x9c00;
+    m_emucs=0x0060;
+    m_dram[0]=0; m_dram[1]=0; m_dram[2]=0x003c; m_dram[3]=0;
+    m_pcpden=0xff; m_pcsel=0xff; m_pfsel=0x87;
+    // Open VZ reference pin-latch reset, not a measured Dana electrical state.
+    static constexpr u8 reset_gpio[32]={
+        0,0,0xff,0xff, 0,0,0xff,0xff, 0,0,0xff,0xff, 0,0,0xff,0x87,
+        0,0,0x3d,0x08, 0,0,0xff,0xef, 0,0,0xff,0xff, 0,0,0x3f,0x3f
+    };
+    std::copy(std::begin(reset_gpio),std::end(reset_gpio),std::begin(m_gpio));
+    // No RAM clear, vector writes, CPU state injection or reset() call here.
+    // Reuse the existing PLL/SYSCLK model, also used by Timer1. Electrical
+    // reset/lock timing and PLLCR divisors remain unqualified.
+    m_maincpu->set_unscaled_clock(guest_system_clock_hz());
+    m_maincpu->resume(SUSPEND_REASON_DISABLE);
+    logerror("DANA_PHYSICAL_RESET vectors=firmware CSA=%04x CSCTRL2=%04x CSCTRL3=%04x\n",
+        m_cs_select[0],m_cs_control[1],m_cs_control[2]);
+}
+
+void alphasdana_state::boot_postload()
+{
+    if (m_physical_boot!=m_firmware->exists() || (m_physical_boot && m_guest->exists()))
+        fatalerror("Boot profile differs from saved state; restart with the original image selection");
+    if (m_physical_boot)
+    {
+        auto const hash=util::sha1_creator::simple(m_firmware->get_rom_base(),m_firmware->get_rom_size());
+        if (std::memcmp(hash.m_raw,m_flash_sha1,sizeof(m_flash_sha1)))
+            fatalerror("Flash image differs from saved state");
+    }
+    m_boot_memory.select(m_physical_boot ? 1 : 0);
+}
+
+void alphasdana_state::physical_block(const char *reason, u32 address, u16 data)
+{
+    if (machine().side_effects_disabled()) return;
+    if (!m_physical_blocked)
+        logerror("DANA_PHYSICAL_BLOCKED reason=%s address=%08x data=%04x pc=%08x\n",
+            reason,address,data,u32(m_maincpu->pc()));
+    m_physical_blocked=true;
+    m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
+}
+
+u16 alphasdana_state::physical_r(offs_t offset)
+{
+    u32 const address=u32(offset)<<1;
+    // CSA's reset boot selection precedes programmed group decoding. A full
+    // linear Flash array uses its own address lines; no fixed Palm ROM base.
+    bool const boot=!(m_cs_select[0] & 1);
+    bool const flash=boot || cs_hit(0,address);
+    bool const ram=!boot && cs_hit(3,address);
+    if (flash && !ram)
+    {
+        u32 const size=m_firmware->get_rom_size();
+        if (!firmware_size_valid(size)) { physical_block("NO_COMPLETE_FLASH",address); return 0xffff; }
+        if (!boot && cs_size(0)<size)
+        {
+            physical_block("FLASH_BANK_WINDOW_UNVERIFIED",address);
+            return 0xffff;
+        }
+        u32 const index=(boot ? address : address-cs_base(0)) & (size-1);
+        u8 const *rom=m_firmware->get_rom_base();
+        return (u16(rom[index])<<8) | rom[index+1];
+    }
+    if (ram && !flash && !(m_cs_select[3] & 0x6000))
+    {
+        if (!physical_ram_ready() || ((m_dram[2] & 0x8000) && (m_dram[2] & 0x0c00)))
+        {
+            physical_block("DRAM_DISABLED_OR_INIT_READ",address);
+            return 0xffff;
+        }
+        u32 const index=address-cs_base(3);
+        if (index<0x400000) return m_ram[index>>1];
+    }
+    physical_block(flash && ram ? "OVERLAPPING_CS" : "EXTERNAL_DECODE_OR_PROTECTION",address);
+    return 0xffff; // Terminal unsupported access, never counted as a valid device response.
+}
+
+void alphasdana_state::physical_w(offs_t offset, u16 data, u16 mem_mask)
+{
+    u32 const address=u32(offset)<<1;
+    bool const boot=!(m_cs_select[0] & 1);
+    if (!boot && cs_hit(3,address) && !cs_hit(0,address) && !(m_cs_select[3] & 0xe000))
+    {
+        if (!physical_ram_ready()) { physical_block("DRAM_DISABLED",address,data); return; }
+        // SDRAM precharge/mode-register writes are controller commands, not
+        // guest data stores (M68VZ328Hwr.h INITPRECHG/INITMODE bits).
+        if ((m_dram[2] & 0x8000) && (m_dram[2] & 0x0c00)) return;
+        u32 const index=address-cs_base(3);
+        if (index<0x400000)
+        {
+            COMBINE_DATA(&m_ram[index>>1]);
+            return;
+        }
+    }
+    // Exact NOR part/command set is not established. Do not fabricate an ID,
+    // completed erase/program, or persistent write to the original dump.
+    physical_block(boot || cs_hit(0,address) ? "FLASH_COMMAND_SET_UNVERIFIED" : "EXTERNAL_WRITE_OR_PROTECTION",address,data);
+}
+
+u16 alphasdana_state::physical_mmio_r(offs_t offset, u16 mem_mask)
+{
+    if (machine().side_effects_disabled()) return 0xffff;
+    logerror("DANA_PHYSICAL_UNIMPLEMENTED_MMIO read address=%08x mask=%04x\n",0xfffff000+(u32(offset)<<1),mem_mask);
+    physical_block("MMIO_READ_UNIMPLEMENTED",0xfffff000+(u32(offset)<<1));
+    return 0xffff;
+}
+
+void alphasdana_state::physical_mmio_w(offs_t offset, u16 data, u16 mem_mask)
+{
+    if (machine().side_effects_disabled()) return;
+    logerror("DANA_PHYSICAL_UNIMPLEMENTED_MMIO write address=%08x mask=%04x\n",0xfffff000+(u32(offset)<<1),mem_mask);
+    physical_block("MMIO_WRITE_UNIMPLEMENTED",0xfffff000+(u32(offset)<<1),data);
+}
+
+void alphasdana_state::scr_w(u8 data)
+{
+    // DMAP=1 is the existing high internal-register decoder. Do not invent a
+    // second low-register page when a firmware requests an unsupported mode.
+    m_scr=(m_scr & 0xe0 & ~data) | (data & 0x1f);
+    if (!(m_scr & 4)) physical_block("SCR_DMAP_MODE",0xfffff000,data);
+}
+
+u16 alphasdana_state::cs_r(offs_t offset)
+{
+    if (offset<4) return m_cs_base[offset];
+    if (offset==4) return m_cs_upper;
+    return m_cs_control[offset-5];
+}
+
+void alphasdana_state::cs_w(offs_t offset, u16 data, u16 mem_mask)
+{
+    if (offset<4)
+    {
+        COMBINE_DATA(&m_cs_base[offset]);
+        m_cs_base[offset] &= 0xfffe;
+    }
+    else if (offset==4)
+    {
+        COMBINE_DATA(&m_cs_upper);
+        if (m_cs_upper) physical_block("CS_UPPER_ADDRESS_MODE",0xfffff108,data);
+    }
+    else
+    {
+        COMBINE_DATA(&m_cs_control[offset-5]);
+        u16 const reset=offset==5 ? 0 : 0x1000;
+        if (m_cs_control[offset-5]!=reset) physical_block("CS_CONTROL_MODE",0xfffff100+offset*2,data);
+    }
+}
+
+void alphasdana_state::cs_control3_w(offs_t, u16 data, u16 mem_mask)
+{
+    COMBINE_DATA(&m_cs_control[2]);
+    if (m_cs_control[2]!=0x9c00) physical_block("CS_CONTROL3_MODE",0xfffff150,data);
 }
 
 
@@ -719,6 +983,8 @@ void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
 
 QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
 {
+    if (m_firmware->exists() || m_physical_boot)
+        return std::make_pair(image_error::INVALIDIMAGE,std::string("DANARAM1 cannot replace a physical Flash boot"));
     // DANARAM1: 64-byte big-endian map-verified envelope, followed by the
     // unmodified EmuTOS image. tools/f1_guest.py binds the original image,
     // first-stage ROM and linker map with SHA-256 before this native load.
@@ -783,7 +1049,19 @@ void alphasdana_state::cpu_space_map(address_map &map)
 void alphasdana_state::program_map(address_map &map)
 {
     // Preserve the independently qualified D1.2 synthetic post-bootstrap RAM.
-    map(0x00000000, 0x003fffff).ram().share("ram");
+    map(0x00000000,0xffffffff).view(m_boot_memory);
+    m_boot_memory[0](0x00000000,0x003fffff).ram().share("ram");
+    m_boot_memory[1](0x00000000,0xffffefff).rw(FUNC(alphasdana_state::physical_r),FUNC(alphasdana_state::physical_w));
+    m_boot_memory[1](0xfffff000,0xffffffff).rw(FUNC(alphasdana_state::physical_mmio_r),FUNC(alphasdana_state::physical_mmio_w));
+    // Additional system/chip-select/DRAM registers exist only in physical mode.
+    m_boot_memory[1](0xfffff000,0xfffff000).rw(FUNC(alphasdana_state::scr_r),FUNC(alphasdana_state::scr_w));
+    // Fixed VZ part ID from pinned M68VZ328Hwr/EmRegsVZ; mask revision is not guessed.
+    m_boot_memory[1](0xfffff004,0xfffff004).lr8(NAME([]() { return u8(0x56); }));
+    m_boot_memory[1](0xfffff100,0xfffff10d).rw(FUNC(alphasdana_state::cs_r),FUNC(alphasdana_state::cs_w));
+    m_boot_memory[1](0xfffff110,0xfffff117).rw(FUNC(alphasdana_state::cs_select_r),FUNC(alphasdana_state::cs_select_w));
+    m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));
+    m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
+    m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
 
     // Individually decoded VZ registers only, never a blanket MMIO RAM page.
     // SCR.DMAP conditional low-address aliases remain intentionally unmapped.
@@ -854,6 +1132,9 @@ void alphasdana_state::program_map(address_map &map)
 
 void alphasdana_state::alphasdana(machine_config &config)
 {
+    GENERIC_SOCKET(config,m_firmware,generic_plain_slot,"dana_flash","bin,rom");
+    m_firmware->set_device_load(FUNC(alphasdana_state::firmware_load));
+    m_firmware->set_device_unload(FUNC(alphasdana_state::firmware_unload));
     QUICKLOAD(config, m_guest, "dana", attotime::zero).set_load_callback(FUNC(alphasdana_state::guest_load));
     // Placeholder CPU frequency, not a calibrated VZ PLL.
     DANA_VZ_CPU(config, m_maincpu, 1'000'000);

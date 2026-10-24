@@ -1,0 +1,118 @@
+{
+  "increment": "D8.5",
+  "status": "IMPLEMENTED_STATIC_CHECKS_PASS",
+  "native_qualification": "PENDING",
+  "canonical_base_commit": "47afeb58e2baa8b56af04fa8a23539454a472256",
+  "canonical_base_driver_sha256": "8e88d36d9d5b1e7574b7d5d58683975aa78ae94f6baf8213a311236707975e21",
+  "modified_production_files": [
+    "src/mame/skeleton/alphasdana.cpp"
+  ],
+  "driver_sha256": "f6ab7772d1a1c84b073fb50cf1682896ad6a55095c1556e5b12a2c04b98a58c7",
+  "patch": "patches/d8_5_physical_boot.patch",
+  "patch_sha256": "8d7c93f7e1914c32b6ca27405fe24d1a332e616263a5ac1d338e2a7ecc34dd31",
+  "patch_hunks": 10,
+  "patch_validation": "PASS: exact original Git bytes patched in memory match modified source; reverse git apply --check passes",
+  "static_checks": {
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "command": "python3 tests/d8_5_physical_boot_test.py",
+    "log_sha256": "60e6c40988de53faee438a5092adcbc93b924d3e63a8890f7110e0c645d595aa",
+    "full_MAME_header_Cpp20_syntax": "PASS (-fsyntax-only -Werror)",
+    "constant_evaluation": "PASS: six static_assert groups using extracted production C++ expressions; no guest program",
+    "Python_AST": "PASS",
+    "preserved_functions": [
+      "gpio_bootstrap_reset",
+      "st_input_reset",
+      "pb_w",
+      "pk_r",
+      "pk_w",
+      "st_exchange",
+      "pen_exchange",
+      "spi2_ctrl_w",
+      "lcd_bootstrap_reset",
+      "screen_update",
+      "pllfsr_w",
+      "ivr_r",
+      "ivr_w",
+      "imr_w",
+      "isr_w",
+      "update_irq_lines",
+      "irq_vector_r",
+      "guest_system_clock_hz",
+      "timer1_source_hz",
+      "timer1_schedule",
+      "timer1_tctl_w",
+      "timer1_tprer_w",
+      "timer1_tcmp_w",
+      "timer1_tcn_r",
+      "timer1_tstat_r",
+      "timer1_tstat_w",
+      "uart1_utx_w",
+      "cpu_space_map"
+    ],
+    "preserved_timer_callbacks": [
+      "clk32_tick",
+      "timer1_compare"
+    ],
+    "original_RAM_loader": "BYTE_IDENTICAL_AFTER_EARLY_IMAGE_CONFLICT_GUARD",
+    "GUI025_GUI026_versioned_patches": "UNCHANGED"
+  },
+  "runtime_results": {
+    "physical_boot": "PENDING_NO_AUTHENTIC_IMAGE_OR_NATIVE_AUTHORIZATION",
+    "RAM_boot_compatibility": "PENDING_NARROW_NATIVE_REGRESSION",
+    "profile_isolation": "STATIC_CHECKED_NATIVE_PENDING",
+    "GUI026": "HISTORICAL_CLOSED_USER_MANUAL_PASS_NOT_REOPENED"
+  },
+  "reported_T_baseline": {
+    "source": "USER_HASH_AND_PUBLISHED_GIT_BYTES_AGREE",
+    "binary_sha256": "51dddb7de0728fd796364039ac56409f50e292c4baea1ffa39aaf96b7c2c5937",
+    "EmuTOS024C_sha256": "eaf3d25cd32a21a9bcfa5cb71756dba749d611c73ed88259444a8ca7aabf67cd",
+    "T_rechecked_or_modified": false
+  },
+  "hardware_scope": {
+    "Flash": "READ_ONLY_LINEAR_ARRAY_NO_PART_ID_OR_PROGRAM_ERASE_EMULATION",
+    "Flash_physical_part_and_capacity": "UNVERIFIED_NOT_INFERRED_FROM_UPDATER",
+    "configured_decode": "SUPPORTED_ALIGNED_CSA_CSD_WINDOWS_ONLY; extended/banked/protected modes stop explicitly",
+    "RAM": "Existing 4 MiB share; CSD and DRAM-enable gating; no claimed 8/16 MiB topology",
+    "first_authentic_Palm_dependency": "UNKNOWN_UNTIL_NATIVE_TRACE",
+    "complete_physical_reset_and_timing": "UNQUALIFIED"
+  },
+  "sources": {
+    "MAME": "c4e48388ca620472643110db2941ce70aa5f3c07",
+    "POSE": "97b10711fe4ca50c1bd47072378eaab26ba8e81d",
+    "Dana_OS3K": "377e785753a7bdff7307d8bac432419926cca964",
+    "Motorola": "Existing D0.2 UM/addendum contract consumed; no new manufacturer manual retrieval claimed"
+  },
+  "restrictions": {
+    "branches_created": 0,
+    "clones_created": 0,
+    "MAME_trees_created": 0,
+    "extra_executables_created": 0,
+    "object_files_created": 0,
+    "emulator_executions": 0,
+    "MAME_builds": 0,
+    "EmuTOS_builds": 0,
+    "Commander_calls": 0,
+    "T_operations": 0,
+    "jobs_launched": 0,
+    "firmware_images_created_or_published": 0
+  },
+  "rector_workbook": {
+    "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "status": "RECORDS_PREPARED_ONLY_EXISTING_BOOK_NOT_MODIFIED",
+    "records": "docs/D8_5_RECTOR_UPDATES.csv"
+  },
+  "next_action": "Review this integrated patch; native qualification requires an independently identified private full Flash image and fresh explicit authorization.",
+  "changed_files": [
+    "src/mame/skeleton/alphasdana.cpp",
+    "tests/d8_5_physical_boot_test.py",
+    "tests/d8_5_static_status.json",
+    "patches/d8_5_physical_boot.patch",
+    "docs/D8_5_PHYSICAL_BOOT_IMPLEMENTATION.md",
+    "docs/D8_5_RECTOR_UPDATES.csv",
+    "docs/HANDOFF.md",
+    "docs/GENERAL_WORK_PLAN.md",
+    "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md"
+  ]
+}

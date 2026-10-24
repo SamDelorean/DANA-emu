@@ -1,0 +1,8 @@
+existing_sheet,record_key,status,update_text
+CONTROL,D8.5 integrated Flash/reset source,STATIC_CHECKS_PASS / NATIVE_PENDING,Implemented against published canonical 47afeb58; only production driver changed; no T deployment.
+HITOS,Physical firmware reset entry,STATIC_CHECKS_PASS / NATIVE_PENDING,Read-only original vector path and programmable supported CSA/CSD decode implemented; actual Palm instruction execution is native PENDING.
+CAMPAÑAS,D8.5 focused qualification,STATIC_CHECKS_PASS / NATIVE_PENDING,8 static checks and full-driver syntax pass; no executable/object/emulator build; no closed native campaign replay.
+CONTRATOS,Exclusive physical and RAM profiles,STATIC_CHECKS_PASS / NATIVE_PENDING,Original DANARAM1 body retained after early conflict guard; no host-generated vectors in physical mode; read-only input and save-image identity.
+RIESGOS,Unverified physical details,STATIC_CHECKS_PASS / NATIVE_PENDING,"Actual Flash part/full-dump topology, command set, extended CS/RAM and timing remain unqualified. First authentic firmware dependency is unknown."
+BITACORA,D8.5 implementation delivery,STATIC_CHECKS_PASS / NATIVE_PENDING,Single canonical checkout; integrated driver patch and static tests; GUI026 remains historically CLOSED; native qualification pending; zero Commander/T operations.
+FUENTES,Canonical/source references,STATIC_CHECKS_PASS / NATIVE_PENDING,Canonical driver 8e88d36d... from main@47afeb58; existing D0.2 UM/addendum plus pinned MAME/POSE/Dana-OS3K. No commercial firmware in Git.

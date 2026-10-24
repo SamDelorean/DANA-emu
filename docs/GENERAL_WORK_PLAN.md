@@ -1,5 +1,7 @@
 # DANA-emu — General Work Plan
 
+> **D8.5 implementation directive, 2026-10-24:** The user now authorizes one integrated physical firmware/reset implementation on the published canonical DIAG source. This supersedes earlier deferral/inventory-only wording for this task. Keep existing peripherals and R-direct, preserve closed GUI026, and create no additional emulator/tree/branch. The source candidate is implemented and statically checked; native qualification remains PENDING. See [D8.5 code/results and supported limits](D8_5_PHYSICAL_BOOT_IMPLEMENTATION.md). No Commander/T/build/run authorization is implied.
+
 > **Binding update (2026-10-24):** DANA-emu is an independent hardware-faithful AlphaSmart Dana emulator, not an EmuTOS product or solely an OS3K development accessory. Original Dana Palm OS execution and physical cold boot are first-class fidelity targets. If EmuTOS does not exercise a hardware function, investigate original Palm OS and verified hardware behavior; do not polish EmuDesk as a substitute. Preserve EmuTOS 024C and CLOSED GUI-025/026 regression evidence. Next: static driver-versus-real-Dana/Palm-boot gap inventory, then the smallest evidenced hardware increment. Retain single DIAG, no isolated branches, no extra master spreadsheet and no remote execution without fresh authorization. Existing D0–D8, D8.5 and I0–I6 milestones remain in place.
 
 **Project:** Reduced AlphaSmart Dana emulator and firmware engineering test bench  
