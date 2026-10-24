@@ -1,0 +1,11 @@
+--- a/src/osd/sdl/window.cpp
++++ b/src/osd/sdl/window.cpp
+@@ -314,7 +314,8 @@
+ 				}
+ 				Uint32 const idle = now - m_dana_last_motion; // wrap-safe
+-				if ((idle < 500U) || (((idle - 500U) % 1000U) < 600U))
++				// Match AS2K Writer selection: TEXT 380 ms, MASK 190 ms.
++				if ((idle < 500U) || (((idle - 500U) % 570U) < 380U))
+ 					show_pointer();
+ 				else
+ 					hide_pointer();
