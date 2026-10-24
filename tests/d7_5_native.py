@@ -173,9 +173,8 @@ local cpu=machine.devices[":maincpu"]
 local memory=cpu.spaces["program"]
 local frames=0
 local done=false
-local fields=machine.ioport.ports[":SDWRITE"].fields
-fields["SD0 image writes"]:set_value({mask & 1})
-fields["SD1 image writes"]:set_value({mask & 2})
+-- SDWRITE uses MAME's persistent IPT_CONFIG, not button/field:set_value.
+-- The per-case disposable asmdana.cfg selects the policy before CPU startup.
 local transactions=0
 local tap=memory:install_write_tap(0xfffff700,0xfffff70b,"d75_spi_cpu",function(offset,data,mem_mask)
     transactions=transactions+1
@@ -249,6 +248,14 @@ def main():
                 import resource
                 signal.signal(signal.SIGXFSZ,signal.SIG_IGN)
                 resource.setrlimit(resource.RLIMIT_FSIZE,(4096,4096))
+        # Native MAME IPT_CONFIG fields are toggles. Lua field:set_value()
+        # simulates a key event; it is not a reliable startup config assignment.
+        # Isolate and load the real MAME config for this case before guest boots.
+        cfg=root/'cfg'
+        cfg.mkdir(exist_ok=True)
+        ports=''.join(f'      <port tag=":SDWRITE" type="CONFIG" mask="{1<<slot}" defvalue="0" value="{mask & (1<<slot)}" />\\n' for slot in (0,1))
+        (cfg/'asmdana.cfg').write_text('<?xml version="1.0"?>\\n<mameconfig version="10">\\n  <system name="asmdana">\\n    <input>\\n'
+                                    +ports+'    </input>\\n  </system>\\n</mameconfig>\\n')
         command=[str(args.diag),'asmdana','-quickload',str(folder/'diagnostic.dana'),'-sd1',str(cards[0]),'-sd2',str(cards[1]),
                  '-autoboot_script',str(folder/'control.lua'),'-autoboot_delay','0','-video','none','-sound','none','-nothrottle',
                  '-nowriteconfig','-cfg_directory',str(root/'cfg'),'-nvram_directory',str(root/'nvram'),'-state_directory',str(root/'states'),'-oslog']
