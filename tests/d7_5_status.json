@@ -2,7 +2,7 @@
   "increment": "D7.5",
   "implementation": "IMPLEMENTED",
   "static": "PASS",
-  "native": "ATTEMPTED_6_FUNCTIONAL_CASES_PASS_RESET_OBSERVER_UPDATED_NATIVE_PENDING",
+  "native": "8_SCOPED_CASES_PASS_BACKEND_EIO_UNQUALIFIED_REAL_WRITES_AND_PERSISTENCE_PENDING",
   "base_commit": "5be8beb797fdf40475f564f54ca3ebd243dc20a5",
   "qualified_SPI1_commit": "cfa77f248711d75b6e0b75090a05f4b3d1bc0102",
   "installed_DIAG_unmodified_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
@@ -12,7 +12,7 @@
     "src/mame/skeleton/alphasdana_sd_image.h": "fec8899bcbcc8658cdfecbc291c33de31bee2adab3cd3af84e27a4562b3fccaa"
   },
   "campaign_sha256": {
-    "tests/d7_5_native.py": "c670c39898c4d7f1e9105a489a1289e8b061bcf444358a8bcb3cf8d655ab7c81",
+    "tests/d7_5_native.py": "f9ba223cc41ad73df97b3f230f534daa80a1b35a5382bf6e0d2af15bb5ac4d6e",
     "tests/d7_5_native_HOLD.job.sh": "ff4a242e839d37aee0103b011a2df3b62607e53a4c44ed3a48860a52651641a6"
   },
   "checks": {
@@ -59,7 +59,7 @@
   },
   "preserved": "SPI1 controller/FIFO/scheduler/IRQ/GPIO bodies; LCD/ST/SPI2/pen/timer/UART/Flash/RESET/RAM loader; GUI025/026; EmuTOS024C",
   "native_campaign": {
-    "state": "NATIVE_6_CASE_PASS_RESET_REENTRY_RUNNER_FIXED_RETEST_REQUIRED",
+    "state": "HOLD_CORRECTED_INVALID_EFBIG_ASSUMPTION_BACKEND_EIO_UNQUALIFIED",
     "job": "tests/d7_5_native_HOLD.job.sh",
     "guard": "DANA_D75_NATIVE_AUTHORIZED=YES with fresh authorization; future maximum 5 Commander calls",
     "emulator": "Existing absolute dana-diag, measured new SHA and exact installed sources; no build fallback",
@@ -76,7 +76,7 @@
       "FAIL",
       "BLOCKED"
     ],
-    "previous_attempt": "2026-10-24: native protected/crc/partial/power_partial/eject_partial/close_partial PASS. reset_partial CPU returned marker 0xa55a after two observed soft resets, but native SPI tap count reset to zero and harness incorrectly classified BLOCKED. Fixture recognition now requires actual Soft reset output and CPU successful marker; no emulator code changed."
+    "previous_attempt": "Actual native protected,CRC,partial,power_partial,eject_partial,close_partial,reset_partial PASS; prior in-bounds RLIMIT_FSIZE case did not produce backend write fault and was invalid as EFBIG injection. Backend write error qualification postponed and excluded from product core acceptance; 512B guest writes/readback/reopen not yet run."
   },
   "restrictions": {
     "Commander_calls": 0,
@@ -96,7 +96,7 @@
     "records": "docs/D7_5_RECTOR_UPDATES.csv",
     "status": "PREPARED_ONLY_SAME_BOOK_NOT_MODIFIED"
   },
-  "next_action": "Reauthorize bounded T execution for already compiled D7.5 bin; only corrected test/status synchronize and transactional native run, rollback on failure. No rebuild or new emulator.",
+  "next_action": "Use final authorized Commander call to sync only this test/status into existing T checkout, run transactional D7.5 native writable SD campaign from already-compiled binary. Accept product upon actual dual SD CMD24/CMD25/readback/reopen integrity PASS; disclose backend fault EIO UNQUALIFIED.",
   "native_preinit_fixed_in_commit": "d4d83624c8e0e68d55f5daf3c2652617880c264b",
   "native_attempt_evidence": "docs/D7_5_NATIVE_RUN_20261024.json"
 }
