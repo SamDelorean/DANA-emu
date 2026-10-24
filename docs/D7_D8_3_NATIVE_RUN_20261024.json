@@ -1,0 +1,24 @@
+{
+  "increment": "D7/D8.3",
+  "date": "2026-10-24",
+  "scope": "single canonical DIAG T; no clone/branch/new installation",
+  "status": "CPU_DUAL_SD_PASS_INSTALLED",
+  "test_slot0": "CPU_SECTOR0_A1_PASS",
+  "test_slot1": "CPU_SECTOR0_B2_PASS",
+  "deployed": "YES",
+  "process_rc": 0,
+  "installed_binary_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
+  "original_palm_boot": "PENDING",
+  "tests": "CPU-origin Motorola 68000 synthetic diagnostic firmware, actual SPI1 transaction CMD0/CMD8/CMD55/ACMD41/CMD17, two independent 32-sector read-only images; NOT authentic Palm OS",
+  "limitations": "SD card write support and real PD2/PD3 board insertion polarity remain pending",
+  "slot0_markers": [
+    "\ufeff[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 read_only=1",
+    "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 read_only=1",
+    "[:] DANA_PHYSICAL_BLOCKED reason=MMIO_WRITE_UNIMPLEMENTED address=fffffe00 data=00a1 pc=000000da"
+  ],
+  "slot1_markers": [
+    "\ufeff[:sd0] DANA_SD_MOUNT slot=:sd0 bytes=16384 read_only=1",
+    "[:sd1] DANA_SD_MOUNT slot=:sd1 bytes=16384 read_only=1",
+    "[:] DANA_PHYSICAL_BLOCKED reason=MMIO_WRITE_UNIMPLEMENTED address=fffffe00 data=00b2 pc=000000ec"
+  ]
+}
