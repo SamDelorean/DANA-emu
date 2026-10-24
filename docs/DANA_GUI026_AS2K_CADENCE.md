@@ -1,6 +1,6 @@
 # GUI-026 — Dana / AS2K Writer shared blink cadence
 
-**2026-10-24; BUILD PASS on the sole installed Dana DIAG; new timing MANUAL VISUAL PENDING.**
+**2026-10-24; BUILD PASS on the sole installed Dana DIAG; USER_MANUAL_VISUAL_PASS__CLOSED (AUD-045).**
 
 ## Authoritative origin (read U19 records first)
 - AS2K Writer visual contract frozen 2026-10-03: TEXT = **380 ms** and MASK = **190 ms** per phase, total **570 ms**, explicitly app-independent.
@@ -16,8 +16,8 @@
 - Clang 21.1.8, MAME incremental make -n and build both rc0. Plan identified 1 compile step. Reused `build/dana-diag`, compiled and relinked **only existing `dana-diag`**, no extra MAME trees or EmuTOS builds.
 - New installed DIAG SHA-256 **`51dddb7de0728fd796364039ac56409f50e292c4baea1ffa39aaf96b7c2c5937`**. EmuTOS 024C SHA-256 `eaf3d25cd32a21a9bcfa5cb71756dba749d611c73ed88259444a8ca7aabf67cd` and Dana driver SHA-256 `8e88d36d9d5b1e7574b7d5d58683975aa78ae94f6baf8213a311236707975e21` were preserved.
 - Evidence: [Drive GUI-026 receipts](https://drive.google.com/drive/folders/13KAj9uTC73DM24d8yuGpC9EN4plZ0w1t) including `result.json`, source delta, Clang incremental log, gzip rollback of previous executable.
-- Canonical master [v4.7 AUD-044](https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit).
+- Canonical master [v4.8 AUD-045](https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit).
 
-**Qualification boundary:** BUILD_PASS is verified; **new cadence was not manually timed or observed** after the build. The older 025S user manual PASS for mouse/visibility/blinking remains valid for that baseline only. One brief visual check of the 380/190 cycle can close this UI detail; do not repeat GEM, PF1/SPI2 or EmuTOS compilation. Never report full GUI/mass-storage APP PASS based on this timing adjustment.
+**Qualification — AUD-045 (2026-10-24):** BUILD_PASS was verified in AUD-044; the user then directly reported **“prueba ok”** after the manual visual check on the installed 026 DIAG. This closes GUI-026 as **USER_MANUAL_VISUAL_PASS__CLOSED**. Nominal 380/190 ms timings come from verified source and the AS2K contract, **not** an instrumented stopwatch measurement. No new build, guest run or remote action is needed. GUI-025S remains a valid historic baseline. Never infer GUI/mass-storage APP PASS from this cursor check.
 
 **Cross-project UI policy:** Where a blinking high-contrast selection or visibility indicator is intentionally used, prefer the established AS2K 380/190 ms readability rhythm over inventing independent cadence values; assess different UX patterns on their merits, not an unconditional requirement that all timeouts be 380/190.
