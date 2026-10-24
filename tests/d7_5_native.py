@@ -253,9 +253,9 @@ def main():
         # Isolate and load the real MAME config for this case before guest boots.
         cfg=root/'cfg'
         cfg.mkdir(exist_ok=True)
-        ports=''.join(f'      <port tag=":SDWRITE" type="CONFIG" mask="{1<<slot}" defvalue="0" value="{mask & (1<<slot)}" />\\n' for slot in (0,1))
-        (cfg/'asmdana.cfg').write_text('<?xml version="1.0"?>\\n<mameconfig version="10">\\n  <system name="asmdana">\\n    <input>\\n'
-                                    +ports+'    </input>\\n  </system>\\n</mameconfig>\\n')
+        ports=''.join(f'      <port tag=":SDWRITE" type="CONFIG" mask="{1<<slot}" defvalue="0" value="{mask & (1<<slot)}" />\n' for slot in (0,1))
+        (cfg/'asmdana.cfg').write_text('<?xml version="1.0"?>\n<mameconfig version="10">\n  <system name="asmdana">\n    <input>\n'
+                                    +ports+'    </input>\n  </system>\n</mameconfig>\n')
         command=[str(args.diag),'asmdana','-quickload',str(folder/'diagnostic.dana'),'-sd1',str(cards[0]),'-sd2',str(cards[1]),
                  '-autoboot_script',str(folder/'control.lua'),'-autoboot_delay','0','-video','none','-sound','none','-nothrottle',
                  '-nowriteconfig','-cfg_directory',str(root/'cfg'),'-nvram_directory',str(root/'nvram'),'-state_directory',str(root/'states'),'-oslog']
