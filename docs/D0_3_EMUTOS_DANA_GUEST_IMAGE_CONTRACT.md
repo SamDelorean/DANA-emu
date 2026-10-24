@@ -39,6 +39,31 @@ Build chain observed in Makefile:
 
 **Important address distinction:** the booter linker region origin 0x00100000 is a **link-time region for that stage**; it is not proof that Dana's physical ROM or the Palm heap at runtime is mapped at 0x00100000. The loader itself is labelled position-independent in source. The actual Palm heap address is not known from a release binary or trace.
 
+## 2A. Mandatory actual-build replay contract (2026-10-23; verified 024C)
+
+**OPERATIVE RULE — READ ORIGINAL BUILD LOGS BEFORE COMPILING.** Section 2 retains its historical 2026-10-13 SPEC_READY context. Newer **actual evidence takes precedence** for build choices: the successful original EmuTOS-Dana provenance on T and the native 024C GEM recovery. Before proposing a compiler, clean, reconstruction, or guest packaging, read and reconcile the *existing* `build_provenance.json`, original `build.log`, `emutos.map`, current guest manifest, the recent failure/success receipts, and the current master spreadsheet/Drive handoff. A failure to consult these records is a process failure, not an excuse to rebuild with a convenient available compiler.
+
+Verified canonical source and toolchain:
+- EmuTOS source pin: `davidgiven/emutos@9c42ef0f2c2fa9d1e217fced9da68901b2326e8b`.
+- Original successful provenance: `/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/emutos-built/build_provenance.json`; original build log in the same directory. Original immutable guest: `emutos-built/emutos.dana` (SHA-256 `c201c8527df87fa6a8788d8ac59f43298666196fefeee12dcac68295cb281b9d`).
+- Verified original compiler **`m68k-atari-mint-gcc (MiNT 20230719) 4.6.4`**, object format **a.out**, ABI `-m68000 -mshort` (the compiler's `-print-multi-lib` includes `mshort`). Its installed binary directory on T is `/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/crossmint/unpacked/usr/bin`. It may not be in the default `PATH`.
+- Reproduce the proven command, **in an isolated source copy whose SHA and pre-existing object provenance have been verified**, never within the preserved original source tree:
+
+```bash
+export PATH="/home/spc/DANA_EMU_ISOLATED/f1_e1e2_baldoi9k/crossmint/unpacked/usr/bin:$PATH"
+m68k-atari-mint-gcc --version
+m68k-atari-mint-gcc -print-multi-lib | grep mshort
+make -j3 dana TOOLCHAIN_PREFIX=m68k-atari-mint-
+```
+
+- If reusing objects, inspect their architecture and **a.out format** and source/build identity first; do not mix a.out and ELF objects. For the 024C isolated copy, only `bios/dana.c` calibration and the generated version object needed rebuilding, followed by relink using the original a.out cache. Do not run an indiscriminate `make clean` or force a full rebuild without evidence requiring it.
+- **PROHIBITED FOR THIS QUALIFIED GUEST:** `m68k-elf-gcc` (T had GCC **16.1.0**) / `ELF=1` as a drop-in substitute. 024R built with ELF, produced a 226,424-byte `emutos_calibrated.dana` where the cursor moved but GEM stayed at the hourglass. Merely passing link or moving the cursor does not qualify EmuTOS boot.
+- **024C PASS, native verified:** MiNT 4.6.4 produced isolated guest `emutos_calibrated_gem.dana` (223,876 bytes; SHA-256 `eaf3d25cd32a21a9bcfa5cb71756dba749d611c73ed88259444a8ca7aabf67cd`), retaining calibration `[3470, 559, 0, -162110, 0, 160, -32000]`. The same installed `dana-diag` (SHA-256 `cd4d7e3ae81f933dddb457152bdafb43e4bbcf605ea06726222f6abbb29269b4`) produced desktop/Alt+C/final *byte-identical* native PNGs and guest framebuffer snapshots to 022S. A further native pen run on this exact guest showed two distinct positions over GEM (exit 0, artifact uploaded). Original source, guest, and DIAG preserved.
+- **FAIL CLOSED:** validate compiler identity/ABI, source pin, map/entry/BSS, package `DANARAM1`/SHA, and original hashes; qualify GUI with a real EmuTOS desktop and 022S Alt+C dialog, then genuine pen position on that desktop. `BUILD_PASS` or snapshot-only hourglass is insufficient. Preserve a known-good launcher for rollback; do not overwrite canonical guest.
+- Evidence: [024C native build and GEM](https://drive.google.com/drive/folders/18c2maQupoIFICosuH7jNr45fTqiz6do-), [original guest handoff](https://drive.google.com/file/d/1pmpnsCcsJOrRlst9kNbcD1Z-56eJ2mD-/view), [master workbook](https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit).
+
+**For every future user instruction:** read the latest applicable Git/Drive logs, provenance and current master *before* deciding on actions or tools. Never infer that the first executable on `PATH` is the qualified compiler. Record which baseline was actually read. T/native execution still requires new explicit authorization; this addendum authorizes none.
+
 ## 3. Observed image layout and entry path
 
 | Layer | File / component | Layout or behavior | Evidence |
