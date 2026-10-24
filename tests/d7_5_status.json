@@ -2,14 +2,14 @@
   "increment": "D7.5",
   "implementation": "IMPLEMENTED",
   "static": "PASS",
-  "native": "PENDING_NOT_EXECUTED",
+  "native": "NATIVE_ATTEMPT_BLOCKED_IOPORT_PREINIT_FIXED_PENDING_RETEST",
   "base_commit": "5be8beb797fdf40475f564f54ca3ebd243dc20a5",
   "qualified_SPI1_commit": "cfa77f248711d75b6e0b75090a05f4b3d1bc0102",
   "installed_DIAG_unmodified_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
   "production_sha256": {
     "src/mame/skeleton/alphasdana.cpp": "4e8948509275b68997094e01abea2582644b1f2cc5d0ec9c0990382dbf27cb0a",
     "src/mame/skeleton/alphasdana_sd.h": "d1c2b63c9953c5644d9c95f63751061a404e7e8facebc6de6cd1b1efce697bcd",
-    "src/mame/skeleton/alphasdana_sd_image.h": "d9ba56eb9836aa68802bd606dc3a651e9cec15e25a3a9868da799ab251df846e"
+    "src/mame/skeleton/alphasdana_sd_image.h": "fec8899bcbcc8658cdfecbc291c33de31bee2adab3cd3af84e27a4562b3fccaa"
   },
   "campaign_sha256": {
     "tests/d7_5_native.py": "700bb80df04377bd3886ff7995c78c76b80728106625a35b6297689374df75fe",
@@ -95,5 +95,6 @@
     "records": "docs/D7_5_RECTOR_UPDATES.csv",
     "status": "PREPARED_ONLY_SAME_BOOK_NOT_MODIFIED"
   },
-  "next_action": "Fresh authorization for one same-DIAG incremental update and integrated disposable-media D7.5 native campaign."
+  "next_action": "Fresh authorization for one same-DIAG incremental update and integrated disposable-media D7.5 native campaign.",
+  "native_preinit_fixed_in_commit": "d4d83624c8e0e68d55f5daf3c2652617880c264b"
 }
