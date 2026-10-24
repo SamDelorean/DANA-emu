@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-24",
+  "increment": "D7.5",
+  "reference_fix_commit": "1d6f7c067b12099408612a2edb03353bdf04f3e3",
+  "single_diag_path": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag/bin/dana-diag",
+  "deployed": "NO",
+  "build_rc": "0",
+  "native_rc": "1",
+  "new_built_sha": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+  "installed_sha": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
+  "command_rc": "1",
+  "source_sha": {
+    "alphasdana.cpp": "4e8948509275b68997094e01abea2582644b1f2cc5d0ec9c0990382dbf27cb0a",
+    "alphasdana_sd.h": "d1c2b63c9953c5644d9c95f63751061a404e7e8facebc6de6cd1b1efce697bcd",
+    "alphasdana_sd_image.h": "fec8899bcbcc8658cdfecbc291c33de31bee2adab3cd3af84e27a4562b3fccaa"
+  },
+  "scope": "single T DIAG / read-write only on disposable 16KiB test card images",
+  "power_loss_guarantee": "NOT_CLAIMED; pinned POSIX flush without fsync",
+  "build_log_tail": [
+    "Clang 21.1.8 detected",
+    "Compiling src/mame/skeleton/alphasdana.cpp...",
+    "Archiving libmame_danadiag.a...",
+    "Linking danadiagd..."
+  ],
+  "campaign_log_tail": [],
+  "qualification": {
+    "increment": "D7.5",
+    "status": "FAIL",
+    "cases": [
+      {
+        "error": "Expecting value: line 1 column 1 (char 0)",
+        "status": "FAIL"
+      }
+    ],
+    "power_loss_durability": "UNQUALIFIED_NO_FSYNC"
+  },
+  "runtime_case_logs": {
+    "protected": [
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[LUA ERROR] in execute_function: ...20261024_native_evidence_corrected/protected/control.lua:36: attempt to index a nil value (field 'A7')",
+      "[:sd0] DANA_SD_EJECT slot=:sd0",
+      "[:sd1] DANA_SD_EJECT slot=:sd1",
+      "Average speed: 621.19% (29 seconds)"
+    ]
+  }
+}
