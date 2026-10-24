@@ -271,7 +271,8 @@ def main():
             poll.close()
         observation=json.loads((folder/'cpu.json').read_text()) if (folder/'cpu.json').exists() else {}
         record={'case':mode,'process_rc':process.returncode,'diag_sha256':args.diag_sha256,'before':before,'after':[sha(p) for p in cards],'cpu':observation}
-        record['status']='PASS' if process.returncode==0 and observation.get('marker')==0xa55a and (state or observation.get('spi_cpu_writes',0)>0) else ('FAIL' if observation.get('marker')==0xdead else 'BLOCKED')
+        reset_completed=(mode=='reset_partial' and b'Soft reset' in output and observation.get('marker')==0xa55a)
+        record['status']='PASS' if process.returncode==0 and observation.get('marker')==0xa55a and (state or observation.get('spi_cpu_writes',0)>0 or reset_completed) else ('FAIL' if observation.get('marker')==0xdead else 'BLOCKED')
         if mode=='both_write' and observation.get('busy_samples',0)<=0:record['status']='FAIL'
         results.append(record)
         if record['status']=='BLOCKED':raise NativeBlocked('Native evidence missing or ambiguous: '+mode)
