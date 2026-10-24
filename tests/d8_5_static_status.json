@@ -9,9 +9,9 @@
   ],
   "driver_sha256": "f6ab7772d1a1c84b073fb50cf1682896ad6a55095c1556e5b12a2c04b98a58c7",
   "patch": "patches/d8_5_physical_boot.patch",
-  "patch_sha256": "8d7c93f7e1914c32b6ca27405fe24d1a332e616263a5ac1d338e2a7ecc34dd31",
+  "patch_sha256": "235018dee2d8fd4d4b347d6e99b016abd29867dad7bbb34cd1f420b3b4b50026",
   "patch_hunks": 10,
-  "patch_validation": "PASS: exact original Git bytes patched in memory match modified source; reverse git apply --check passes",
+  "patch_validation": "PASS: exact base application in memory; git reverse --check and GNU patch reverse --dry-run --fuzz=0; normalized empty context lines",
   "static_checks": {
     "tests": 8,
     "failures": 0,
@@ -114,5 +114,6 @@
     "docs/HANDOFF.md",
     "docs/GENERAL_WORK_PLAN.md",
     "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md"
-  ]
+  ],
+  "implementation_commit": "512a760c864130b024637d9e6207d37bd2866eb6"
 }
