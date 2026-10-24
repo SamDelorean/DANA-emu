@@ -1,0 +1,101 @@
+{
+  "increment": "D7/D8.3",
+  "status": "IMPLEMENTED_STATIC_PASS",
+  "native_qualification": "PENDING_NOT_EXECUTED",
+  "base_commit": "4275fb76156a6b8e41d60935142ed7d28eb9c8b0",
+  "base_driver_sha256": "5b8d3ae5f7a01034241aa448b77eb4803f6c2dc8ac79d7dc50ad851f6436ddee",
+  "installed_binary_user_reported_sha256": "7cfb5a7306b27d8a19d5110d0b71e16d12336fb33dcab143ce2154b2205a983c",
+  "installed_binary_accessed_or_modified": false,
+  "production_sha256": {
+    "src/mame/skeleton/alphasdana.cpp": "2ef2eedcfa45aa772218fb553f54dca4e118aaa016bc2918fa5d1917a494f8a5",
+    "src/mame/skeleton/alphasdana_sd.h": "176d3e9104abd43dc8aaa35965a4b7b2831ef2c941628129c849dc2a15745d1c",
+    "src/mame/skeleton/alphasdana_sd_image.h": "51b068b3f59c0dde595e75513fcf6767723ebd73bdcffe40bc6d9d03cd311b8f"
+  },
+  "checks": {
+    "command": "DANA_MAME_REFERENCE=/path/to/pinned/mame python3 tests/d7_sd_test.py",
+    "executed_reference": "/workspace/mame-as3k",
+    "MAME_commit": "c4e48388ca620472643110db2941ce70aa5f3c07",
+    "tests": 12,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "log": "tests/d7_sd_static.log",
+    "log_sha256": "1a0f179d0bd054b391c1a86ca48f98aa0d9ff7c62d64534bcf87cbb1a42ededb",
+    "full_driver_MAME_Cpp20_syntax": "PASS -fsyntax-only -Werror",
+    "production_protocol_FIFO_static_assert_groups": 6,
+    "extracted_production_GPIO_IRQ_static_assert_groups": 1,
+    "Python_AST": "PASS",
+    "Git_diff_check": "PASS",
+    "test_sources_sha256": {
+      "tests/d7_sd_test.py": "5002658a74559ff504e36761975c98c037d08b2f0cb7c134d6e85364bca43636",
+      "tests/d7_sd_static.cpp": "08e4efb309247961ab396f8801b67fd228c03c2705157b1887ea36477630934f"
+    }
+  },
+  "scope": {
+    "slots": 2,
+    "cli": [
+      "-sd1",
+      "-sd2"
+    ],
+    "media": "INDEPENDENT_READ_ONLY_RAW_512_BYTE_SECTORS",
+    "protocol": [
+      "CMD0",
+      "CMD8",
+      "CMD9",
+      "CMD10",
+      "CMD12",
+      "CMD13",
+      "CMD16_512",
+      "CMD17",
+      "CMD18",
+      "CMD55",
+      "ACMD41",
+      "CMD58",
+      "CMD59",
+      "CMD24_CMD25_CONSUME_AND_REJECT_WRITE_PROTECTED"
+    ],
+    "host_filesystem_emulation": false,
+    "capacity": "Exact SDSC/SDHC CSD representability; maximum 32 GiB; no CHS rounding",
+    "GPIO": [
+      "SD0 PB5 power / PJ3 CS / PD2 input",
+      "SD1 PK5 power / PF2 CS / PD3 input"
+    ],
+    "IRQ": "SPI1 bit21 through ILCR; PD2/PD3 INT2/INT3 through configured polarity/edge and IRQ4",
+    "insertion_to_PD_IRQ_electrical_contract": "UNVERIFIED_NOT_SYNTHESIZED; independent explicitly labeled raw pin test inputs",
+    "clock": "Per-bit MAME SYSCLK timer; secondary reference 4<<rate; native timing pending",
+    "snapshot": "All protocol/FIFO/partial-bit/IRQ state; exact length and full-file SHA1 bound per slot; readonly originals"
+  },
+  "preservation": {
+    "Flash_RESET_RAM_loader_LCD_SPI2_ST_pen_timer_UART": "Existing functional bodies unchanged; PB/PK SD notification only",
+    "original_maps_and_save_items": "RETAINED",
+    "GUI025_GUI026": "UNCHANGED_CLOSED_HISTORICAL",
+    "EmuTOS": "UNCHANGED_SOURCE_AND_IMAGES; no rebuild"
+  },
+  "limitations": [
+    "No native CPU-origin SD evidence yet",
+    "Pinned EmuTOS exercises only slot0",
+    "Board IRQ/insertion polarity/function unresolved",
+    "Writable media/SDIO not implemented",
+    "Test/sample modes and unsupported phases stop explicitly",
+    "Extended physical boot limitations remain those of D8.5"
+  ],
+  "restrictions": {
+    "new_branches": 0,
+    "clones": 0,
+    "new_trees": 0,
+    "emulator_executions": 0,
+    "executables_created": 0,
+    "object_files_created": 0,
+    "Commander_calls": 0,
+    "T_operations": 0,
+    "MAME_builds": 0,
+    "EmuTOS_builds": 0,
+    "native_jobs_launched": 0
+  },
+  "rector_workbook": {
+    "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "status": "RECORDS_PREPARED_ONLY; existing workbook not accessed/replaced",
+    "records": "docs/D7_D8_3_RECTOR_UPDATES.csv"
+  },
+  "next_action": "Authorize one incremental same-DIAG build and scoped integrated dual-SD native qualification."
+}

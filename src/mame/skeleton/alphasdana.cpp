@@ -8,6 +8,7 @@
 #include "bus/generic/carts.h"
 #include "screen.h"
 #include "util/hashing.h"
+#include "alphasdana_sd_image.h"
 
 // Minimal VZ-aware M68000 address-width carrier. The stock M68000 exposes
 // only 24 address bits; the pinned MAME MC68EZ328 shows the exact native
@@ -50,16 +51,35 @@ public:
         , m_pen_y(*this, "PENY")
         , m_firmware(*this, "firmware")
         , m_boot_memory(*this, "boot_memory")
+        , m_sd(*this, "sd%u", 0U)
+        , m_sd_irq(*this, "SDIRQ")
     {
     }
 
     void alphasdana(machine_config &config);
+    DECLARE_INPUT_CHANGED_MEMBER(sd_irq_changed);
 
 protected:
     virtual void machine_start() override ATTR_COLD;
     virtual void machine_reset() override ATTR_COLD;
 
 private:
+    // D7/D8.3: shared VZ SPI1 controller, two independent raw SD image devices.
+    void spi1_reset();
+    u16 spi1_r(offs_t reg);
+    void spi1_w(offs_t reg,u16 data,u16 mem_mask);
+    void spi1_irq();
+    void spi1_schedule();
+    TIMER_CALLBACK_MEMBER(spi1_complete);
+    void sd_lines();
+    void sd_gpio_irq();
+    u8 pd_r(offs_t reg);
+    void pd_w(offs_t reg,u8 value);
+    u8 pd_extra_r(offs_t reg) { return m_pd_extra[reg]; }
+    void pd_extra_w(offs_t reg,u8 value) { m_pd_extra[reg]=value; sd_gpio_irq(); }
+    u16 ilcr_r() { return m_ilcr; }
+    void ilcr_w(offs_t,u16 data,u16 mem_mask)
+    { COMBINE_DATA(&m_ilcr); m_ilcr&=0x7777; spi1_irq(); }
     // D8.5: one CPU, two exclusive memory profiles. The firmware socket owns
     // unchanged raw bus-order bytes, never a fabricated reset stack or PC.
     DECLARE_DEVICE_IMAGE_LOAD_MEMBER(firmware_load);
@@ -146,12 +166,12 @@ private:
     // VZ silicon reset is 0x87; this machine uses dbztool's R-direct 0xc5.
     void pfsel_reset() { m_pfsel = 0xc5; }
     u8 pfsel_r() { return m_pfsel; }
-    void pfsel_w(u8 data) { m_pfsel = data; }
+    void pfsel_w(u8 data) { m_pfsel = data; sd_lines(); }
 
 
     // Post-bootstrap GPIO output/configuration latches. The initial values
     // come from pinned dbztool/danainit.sh, NOT MC68VZ328 silicon reset.
-    // External pen contact is modeled on PF1. Card detect is unconnected.
+    // External pen contact is modeled on PF1; SD IRQ pins are separate inputs.
     // Port order B, D, E, F, G, J, K, M; DIR/DATA/PUEN/SEL columns.
     void gpio_bootstrap_reset();
 #define DANA_GPIO_PORT(NAME, INDEX) \
@@ -160,7 +180,6 @@ private:
     // Port B and K observe the ST controller reset/ready handshake.
     u8 pb_r(offs_t reg) { return m_gpio[reg]; }
     void pb_w(offs_t reg, u8 value);
-    DANA_GPIO_PORT(pd, 1)
     DANA_GPIO_PORT(pe, 2)
     // PF1 is the active-low pen IRQ input. Only override its DATA bit while
     // configured as GPIO input; software-driven PF1 retains its own latch.
@@ -171,7 +190,7 @@ private:
             value=(value & ~u8(0x02)) | ((m_pen_contact->read() & 1) ? 0 : 0x02);
         return value;
     }
-    void pf_w(offs_t reg, u8 value) { m_gpio[3*4+reg]=value; }
+    void pf_w(offs_t reg, u8 value) { m_gpio[3*4+reg]=value; sd_lines(); }
     // PG2 selects the external pen ADC, distinct from PE3 selecting the ST.
     u8 pg_r(offs_t reg) { return m_gpio[4*4+reg]; }
     void pg_w(offs_t reg, u8 value)
@@ -183,7 +202,8 @@ private:
             m_pen_sample=0;
         }
     }
-    DANA_GPIO_PORT(pj, 5)
+    u8 pj_r(offs_t reg) { return m_gpio[5*4+reg]; }
+    void pj_w(offs_t reg,u8 value) { m_gpio[5*4+reg]=value; sd_lines(); }
     u8 pk_r(offs_t reg);
     void pk_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pm, 7)
@@ -244,6 +264,14 @@ private:
     required_ioport m_pen_y;
     required_device<generic_socket_device> m_firmware;
     memory_view m_boot_memory;
+    required_device_array<dana_sd_image_device,2> m_sd;
+    required_ioport m_sd_irq;
+    dana_sd::controller m_spi1;
+    emu_timer *m_spi1_timer=nullptr;
+    u16 m_spi1_word=0,m_spi1_control=0,m_spi1_received=0,m_ilcr=0x6533;
+    u8 m_spi1_bits_left=0;
+    u8 m_pd_extra[4]={},m_sd_last_pins=0x0c,m_sd_edges=0;
+    bool m_spi1_busy=false;
     bool m_physical_boot=false, m_physical_blocked=false;
     u8 m_scr=0x1c, m_flash_sha1[20]={};
     u16 m_cs_base[4]={}, m_cs_select[4]={};
@@ -335,6 +363,16 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_cs_upper)); save_item(NAME(m_cs_control));
     save_item(NAME(m_emucs)); save_item(NAME(m_dram));
     machine().save().register_postload(save_prepost_delegate(FUNC(alphasdana_state::boot_postload),this));
+    m_spi1_timer=timer_alloc(FUNC(alphasdana_state::spi1_complete),this);
+#define DANA_SPI1_SAVE(member) save_item(NAME(m_spi1.member))
+    DANA_SPI1_SAVE(tx); DANA_SPI1_SAVE(rx); DANA_SPI1_SAVE(control); DANA_SPI1_SAVE(mask);
+    DANA_SPI1_SAVE(spc); DANA_SPI1_SAVE(last_tx); DANA_SPI1_SAVE(last_rx);
+    DANA_SPI1_SAVE(tx_head); DANA_SPI1_SAVE(rx_head); DANA_SPI1_SAVE(tx_count);
+    DANA_SPI1_SAVE(rx_count); DANA_SPI1_SAVE(rx_edge);
+#undef DANA_SPI1_SAVE
+    save_item(NAME(m_spi1_word)); save_item(NAME(m_spi1_control)); save_item(NAME(m_spi1_busy));
+    save_item(NAME(m_spi1_received)); save_item(NAME(m_spi1_bits_left));
+    save_item(NAME(m_ilcr)); save_item(NAME(m_pd_extra)); save_item(NAME(m_sd_last_pins)); save_item(NAME(m_sd_edges));
     m_guest_ready = 0;
 }
 
@@ -367,6 +405,7 @@ void alphasdana_state::machine_reset()
     st_input_reset();
     m_pen_command=0; m_pen_sample=0;
     lcd_bootstrap_reset();
+    spi1_reset();
     m_physical_boot=m_firmware->exists();
     if (m_physical_boot && m_guest->exists())
         fatalerror("Select either raw firmware (-rom) or DANARAM1 (-quickload), never both");
@@ -374,6 +413,7 @@ void alphasdana_state::machine_reset()
     if (m_physical_boot)
     {
         physical_reset();
+        sd_lines();
         return; // CPU device reset fetches the firmware vectors through AS_PROGRAM.
     }
     // Quickload is timer-driven. Suppress *all* CPU fetches until validation
@@ -629,6 +669,7 @@ void alphasdana_state::pb_w(offs_t reg, u8 value)
             m_st_hello=true;
         }
     }
+    sd_lines();
 }
 
 u8 alphasdana_state::pk_r(offs_t reg)
@@ -655,6 +696,7 @@ void alphasdana_state::pk_w(offs_t reg, u8 value)
         m_st_ready=true;
         m_st_hello=true;
     }
+    sd_lines();
 }
 
 u8 alphasdana_state::st_exchange(u8 command)
@@ -728,6 +770,168 @@ u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
     }
     return 0xffff; // wrong phase, unknown command or unimplemented mode
 }
+
+// SPI1 uses the existing scheduler/interrupt controller and SYSCLK domain.
+// FIFO/status masks follow the VZ register contract; they are not SPI2 bits.
+void alphasdana_state::spi1_reset()
+{
+    m_spi1=dana_sd::controller{}; m_spi1_word=m_spi1_control=m_spi1_received=0;
+    m_spi1_bits_left=0; m_spi1_busy=false; m_spi1_timer->adjust(attotime::never);
+    m_ilcr=0x6533; std::fill(std::begin(m_pd_extra),std::end(m_pd_extra),0);
+    m_sd_edges=0; m_sd_last_pins=m_sd_irq->read() & 0x0c;
+    // A machine reset reinitializes the cards without unmounting either file.
+    for (auto &slot:m_sd) slot->lines(false,false);
+    sd_lines(); spi1_irq(); sd_gpio_irq();
+}
+
+void alphasdana_state::sd_lines()
+{
+    auto driven=[this](unsigned port,u8 mask,u8 select) {
+        return (m_gpio[port*4] & mask) && (select & mask);
+    };
+    bool const power0=driven(0,0x20,m_gpio[3]) && (m_gpio[1]&0x20);
+    bool const power1=driven(6,0x20,m_gpio[27]) && (m_gpio[25]&0x20);
+    bool const cs0=driven(5,0x08,m_gpio[23]) && !(m_gpio[21]&0x08);
+    bool const cs1=driven(3,0x04,m_pfsel) && !(m_gpio[13]&0x04);
+    m_sd[0]->lines(power0,cs0); m_sd[1]->lines(power1,cs1);
+}
+
+void alphasdana_state::spi1_irq()
+{
+    m_pending=(m_pending & ~0x00200000U) | (m_spi1.irq() ? 0x00200000U : 0);
+    unsigned const level=(m_ilcr>>12)&7;
+    if (m_spi1.irq() && (!level || level==7))
+    {
+        logerror("DANA_SPI1_BLOCKED INVALID_SPI1_INTERRUPT_LEVEL ILCR=%04x\n",m_ilcr);
+        m_spi1_busy=false; m_spi1_timer->adjust(attotime::never);
+        m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
+    }
+    update_irq_lines();
+}
+
+u16 alphasdana_state::spi1_r(offs_t reg)
+{
+    bool const effects=!machine().side_effects_disabled();
+    switch (reg)
+    {
+    case 0: { u16 const value=m_spi1.pop_rx(effects); if (effects) spi1_irq(); return value; }
+    case 1: return m_spi1.last_tx;
+    case 2: return m_spi1.control;
+    case 3: { u16 const value=m_spi1.status(effects); if (effects) spi1_irq(); return value; }
+    case 4: return m_spi1.tx_count | (u16(m_spi1.rx_count)<<4);
+    default: return m_spi1.spc;
+    }
+}
+
+void alphasdana_state::spi1_w(offs_t reg,u16 data,u16 mem_mask)
+{
+    switch (reg)
+    {
+    case 0: return; // RX data is read-only.
+    case 1:
+        if (!m_spi1.push_tx(data,mem_mask))
+        { logerror("DANA_SPI1_BLOCKED TX_FIFO_OVERFLOW\n"); m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); }
+        break;
+    case 2:
+    {
+        u16 const previous=m_spi1.control;
+        COMBINE_DATA(&m_spi1.control);
+        if (!(m_spi1.control&0x0200))
+        {
+            m_spi1.tx_head=m_spi1.rx_head=m_spi1.tx_count=m_spi1.rx_count=0;
+            m_spi1.rx_edge=false;
+        }
+        if ((m_spi1.control&0x0600)!=0x0600 || !(m_spi1.control&0x0100))
+        {
+            m_spi1_busy=false; m_spi1.control&=~0x0100;
+            m_spi1_timer->adjust(attotime::never);
+        }
+        else if (!(previous&0x0100)) spi1_schedule();
+        break;
+    }
+    case 3: m_spi1.mask=((m_spi1.mask & ~mem_mask)|(data & mem_mask)) & 0x7f00; break;
+    case 4:
+        if (data & mem_mask)
+        { logerror("DANA_SPI1_BLOCKED TEST_MODE_UNQUALIFIED\n"); m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); }
+        break;
+    case 5:
+        COMBINE_DATA(&m_spi1.spc);
+        if (m_spi1.spc)
+        { logerror("DANA_SPI1_BLOCKED SAMPLE_MODE_UNQUALIFIED\n"); m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); }
+        break;
+    }
+    spi1_irq();
+}
+
+void alphasdana_state::spi1_schedule()
+{
+    if (!m_spi1.tx_count)
+    { m_spi1.control&=~0x0100; m_spi1_busy=false; return; }
+    // SD SPI permits modes 0 and 3. Never treat an unsupported master/slave,
+    // sample/test or phase configuration as successful SD wire traffic.
+    bool const polarity=m_spi1.control&0x10, phase=m_spi1.control&0x20;
+    if (polarity!=phase || (m_gpio[23]&7) || m_spi1.spc)
+    {
+        logerror("DANA_SPI1_BLOCKED unsupported_bus_mode control=%04x PJSEL=%02x SPC=%04x\n",m_spi1.control,m_gpio[23],m_spi1.spc);
+        m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); return;
+    }
+    m_spi1_word=m_spi1.pop_tx(); m_spi1_control=m_spi1.control;
+    m_spi1_bits_left=m_spi1.bits(); m_spi1_received=0; m_spi1_busy=true;
+    m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),guest_system_clock_hz()));
+    spi1_irq();
+}
+
+TIMER_CALLBACK_MEMBER(alphasdana_state::spi1_complete)
+{
+    if (!m_spi1_busy) return;
+    // Refresh actual output pins at each serial bit, including power/CS
+    // transitions during an exchange; no whole-command host shortcut.
+    sd_lines();
+    if (m_sd[0]->selected() && m_sd[1]->selected())
+    {
+        logerror("DANA_SPI1_BLOCKED TWO_SELECTED_CARDS_BUS_CONTENTION\n");
+        m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); return;
+    }
+    bool const outgoing=(m_spi1_word>>(m_spi1_bits_left-1))&1;
+    bool const a=m_sd[0]->bit(outgoing), b=m_sd[1]->bit(outgoing);
+    m_spi1_received=(m_spi1_received<<1)|(a && b);
+    if (--m_spi1_bits_left)
+    { m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),guest_system_clock_hz())); return; }
+    if (!m_spi1.push_rx(m_spi1_received))
+    { logerror("DANA_SPI1_BLOCKED RX_FIFO_OVERFLOW\n"); m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); return; }
+    spi1_irq();
+    if (m_spi1_busy) spi1_schedule(); // A terminal IRQ error must not restart the timer.
+}
+
+// PD2/PD3 are independent electrical input levels, NOT invented socket-
+// insertion events or SD command-completion interrupts. The pinned sources
+// identify the pins but do not establish their external board circuitry.
+u8 alphasdana_state::pd_r(offs_t reg)
+{
+    u8 result=m_gpio[4+reg];
+    if (reg==1)
+    { u8 const inputs=~m_gpio[4] & 0x0c; result=(result & ~inputs)|(m_sd_irq->read() & inputs); }
+    return result;
+}
+void alphasdana_state::pd_w(offs_t reg,u8 value)
+{
+    m_gpio[4+reg]=value;
+    if (reg==1) m_sd_edges&=~(value & m_pd_extra[3]);
+    sd_gpio_irq();
+}
+void alphasdana_state::sd_gpio_irq()
+{
+    u8 const pins=m_sd_irq->read() & 0x0c;
+    u8 const changed=pins ^ m_sd_last_pins;
+    m_sd_edges|=changed & ~(pins ^ m_pd_extra[0]);
+    m_sd_last_pins=pins;
+    u8 const levels=~(pins ^ m_pd_extra[0]) & ~m_pd_extra[3];
+    u8 const edges=m_sd_edges & m_pd_extra[3];
+    u8 const active=(levels|edges) & m_pd_extra[1] & ~m_gpio[4] & 0x0c;
+    m_pending=(m_pending & ~0x00000c00U)|(u32(active)<<8);
+    update_irq_lines();
+}
+INPUT_CHANGED_MEMBER(alphasdana_state::sd_irq_changed) { sd_gpio_irq(); }
 
 void alphasdana_state::spi2_ctrl_w(offs_t, u16 data, u16 mem_mask)
 {
@@ -827,7 +1031,7 @@ void alphasdana_state::ivr_w(u8 data)
 }
 
 
-// VZ interrupt group. Timer1 source bit1 -> IRQ6, UART1 bit2 -> IRQ4.
+// VZ interrupt group. Preserve Timer1/UART1; SPI1 uses ILCR and PD2/3 use IRQ4.
 // Guest IVR=0x40 and CPU space IACK allow authentic interrupt vectors.
 // PLLCR/PCTRL and unrelated sources stay unimplemented; no broad MMIO stub.
 void alphasdana_state::imr_w(offs_t offset, u16 data, u16 mem_mask)
@@ -855,10 +1059,16 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
 void alphasdana_state::update_irq_lines()
 {
     // VZ IPR/IMR masks proven by pinned EmuTOS: bit1 Timer1 -> level6,
-    // bit2 UART1 -> level4. UART1 RX is unconnected, so never assert it.
+    // bit2 UART1 and INT2/3 -> level4; SPI1 bit21 uses ILCR[14:12].
     u32 const active=m_pending & ~m_imr;
-    m_maincpu->set_input_line(6,(active & 0x00000002) ? ASSERT_LINE : CLEAR_LINE);
-    m_maincpu->set_input_line(4,(active & 0x00000004) ? ASSERT_LINE : CLEAR_LINE);
+    unsigned const spi_level=(m_ilcr>>12)&7;
+    for (unsigned level=1;level<=6;++level)
+    {
+        bool const spi=(spi_level==level) && (active & 0x00200000);
+        if (level!=4 && level!=6) m_maincpu->set_input_line(level,spi ? ASSERT_LINE : CLEAR_LINE);
+    }
+    m_maincpu->set_input_line(6,((active & 0x00000002) || (spi_level==6 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(4,((active & 0x00000c04) || (spi_level==4 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 u8 alphasdana_state::irq_vector_r(offs_t offset)
@@ -1070,6 +1280,7 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff304, 0xfffff307).rw(FUNC(alphasdana_state::imr_r), FUNC(alphasdana_state::imr_w));
     map(0xfffff30c, 0xfffff30f).rw(FUNC(alphasdana_state::isr_r), FUNC(alphasdana_state::isr_w));
     map(0xfffff310, 0xfffff313).r(FUNC(alphasdana_state::ipr_r));
+    map(0xfffff314,0xfffff315).rw(FUNC(alphasdana_state::ilcr_r),FUNC(alphasdana_state::ilcr_w));
     // Timer1 / UART1 complete register groups (individual, true VZ lanes).
     map(0xfffff600,0xfffff601).rw(FUNC(alphasdana_state::timer1_tctl_r),FUNC(alphasdana_state::timer1_tctl_w));
     map(0xfffff602,0xfffff603).rw(FUNC(alphasdana_state::timer1_tprer_r),FUNC(alphasdana_state::timer1_tprer_w));
@@ -1096,16 +1307,19 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff42b, 0xfffff42b).rw(FUNC(alphasdana_state::pfsel_r), FUNC(alphasdana_state::pfsel_w));
 
     // One coherent Dana VZ R-direct GPIO family. DATA registers are output
-    // latches; no external ST/SD/pen input or IRQ is fabricated. Preserve the
+    // latches; external inputs are explicitly scoped per pin. Preserve the
     // separately qualified Port C and PFSEL byte handlers.
     map(0xfffff408,0xfffff40b).rw(FUNC(alphasdana_state::pb_r),FUNC(alphasdana_state::pb_w));
     map(0xfffff418,0xfffff41b).rw(FUNC(alphasdana_state::pd_r),FUNC(alphasdana_state::pd_w));
+    map(0xfffff41c,0xfffff41f).rw(FUNC(alphasdana_state::pd_extra_r),FUNC(alphasdana_state::pd_extra_w));
     map(0xfffff420,0xfffff423).rw(FUNC(alphasdana_state::pe_r),FUNC(alphasdana_state::pe_w));
     map(0xfffff428,0xfffff42a).rw(FUNC(alphasdana_state::pf_r),FUNC(alphasdana_state::pf_w));
     map(0xfffff430,0xfffff433).rw(FUNC(alphasdana_state::pg_r),FUNC(alphasdana_state::pg_w));
     map(0xfffff438,0xfffff43b).rw(FUNC(alphasdana_state::pj_r),FUNC(alphasdana_state::pj_w));
     map(0xfffff440,0xfffff443).rw(FUNC(alphasdana_state::pk_r),FUNC(alphasdana_state::pk_w));
     map(0xfffff448,0xfffff44b).rw(FUNC(alphasdana_state::pm_r),FUNC(alphasdana_state::pm_w));
+
+    map(0xfffff700,0xfffff70b).rw(FUNC(alphasdana_state::spi1_r),FUNC(alphasdana_state::spi1_w));
 
     // Dana SPI2 register pair (ST keyboard and pen bus).
     map(0xfffff800,0xfffff801).rw(FUNC(alphasdana_state::spi2_data_r),FUNC(alphasdana_state::spi2_data_w));
@@ -1131,6 +1345,8 @@ void alphasdana_state::program_map(address_map &map)
 
 void alphasdana_state::alphasdana(machine_config &config)
 {
+    DANA_SD_IMAGE(config,m_sd[0]);
+    DANA_SD_IMAGE(config,m_sd[1]);
     GENERIC_SOCKET(config,m_firmware,generic_plain_slot,"dana_flash","bin,rom");
     m_firmware->set_device_load(FUNC(alphasdana_state::firmware_load));
     m_firmware->set_device_unload(FUNC(alphasdana_state::firmware_unload));
@@ -1148,6 +1364,16 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
+    // The pinned port labels PD2/3 as SD IRQ, but does not prove that they
+    // are insertion switches or give board polarity. Expose actual pin levels
+    // for independent qualification; never fabricate an insertion interrupt.
+    PORT_START("SDIRQ")
+    PORT_CONFNAME(0x04,0x04,"SD0 PD2 external pin level (board function unqualified)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::sd_irq_changed),0)
+    PORT_CONFSETTING(0x04,"High / released")
+    PORT_CONFSETTING(0x00,"Low")
+    PORT_CONFNAME(0x08,0x08,"SD1 PD3 external pin level (board function unqualified)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::sd_irq_changed),0)
+    PORT_CONFSETTING(0x08,"High / released")
+    PORT_CONFSETTING(0x00,"Low")
     // Use one SDL lightgun-class pointing device for absolute X/Y AND its
     // trigger. The SDL lightgun provider already tracks the host mouse
     // position and left button in the MAME window. Never inject GEM mouse

@@ -1,0 +1,17 @@
+test_01_exact_installed_source_baseline (__main__.SourceContract.test_01_exact_installed_source_baseline) ... ok
+test_02_flash_ram_lcd_st_pen_timer_uart_preservation (__main__.SourceContract.test_02_flash_ram_lcd_st_pen_timer_uart_preservation) ... ok
+test_03_original_gpio_behaviour_plus_sd_notifications (__main__.SourceContract.test_03_original_gpio_behaviour_plus_sd_notifications) ... ok
+test_04_original_maps_save_fields_and_gui_patches (__main__.SourceContract.test_04_original_maps_save_fields_and_gui_patches) ... ok
+test_05_mame_full_driver_syntax (__main__.SourceContract.test_05_mame_full_driver_syntax) ... ok
+test_06_wire_protocol_fifo_negative_and_restore_constants (__main__.SourceContract.test_06_wire_protocol_fifo_negative_and_restore_constants) ... ok
+test_07_readonly_media_identity_and_eject (__main__.SourceContract.test_07_readonly_media_identity_and_eject) ... ok
+test_08_all_protocol_and_controller_state_saved (__main__.SourceContract.test_08_all_protocol_and_controller_state_saved) ... ok
+test_09_independent_native_image_devices (__main__.SourceContract.test_09_independent_native_image_devices) ... ok
+test_10_actual_gpio_irq_production_logic (__main__.SourceContract.test_10_actual_gpio_irq_production_logic) ... ok
+test_11_scheduler_and_terminal_errors (__main__.SourceContract.test_11_scheduler_and_terminal_errors) ... ok
+test_12_original_portc_and_pll_assertions_preserved (__main__.SourceContract.test_12_original_portc_and_pll_assertions_preserved) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 6.768s
+
+OK
