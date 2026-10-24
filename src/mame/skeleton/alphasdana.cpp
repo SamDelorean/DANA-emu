@@ -1345,8 +1345,8 @@ void alphasdana_state::program_map(address_map &map)
 
 void alphasdana_state::alphasdana(machine_config &config)
 {
-    DANA_SD_IMAGE(config,m_sd[0]);
-    DANA_SD_IMAGE(config,m_sd[1]);
+    DANA_SD_IMAGE(config,m_sd[0]).set_slot(0);
+    DANA_SD_IMAGE(config,m_sd[1]).set_slot(1);
     GENERIC_SOCKET(config,m_firmware,generic_plain_slot,"dana_flash","bin,rom");
     m_firmware->set_device_load(FUNC(alphasdana_state::firmware_load));
     m_firmware->set_device_unload(FUNC(alphasdana_state::firmware_unload));
@@ -1364,6 +1364,13 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
+    PORT_START("SDWRITE")
+    PORT_CONFNAME(0x01,0x00,"SD0 image writes")
+    PORT_CONFSETTING(0x00,"Protected (default)")
+    PORT_CONFSETTING(0x01,"Enabled explicitly")
+    PORT_CONFNAME(0x02,0x00,"SD1 image writes")
+    PORT_CONFSETTING(0x00,"Protected (default)")
+    PORT_CONFSETTING(0x02,"Enabled explicitly")
     // The pinned port labels PD2/3 as SD IRQ, but does not prove that they
     // are insertion switches or give board polarity. Expose actual pin levels
     // for independent qualification; never fabricate an insertion interrupt.

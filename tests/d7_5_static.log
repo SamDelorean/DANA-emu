@@ -1,0 +1,34 @@
+test_01_exact_installed_source_baseline (__main__.SourceContract.test_01_exact_installed_source_baseline) ... ok
+test_02_flash_ram_lcd_st_pen_timer_uart_preservation (__main__.SourceContract.test_02_flash_ram_lcd_st_pen_timer_uart_preservation) ... ok
+test_03_original_gpio_behaviour_plus_sd_notifications (__main__.SourceContract.test_03_original_gpio_behaviour_plus_sd_notifications) ... ok
+test_04_original_maps_save_fields_and_gui_patches (__main__.SourceContract.test_04_original_maps_save_fields_and_gui_patches) ... ok
+test_05_mame_full_driver_syntax (__main__.SourceContract.test_05_mame_full_driver_syntax) ... ok
+test_06_wire_protocol_fifo_negative_and_restore_constants (__main__.SourceContract.test_06_wire_protocol_fifo_negative_and_restore_constants) ... ok
+test_07_readonly_media_identity_and_eject (__main__.SourceContract.test_07_readonly_media_identity_and_eject) ... ok
+test_08_all_protocol_and_controller_state_saved (__main__.SourceContract.test_08_all_protocol_and_controller_state_saved) ... ok
+test_09_independent_native_image_devices (__main__.SourceContract.test_09_independent_native_image_devices) ... ok
+test_10_actual_gpio_irq_production_logic (__main__.SourceContract.test_10_actual_gpio_irq_production_logic) ... ok
+test_11_scheduler_and_terminal_errors (__main__.SourceContract.test_11_scheduler_and_terminal_errors) ... ok
+test_12_original_portc_and_pll_assertions_preserved (__main__.SourceContract.test_12_original_portc_and_pll_assertions_preserved) ... ok
+test_13_d75_write_protocol_constants (__main__.SourceContract.test_13_d75_write_protocol_constants) ... ok
+test_14_qualified_spi1_and_peripheral_bodies_unchanged (__main__.SourceContract.test_14_qualified_spi1_and_peripheral_bodies_unchanged) ... ok
+test_15_d75_write_commit_order_and_snapshot_quarantine (__main__.SourceContract.test_15_d75_write_commit_order_and_snapshot_quarantine) ... ok
+test_16_d75_independent_safe_defaults_and_partial_abort (__main__.SourceContract.test_16_d75_independent_safe_defaults_and_partial_abort) ... ok
+test_17_d75_native_job_syntax_and_hold_guards (__main__.SourceContract.test_17_d75_native_job_syntax_and_hold_guards) ... ok
+test_18_d75_native_fixture_encoding_and_envelope (__main__.SourceContract.test_18_d75_native_fixture_encoding_and_envelope) ... ok
+test_19_d75_generated_lua_syntax_without_execution (__main__.SourceContract.test_19_d75_generated_lua_syntax_without_execution) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 7.003s
+
+OK
+
+Packaging guard recheck (no emulator execution):
+test_17_d75_native_job_syntax_and_hold_guards (__main__.SourceContract.test_17_d75_native_job_syntax_and_hold_guards) ... ok
+test_18_d75_native_fixture_encoding_and_envelope (__main__.SourceContract.test_18_d75_native_fixture_encoding_and_envelope) ... ok
+test_19_d75_generated_lua_syntax_without_execution (__main__.SourceContract.test_19_d75_generated_lua_syntax_without_execution) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.063s
+
+OK

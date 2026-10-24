@@ -9,6 +9,8 @@ struct medium
     byte identity=0x12;
     unsigned reads=0;
     constexpr bool present() const { return inserted; }
+    constexpr bool write_protected() const { return true; }
+    constexpr bool write_sector(dword,const byte *) { return false; }
     constexpr bool read_sector(dword lba,byte *out)
     {
         ++reads;
@@ -162,7 +164,8 @@ constexpr bool readonly_writes()
         wire(c,m,op==24 ? 0xfe : 0xfc);
         for (unsigned i=0;i<514;++i) wire(c,m,0x5a);
         if (!token(c,m,0x0d)) return false;
-        if (op==25) wire(c,m,0xfd);
+        if (op==25)
+        { wire(c,m,0xfd); for (unsigned i=0;i<8;++i) if (wire(c,m)==0xff && !c.write_reply) break; }
         if (command(c,m,13)!=0 || wire(c,m)!=0x20) return false;
     }
     return m.reads==0; // backend intentionally has NO write method

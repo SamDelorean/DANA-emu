@@ -1,0 +1,8 @@
+sheet,record,status,detail,workbook_id
+CONTROL,D7.5,IMPLEMENTED / STATIC_PASS / NATIVE_PENDING,"Actual dual-slot writes; independently enabled, protected by default. Same DIAG only.",1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l
+HITOS,D7.5 persistent SD writes,SOURCE_IMPLEMENTED,CMD24/CMD25; full-block checked backend; native persistence pending.,1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l
+CAMPAÑAS,Integrated D7.5,19/19 STATIC_PASS; NATIVE_HOLD,"Compile-time negatives, MAME syntax, Lua syntax and guarded single job; zero native runs.",1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l
+CONTRATOS,Media and saved state,IMPLEMENTED,No acceptance before full backend write/flush/readback/hash; modified identities and live fault quarantine; no partial-frame commit.,1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l
+RIESGOS,Durability and faults,EXPLICIT_LIMITATIONS,POSIX flush lacks fsync; failed in-place writes may be partial; full scans costly; exclusive distinct files required.,1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l
+BITACORA,2026-10-24 D7.5,STATIC_PASS / NATIVE_PENDING,"Canonical files extended on main; historical read/Flash/touch/GUI campaigns untouched; future intervention max5 calls, no authority consumed.",1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l
+FUENTES,Existing pinned MAME/SD contract,REUSED,MAME c4e48388 corefile/ioprocs/POSIX; existing SD contract and EmuTOS source unchanged.,1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l

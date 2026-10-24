@@ -43,6 +43,8 @@ struct card
 {
     std::array<byte,6> cmd{};
     std::array<byte,520> reply{};
+    std::array<byte,514> write_data{};
+    bool write_reply=false;
     word reply_pos=0, reply_size=0, write_left=0;
     byte command_size=0, bit_count=0, input=0, output=0xff;
     byte initial_clocks=0, status=0;
@@ -76,7 +78,7 @@ struct card
         if (selected!=on)
         {
             selected=on; command_size=bit_count=input=0; output=0xff;
-            reply_size=reply_pos=write_left=0; multi_read=multi_write=false;
+            reply_size=reply_pos=write_left=0; multi_read=multi_write=write_reply=false;
         }
     }
     constexpr void response(byte r1)
@@ -84,7 +86,7 @@ struct card
     constexpr void append(byte value) { reply[reply_size++]=value; }
     constexpr void data_crc(unsigned start, unsigned size)
     { word const crc=crc16(reply.data()+start,size); append(crc>>8); append(crc); }
-    constexpr void identification(bool csd)
+    constexpr void identification(bool csd, bool protected_media)
     {
         response(0); append(0xff); append(0xfe);
         unsigned const start=reply_size;
@@ -102,7 +104,7 @@ struct card
             { p[6]=(size>>10)&3; p[7]=size>>2; p[8]=(size&3)<<6;
               p[9]=(mult>>1)&3; p[10]=(mult&1)<<7; }
             p[10]|=0x40; p[11]=0x80; p[12]=0x02; p[13]=0x40;
-            p[14]=0x10; // TMP_WRITE_PROTECT: all images are opened read-only.
+            p[14]=protected_media ? 0x10 : 0; // TMP_WRITE_PROTECT follows this slot policy/backend.
         }
         else
         {
@@ -154,7 +156,7 @@ struct card
         if (idle) { response(1); return; }
         switch (op)
         {
-        case 9: case 10: identification(op==9); break;
+        case 9: case 10: identification(op==9,media.write_protected()); break;
         case 12: multi_read=false; reply_size=reply_pos=0;
                  append(0xff); append(0xff); append(0); append(0xff); break; // stuff + R1b
         case 13: response(0); append(status); status=0; break;
@@ -164,25 +166,46 @@ struct card
             multi_read=op==18; read_block(media,true); break;
         case 24: case 25:
             if (!address(arg,next_block)) { response(0x20); break; }
-            response(0); multi_write=op==25; write_left=0xffff; break;
+            response(0); multi_write=op==25; write_left=0xffff; write_reply=false; break;
         default: response(4); break; // explicit SPI illegal-command R1
         }
     }
     template<class Media> constexpr void receive(byte value, Media &media)
     {
+        // Ignore input while emitting a write data-response/program-busy tail.
+        // The backend has already returned before an accepted token is queued.
+        if (write_reply && reply_pos<reply_size) return;
+        write_reply=false;
         if (write_left)
         {
             if (write_left==0xffff)
             {
-                if (multi_write && value==0xfd) { write_left=0; multi_write=false; }
+                if (multi_write && value==0xfd)
+                {
+                    write_left=0; multi_write=false; write_reply=true;
+                    reply_size=reply_pos=0; append(0); append(0xff);
+                }
                 else if (value==(multi_write ? 0xfc : 0xfe)) write_left=514;
             }
-            else if (!--write_left)
+            else
             {
-                // Consume data + CRC, report write-error and WP violation.
-                // There is deliberately no Media::write_sector call.
-                status|=0x20; reply_size=reply_pos=0; append(0x0d); append(0xff);
-                if (multi_write) write_left=0xffff;
+                write_data[514-write_left]=value;
+                if (!--write_left)
+                {
+                    word const received=(word(write_data[512])<<8)|write_data[513];
+                    byte token=0x0d;
+                    if (crc_enabled && crc16(write_data.data(),512)!=received) token=0x0b;
+                    else if (!media.present() || next_block>=blocks) status|=0x80;
+                    else if (media.write_protected()) status|=0x20;
+                    else if (!media.write_sector(next_block,write_data.data())) status|=0x04;
+                    else { token=0x05; ++next_block; }
+                    reply_size=reply_pos=0; append(token);
+                    // Bounded SPI programming-completion phase, not a claim
+                    // about physical NAND latency or power-loss durability.
+                    if (token==0x05) { append(0); append(0); }
+                    append(0xff); write_reply=true;
+                    if (multi_write) write_left=0xffff;
+                }
             }
             return;
         }

@@ -1,0 +1,99 @@
+{
+  "increment": "D7.5",
+  "implementation": "IMPLEMENTED",
+  "static": "PASS",
+  "native": "PENDING_NOT_EXECUTED",
+  "base_commit": "5be8beb797fdf40475f564f54ca3ebd243dc20a5",
+  "qualified_SPI1_commit": "cfa77f248711d75b6e0b75090a05f4b3d1bc0102",
+  "installed_DIAG_unmodified_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
+  "production_sha256": {
+    "src/mame/skeleton/alphasdana.cpp": "4e8948509275b68997094e01abea2582644b1f2cc5d0ec9c0990382dbf27cb0a",
+    "src/mame/skeleton/alphasdana_sd.h": "d1c2b63c9953c5644d9c95f63751061a404e7e8facebc6de6cd1b1efce697bcd",
+    "src/mame/skeleton/alphasdana_sd_image.h": "d9ba56eb9836aa68802bd606dc3a651e9cec15e25a3a9868da799ab251df846e"
+  },
+  "campaign_sha256": {
+    "tests/d7_5_native.py": "700bb80df04377bd3886ff7995c78c76b80728106625a35b6297689374df75fe",
+    "tests/d7_5_native_HOLD.job.sh": "ff4a242e839d37aee0103b011a2df3b62607e53a4c44ed3a48860a52651641a6"
+  },
+  "checks": {
+    "command": "DANA_MAME_REFERENCE=/path/to/pinned/mame python3 tests/d7_sd_test.py",
+    "executed_reference": "/workspace/mame-as3k",
+    "pinned_MAME": "c4e48388ca620472643110db2941ce70aa5f3c07",
+    "tests": 19,
+    "errors": 0,
+    "failures": 0,
+    "skips": 0,
+    "full_driver_Cpp20": "PASS -fsyntax-only -Werror",
+    "new_write_protocol_constant_assertion_groups": 6,
+    "object_or_executable_emission": false,
+    "Bash_hold_guard": "PASS rejects without authorization, no emulator invocation",
+    "generated_Lua54": "PASS syntax-only via installed liblua5.4, no execution",
+    "Python_AST": "PASS",
+    "Git_diff_check": "PASS",
+    "log": "tests/d7_5_static.log",
+    "log_sha256": "91dac3c9665791329c56d6cd2cd7dbbb69b29aa0a3cd6cd4f5d094f056fd8513",
+    "post_packaging_guard_recheck": "3/3 PASS; full preceding suite 19/19 PASS"
+  },
+  "media_contract": {
+    "default": "Both slots PROTECTED, explicit independent SDWRITE fields",
+    "write_path": "512 bytes + conditional CRC16 -> backend exact write -> flush -> block readback -> predicted full-image hash -> accepted 05",
+    "busy": "Two modeled zero bytes after successful synchronous commit; FD completion tail",
+    "errors": [
+      "CRC 0B",
+      "WP 0D + CMD13 20",
+      "backend 0D + CMD13 04",
+      "stream range 0D + CMD13 80",
+      "absent FF/no response"
+    ],
+    "persistence": "Real in-place selected-image writes; normal close/reopen verification NATIVE_PENDING",
+    "backend_flush": "Checked; pinned POSIX OSD does not fsync/fdatasync",
+    "power_loss_durability": "UNQUALIFIED_NOT_CLAIMED",
+    "failed_partial_host_write": "May modify part of sector; no atomicity/rollback; live quarantine; no acceptance or identity promotion",
+    "snapshots": "Modified identity validated; exact media + permission match; partial buffer saved; fault quarantine not serialized/clearable by restore",
+    "limitations": [
+      "Two full-image scans per accepted sector can be slow",
+      "Exclusive ownership of distinct backing files required",
+      "External concurrent resize/writers and writable aliases unsupported",
+      "Native write evidence absent; prepared fixture not executed"
+    ]
+  },
+  "preserved": "SPI1 controller/FIFO/scheduler/IRQ/GPIO bodies; LCD/ST/SPI2/pen/timer/UART/Flash/RESET/RAM loader; GUI025/026; EmuTOS024C",
+  "native_campaign": {
+    "state": "LOCAL_GIT_HOLD_NOT_SUBMITTED",
+    "job": "tests/d7_5_native_HOLD.job.sh",
+    "guard": "DANA_D75_NATIVE_AUTHORIZED=YES with fresh authorization; future maximum 5 Commander calls",
+    "emulator": "Existing absolute dana-diag, measured new SHA and exact installed sources; no build fallback",
+    "media": "Only two newly generated disposable 16 KiB images; no user-image arguments",
+    "limits": {
+      "per_process_wall_seconds": 90,
+      "display_frames": 1800,
+      "log_bytes": 2097152,
+      "job_wall_seconds": 1800
+    },
+    "real_backend_failure_prepared": "Linux RLIMIT_FSIZE=4096, SIGXFSZ ignored, in-bounds sector16 EFBIG; not yet run",
+    "result_taxonomy": [
+      "PASS",
+      "FAIL",
+      "BLOCKED"
+    ]
+  },
+  "restrictions": {
+    "Commander_calls": 0,
+    "T_operations": 0,
+    "emulator_executions": 0,
+    "MAME_builds": 0,
+    "EmuTOS_builds": 0,
+    "branches_created": 0,
+    "clones_created": 0,
+    "new_trees": 0,
+    "objects_created": 0,
+    "executables_created": 0,
+    "native_jobs_dispatched": 0
+  },
+  "continuity": {
+    "workbook": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "records": "docs/D7_5_RECTOR_UPDATES.csv",
+    "status": "PREPARED_ONLY_SAME_BOOK_NOT_MODIFIED"
+  },
+  "next_action": "Fresh authorization for one same-DIAG incremental update and integrated disposable-media D7.5 native campaign."
+}
