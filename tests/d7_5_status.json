@@ -2,7 +2,7 @@
   "increment": "D7.5",
   "implementation": "IMPLEMENTED",
   "static": "PASS",
-  "native": "ATTEMPTED_NOT_QUALIFIED_HARNESS_A7_FIXED_RETRY_REQUIRED",
+  "native": "ATTEMPTED_NOT_QUALIFIED_HARNESS_CORRECTED_RETRY_REQUIRED",
   "base_commit": "5be8beb797fdf40475f564f54ca3ebd243dc20a5",
   "qualified_SPI1_commit": "cfa77f248711d75b6e0b75090a05f4b3d1bc0102",
   "installed_DIAG_unmodified_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
@@ -12,7 +12,7 @@
     "src/mame/skeleton/alphasdana_sd_image.h": "fec8899bcbcc8658cdfecbc291c33de31bee2adab3cd3af84e27a4562b3fccaa"
   },
   "campaign_sha256": {
-    "tests/d7_5_native.py": "dd57a2dee82599c7dafd80fe29ce4435e4bf1c53a83c9ef8c19feeccaa2c9f96",
+    "tests/d7_5_native.py": "1f0636def842241d2bc92751c370d6a89eeb74f769ed946fad598f22e5cd3721",
     "tests/d7_5_native_HOLD.job.sh": "ff4a242e839d37aee0103b011a2df3b62607e53a4c44ed3a48860a52651641a6"
   },
   "checks": {
@@ -59,7 +59,7 @@
   },
   "preserved": "SPI1 controller/FIFO/scheduler/IRQ/GPIO bodies; LCD/ST/SPI2/pen/timer/UART/Flash/RESET/RAM loader; GUI025/026; EmuTOS024C",
   "native_campaign": {
-    "state": "GIT_FIXED_LUA_SP_READY_FOR_FRESHLY_AUTHORIZED_RETRY",
+    "state": "GIT_FIXED_LUA_SP_AND_BOTH_CS_DESELECT_READY_FOR_NEWLY_AUTHORIZED_RETRY",
     "job": "tests/d7_5_native_HOLD.job.sh",
     "guard": "DANA_D75_NATIVE_AUTHORIZED=YES with fresh authorization; future maximum 5 Commander calls",
     "emulator": "Existing absolute dana-diag, measured new SHA and exact installed sources; no build fallback",
@@ -76,7 +76,7 @@
       "FAIL",
       "BLOCKED"
     ],
-    "previous_attempt": "Clang21 build PASS, primary init access fixed, native harness Lua CPU state A7 is nil; corrected to SP from pinned MAME source. Prior T binary restored. Native write NOT proven."
+    "previous_attempt": "Clang21 native build PASS, mounted device init corrected; Lua SP register and both-card CS deselect fixture repaired in Git, not yet executed on T. Existing operating D7/D8.3 binary restored."
   },
   "restrictions": {
     "Commander_calls": 0,
@@ -96,7 +96,7 @@
     "records": "docs/D7_5_RECTOR_UPDATES.csv",
     "status": "PREPARED_ONLY_SAME_BOOK_NOT_MODIFIED"
   },
-  "next_action": "Fresh authorization for one same-DIAG incremental update and integrated disposable-media D7.5 native campaign.",
+  "next_action": "Fresh explicit authorization for bounded T final native D7.5 campaign using existing built binary 254c834e...; sync only corrected HOLD harness files, verify SHA, run with rollback, deploy iff proven PASS. No rebuild unless binary fingerprint changes.",
   "native_preinit_fixed_in_commit": "d4d83624c8e0e68d55f5daf3c2652617880c264b",
   "native_attempt_evidence": "docs/D7_5_NATIVE_RUN_20261024.json"
 }
