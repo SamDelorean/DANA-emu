@@ -44,3 +44,7 @@ Three successive **real T** job receipts; never conflate safety aborts with a bu
 5. Preserve original DIAG/guest and evidence. **Do not mark 025 NATIVE_PASS until the host window was actually tested.** Do not use Commander while machines are offline or without new explicit authorization.
 
 **Exit condition for offline work:** patch and this handoff versioned; master records `025 STATIC_PATCH_READY / NATIVE_PENDING_POWER_OUTAGE` accurately. No new guest/run tests; exactly one guarded job has been queued in Drive inbox but never launched.
+
+## Manual confirmation — GUI-025 (24 Oct 2026, AUD-043)
+
+The user tested the installed 025S DIAG in T. Host mouse moves and remains visible, and the **cursor blink works correctly**. This completes the GUI-025 host-cursor UX feature with **USER_MANUAL_PASS**. The nominal 600ms-visible / 400ms-hidden period was not instrumentally timed; no new rebuild, emulator run, or Commander access was needed. Retain DIAG SHA-256 `1715a4820ed32fafda5ba18f54d4491bc8ae6686f5817a85e99ccb7e871c33d3` and guest EmuTOS 024C. The user's other observation—desktop icons displaying descriptive dialogs and many menus disabled—is a **separate EmuDesk/configuration issue**, not a GUI-025 cursor regression. Master record: AUD-043, v4.6, original file ID `1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l`.
