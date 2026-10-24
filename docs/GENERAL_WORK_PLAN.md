@@ -1,5 +1,7 @@
 # DANA-emu — General Work Plan
 
+> **Binding update (2026-10-24):** DANA-emu is an independent hardware-faithful AlphaSmart Dana emulator, not an EmuTOS product or solely an OS3K development accessory. Original Dana Palm OS execution and physical cold boot are first-class fidelity targets. If EmuTOS does not exercise a hardware function, investigate original Palm OS and verified hardware behavior; do not polish EmuDesk as a substitute. Preserve EmuTOS 024C and CLOSED GUI-025/026 regression evidence. Next: static driver-versus-real-Dana/Palm-boot gap inventory, then the smallest evidenced hardware increment. Retain single DIAG, no isolated branches, no extra master spreadsheet and no remote execution without fresh authorization. Existing D0–D8, D8.5 and I0–I6 milestones remain in place.
+
 **Project:** Reduced AlphaSmart Dana emulator and firmware engineering test bench  
 **Implementation repository:** [SamDelorean/DANA-emu](https://github.com/SamDelorean/DANA-emu)  
 **Technical foundation:** MAME, Motorola MC68VZ328 (DragonBall VZ)  
