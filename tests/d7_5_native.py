@@ -279,13 +279,16 @@ def main():
         if record['status']!='PASS':raise RuntimeError('Native CPU case failed: '+mode)
         return observation
     try:
-        for mode in ('protected','crc','partial','power_partial','eject_partial','close_partial','reset_partial','io_error'):
+        # RLIMIT_FSIZE does not reliably cause errors on in-bounds overwrite
+        # of existing fixed-size raw media. Do not claim an injected EFBIG test
+        # exercised the backend or block actual product write qualification.
+        for mode in ('protected','crc','partial','power_partial','eject_partial','close_partial','reset_partial'):
             mask=0 if mode=='protected' else 3
             before=[p.read_bytes() for p in cards]
-            run(mode,mask,mode=='io_error')
-            if mode=='io_error' and b'BACKEND_WRITE_OR_SHORT_WRITE' not in (root/mode/'native.log').read_bytes():
-                raise RuntimeError('Real backend failure was not observed')
+            run(mode,mask)
             if [p.read_bytes() for p in cards]!=before:raise RuntimeError('Rejected/interrupted write modified disposable media: '+mode)
+        results.append({'case':'backend_io_error','status':'UNQUALIFIED',
+                        'reason':'No verified in-bounds POSIX short-write/EIO injection available; RLIMIT_FSIZE was not valid evidence'})
         run('write',1) # card0 enabled, card1 must still reject
         if cards[1].read_bytes()!=original[1]:raise RuntimeError('Independent SD1 protection failed')
         for p,b in zip(cards,original):p.write_bytes(b) # reset ONLY this campaign's own disposable images
