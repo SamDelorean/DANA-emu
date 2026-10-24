@@ -2,7 +2,7 @@
   "increment": "D7.5",
   "implementation": "IMPLEMENTED",
   "static": "PASS",
-  "native": "NATIVE_ATTEMPT_BLOCKED_IOPORT_PREINIT_FIXED_PENDING_RETEST",
+  "native": "ATTEMPTED_NOT_QUALIFIED_HARNESS_A7_FIXED_RETRY_REQUIRED",
   "base_commit": "5be8beb797fdf40475f564f54ca3ebd243dc20a5",
   "qualified_SPI1_commit": "cfa77f248711d75b6e0b75090a05f4b3d1bc0102",
   "installed_DIAG_unmodified_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
@@ -12,7 +12,7 @@
     "src/mame/skeleton/alphasdana_sd_image.h": "fec8899bcbcc8658cdfecbc291c33de31bee2adab3cd3af84e27a4562b3fccaa"
   },
   "campaign_sha256": {
-    "tests/d7_5_native.py": "700bb80df04377bd3886ff7995c78c76b80728106625a35b6297689374df75fe",
+    "tests/d7_5_native.py": "dd57a2dee82599c7dafd80fe29ce4435e4bf1c53a83c9ef8c19feeccaa2c9f96",
     "tests/d7_5_native_HOLD.job.sh": "ff4a242e839d37aee0103b011a2df3b62607e53a4c44ed3a48860a52651641a6"
   },
   "checks": {
@@ -59,7 +59,7 @@
   },
   "preserved": "SPI1 controller/FIFO/scheduler/IRQ/GPIO bodies; LCD/ST/SPI2/pen/timer/UART/Flash/RESET/RAM loader; GUI025/026; EmuTOS024C",
   "native_campaign": {
-    "state": "LOCAL_GIT_HOLD_NOT_SUBMITTED",
+    "state": "GIT_FIXED_LUA_SP_READY_FOR_FRESHLY_AUTHORIZED_RETRY",
     "job": "tests/d7_5_native_HOLD.job.sh",
     "guard": "DANA_D75_NATIVE_AUTHORIZED=YES with fresh authorization; future maximum 5 Commander calls",
     "emulator": "Existing absolute dana-diag, measured new SHA and exact installed sources; no build fallback",
@@ -75,7 +75,8 @@
       "PASS",
       "FAIL",
       "BLOCKED"
-    ]
+    ],
+    "previous_attempt": "Clang21 build PASS, primary init access fixed, native harness Lua CPU state A7 is nil; corrected to SP from pinned MAME source. Prior T binary restored. Native write NOT proven."
   },
   "restrictions": {
     "Commander_calls": 0,
@@ -96,5 +97,6 @@
     "status": "PREPARED_ONLY_SAME_BOOK_NOT_MODIFIED"
   },
   "next_action": "Fresh authorization for one same-DIAG incremental update and integrated disposable-media D7.5 native campaign.",
-  "native_preinit_fixed_in_commit": "d4d83624c8e0e68d55f5daf3c2652617880c264b"
+  "native_preinit_fixed_in_commit": "d4d83624c8e0e68d55f5daf3c2652617880c264b",
+  "native_attempt_evidence": "docs/D7_5_NATIVE_RUN_20261024.json"
 }
