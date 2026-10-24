@@ -70,7 +70,7 @@ class Code:
         self.jsr('response');self.expect(expected)
     def select(self,slot):
         self.move_b(0 if slot==0 else 8,0xfffff439)
-        self.move_b(4 if slot==0 else 0,0xfffff429)
+        self.move_b(0 if slot==1 else 4,0xfffff429)
     def init(self,slot):
         self.select(slot);self.command(0,expected=1);self.command(8,0x1aa,1)
         for v in [0,0,1,0xaa]:self.send(255);self.expect(v)
