@@ -89,11 +89,10 @@ private:
     void cs_control3_w(offs_t, u16 data, u16 mem_mask);
     u16 dram_r(offs_t offset) { return m_dram[offset]; }
     void dram_w(offs_t offset, u16 data, u16 mem_mask) { COMBINE_DATA(&m_dram[offset]); }
-    static bool firmware_header_valid(const u8 *rom)
+    static bool firmware_vectors_valid(const u8 *rom)
     {
         u32 const pc=(u32(rom[4])<<24) | (u32(rom[5])<<16) | (u32(rom[6])<<8) | rom[7];
-        return rom[8]==0xfe && rom[9]==0xed && rom[10]==0xbe && rom[11]==0xef
-            && pc && !(pc & 1) && pc<0xfffff000;
+        return pc && !(pc & 1) && pc<0xfffff000;
     }
     static bool firmware_size_valid(u32 size) { return size>=0x20000 && size<=0x1000000 && !(size & (size-1)); }
     void program_map(address_map &map) ATTR_COLD;
@@ -405,8 +404,8 @@ DEVICE_IMAGE_LOAD_MEMBER(alphasdana_state::firmware_load)
         m_firmware->common_load_rom(rom,size,"rom");
     else if (image.fread(rom,size)!=size)
         return std::make_pair(image_error::INVALIDIMAGE,std::string("Short physical Flash read"));
-    if (!std::memcmp(rom,"DANARAM1",8) || !firmware_header_valid(rom))
-        return std::make_pair(image_error::INVALIDIMAGE,std::string("Expected raw PalmCard Flash bytes with original vectors at offset zero"));
+    if (!std::memcmp(rom,"DANARAM1",8) || !firmware_vectors_valid(rom))
+        return std::make_pair(image_error::INVALIDIMAGE,std::string("Expected raw Flash bytes with original aligned vectors at offset zero"));
     auto const hash=util::sha1_creator::simple(rom,size);
     std::copy(std::begin(hash.m_raw),std::end(hash.m_raw),std::begin(m_flash_sha1));
     logerror("DANA_PHYSICAL_IMAGE bytes=%u sha1=%s read_only=1 topology=linear_array_unqualified\n",size,hash.as_string());

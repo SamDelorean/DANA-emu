@@ -87,7 +87,7 @@ class CanonicalPreservation(unittest.TestCase):
         self.assertLess(load.index('m_guest->exists()'),load.index('rom_alloc'))
         self.assertIn('image.fread(rom,size)!=size',load)
         self.assertLess(load.index('m_firmware->get_rom_size()!=size'),load.index('image.fread(rom,size)'))
-        self.assertIn('!firmware_header_valid(rom)',load)
+        self.assertIn('!firmware_vectors_valid(rom)',load)
         for forbidden in ('image.fwrite','battery_save','memset(','write_dword','set_state_int'):self.assertNotIn(forbidden,load)
         saved=function(self.new,'void alphasdana_state::boot_postload()')
         self.assertIn('m_physical_boot!=m_firmware->exists()',saved)
@@ -100,7 +100,7 @@ class CanonicalPreservation(unittest.TestCase):
 class ConstantEvaluation(unittest.TestCase):
     def test_production_decode_lane_reset_and_fail_closed_logic_without_executable(self):
         source=DRIVER.read_text()
-        inline=('u32 cs_base(', 'u32 cs_size(', 'bool cs_hit(', 'bool physical_ram_ready()', 'static bool firmware_size_valid(', 'static bool firmware_header_valid(')
+        inline=('u32 cs_base(', 'u32 cs_size(', 'bool cs_hit(', 'bool physical_ram_ready()', 'static bool firmware_size_valid(', 'static bool firmware_vectors_valid(')
         methods=[]
         for name in inline:
             method=function(source,name)
@@ -153,11 +153,13 @@ constexpr bool size_checks(){
   && alphasdana_state::firmware_size_valid(131072) && alphasdana_state::firmware_size_valid(0x1000000)
   && !alphasdana_state::firmware_size_valid(0x2000000);
 }
-constexpr bool header_checks(){
- std::array<u8,12> bytes{};bytes[4]=0x10;bytes[8]=0xfe;bytes[9]=0xed;bytes[10]=0xbe;bytes[11]=0xef;
- if(!alphasdana_state::firmware_header_valid(bytes.data()))return false;
- bytes[7]=1;if(alphasdana_state::firmware_header_valid(bytes.data()))return false;
- bytes[7]=0;bytes[8]=0xef;return !alphasdana_state::firmware_header_valid(bytes.data());
+constexpr bool vector_structure_checks(){
+ std::array<u8,12> bytes{};bytes[4]=0x10;
+ if(!alphasdana_state::firmware_vectors_valid(bytes.data()))return false;
+ bytes[7]=1;if(alphasdana_state::firmware_vectors_valid(bytes.data()))return false;
+ bytes[7]=0;bytes[8]=0xef;
+ if(!alphasdana_state::firmware_vectors_valid(bytes.data()))return false; // No invented PalmCard header location.
+ bytes[4]=0xff;bytes[5]=0xff;bytes[6]=0xf0;return !alphasdana_state::firmware_vectors_valid(bytes.data());
 }
 constexpr bool reset_and_vector_bytes(){
  alphasdana_state s;s.m_ram.low[0]=0x9876;s.physical_reset();
@@ -208,7 +210,7 @@ constexpr bool debugger_peeks_are_not_cpu_evidence(){
 }
 static_assert(debugger_peeks_are_not_cpu_evidence());
 static_assert(size_checks());
-static_assert(header_checks());
+static_assert(vector_structure_checks());
 static_assert(reset_and_vector_bytes());
 static_assert(remap_and_byte_lanes());
 static_assert(unsupported_accesses_are_terminal());

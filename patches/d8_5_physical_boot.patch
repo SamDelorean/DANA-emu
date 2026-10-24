@@ -1,5 +1,5 @@
 diff --git a/src/mame/skeleton/alphasdana.cpp b/src/mame/skeleton/alphasdana.cpp
-index 2c9bcb9..cb26802 100644
+index 2c9bcb9..9251101 100644
 --- a/src/mame/skeleton/alphasdana.cpp
 +++ b/src/mame/skeleton/alphasdana.cpp
 @@ -4,6 +4,8 @@
@@ -20,7 +20,7 @@ index 2c9bcb9..cb26802 100644
      {
      }
 
-@@ -56,6 +60,42 @@ protected:
+@@ -56,6 +60,41 @@ protected:
      virtual void machine_reset() override ATTR_COLD;
 
  private:
@@ -53,17 +53,16 @@ index 2c9bcb9..cb26802 100644
 +    void cs_control3_w(offs_t, u16 data, u16 mem_mask);
 +    u16 dram_r(offs_t offset) { return m_dram[offset]; }
 +    void dram_w(offs_t offset, u16 data, u16 mem_mask) { COMBINE_DATA(&m_dram[offset]); }
-+    static bool firmware_header_valid(const u8 *rom)
++    static bool firmware_vectors_valid(const u8 *rom)
 +    {
 +        u32 const pc=(u32(rom[4])<<24) | (u32(rom[5])<<16) | (u32(rom[6])<<8) | rom[7];
-+        return rom[8]==0xfe && rom[9]==0xed && rom[10]==0xbe && rom[11]==0xef
-+            && pc && !(pc & 1) && pc<0xfffff000;
++        return pc && !(pc & 1) && pc<0xfffff000;
 +    }
 +    static bool firmware_size_valid(u32 size) { return size>=0x20000 && size<=0x1000000 && !(size & (size-1)); }
      void program_map(address_map &map) ATTR_COLD;
      void cpu_space_map(address_map &map) ATTR_COLD;
      void update_irq_lines();
-@@ -203,6 +243,13 @@ private:
+@@ -203,6 +242,13 @@ private:
      required_ioport m_pen_contact;
      required_ioport m_pen_x;
      required_ioport m_pen_y;
@@ -77,7 +76,7 @@ index 2c9bcb9..cb26802 100644
      emu_timer *m_clk32_timer = nullptr;
      emu_timer *m_timer1_timer = nullptr;
      u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
-@@ -283,12 +330,18 @@ void alphasdana_state::machine_start()
+@@ -283,12 +329,18 @@ void alphasdana_state::machine_start()
      save_item(NAME(m_lgpmr));
      save_item(NAME(m_lrra));
      save_item(NAME(m_pwmr));
@@ -97,7 +96,7 @@ index 2c9bcb9..cb26802 100644
      // Motorola MC68VZ328UM 4.4.2: actual VZ reset, not MAME EZ/POSE 0x0123.
      m_pllfsr = 0x0347;
      m_clk32_high = false;
-@@ -315,6 +368,15 @@ void alphasdana_state::machine_reset()
+@@ -315,6 +367,15 @@ void alphasdana_state::machine_reset()
      st_input_reset();
      m_pen_command=0; m_pen_sample=0;
      lcd_bootstrap_reset();
@@ -113,7 +112,7 @@ index 2c9bcb9..cb26802 100644
      // Quickload is timer-driven. Suppress *all* CPU fetches until validation
      // and the complete RAM/bootstrap seed have succeeded. No-image tests keep
      // their independently qualified native reset path unchanged.
-@@ -323,6 +385,208 @@ void alphasdana_state::machine_reset()
+@@ -323,6 +384,208 @@ void alphasdana_state::machine_reset()
  }
 
 
@@ -137,8 +136,8 @@ index 2c9bcb9..cb26802 100644
 +        m_firmware->common_load_rom(rom,size,"rom");
 +    else if (image.fread(rom,size)!=size)
 +        return std::make_pair(image_error::INVALIDIMAGE,std::string("Short physical Flash read"));
-+    if (!std::memcmp(rom,"DANARAM1",8) || !firmware_header_valid(rom))
-+        return std::make_pair(image_error::INVALIDIMAGE,std::string("Expected raw PalmCard Flash bytes with original vectors at offset zero"));
++    if (!std::memcmp(rom,"DANARAM1",8) || !firmware_vectors_valid(rom))
++        return std::make_pair(image_error::INVALIDIMAGE,std::string("Expected raw Flash bytes with original aligned vectors at offset zero"));
 +    auto const hash=util::sha1_creator::simple(rom,size);
 +    std::copy(std::begin(hash.m_raw),std::end(hash.m_raw),std::begin(m_flash_sha1));
 +    logerror("DANA_PHYSICAL_IMAGE bytes=%u sha1=%s read_only=1 topology=linear_array_unqualified\n",size,hash.as_string());
@@ -322,7 +321,7 @@ index 2c9bcb9..cb26802 100644
  void alphasdana_state::gpio_bootstrap_reset()
  {
      // R-direct preconfiguration from dbztool@d327023/danainit.sh.
-@@ -719,6 +983,8 @@ void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
+@@ -719,6 +982,8 @@ void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
 
  QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
  {
@@ -331,7 +330,7 @@ index 2c9bcb9..cb26802 100644
      // DANARAM1: 64-byte big-endian map-verified envelope, followed by the
      // unmodified EmuTOS image. tools/f1_guest.py binds the original image,
      // first-stage ROM and linker map with SHA-256 before this native load.
-@@ -783,7 +1049,19 @@ void alphasdana_state::cpu_space_map(address_map &map)
+@@ -783,7 +1048,19 @@ void alphasdana_state::cpu_space_map(address_map &map)
  void alphasdana_state::program_map(address_map &map)
  {
      // Preserve the independently qualified D1.2 synthetic post-bootstrap RAM.
@@ -352,7 +351,7 @@ index 2c9bcb9..cb26802 100644
 
      // Individually decoded VZ registers only, never a blanket MMIO RAM page.
      // SCR.DMAP conditional low-address aliases remain intentionally unmapped.
-@@ -854,6 +1132,9 @@ void alphasdana_state::program_map(address_map &map)
+@@ -854,6 +1131,9 @@ void alphasdana_state::program_map(address_map &map)
 
  void alphasdana_state::alphasdana(machine_config &config)
  {

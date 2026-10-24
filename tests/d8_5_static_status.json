@@ -7,9 +7,9 @@
   "modified_production_files": [
     "src/mame/skeleton/alphasdana.cpp"
   ],
-  "driver_sha256": "f6ab7772d1a1c84b073fb50cf1682896ad6a55095c1556e5b12a2c04b98a58c7",
+  "driver_sha256": "5b8d3ae5f7a01034241aa448b77eb4803f6c2dc8ac79d7dc50ad851f6436ddee",
   "patch": "patches/d8_5_physical_boot.patch",
-  "patch_sha256": "235018dee2d8fd4d4b347d6e99b016abd29867dad7bbb34cd1f420b3b4b50026",
+  "patch_sha256": "e6b11aabfc2c7272642fcf1e2320674bf137a4a99e8d3b3250b4eef7a929e467",
   "patch_hunks": 10,
   "patch_validation": "PASS: exact base application in memory; git reverse --check and GNU patch reverse --dry-run --fuzz=0; normalized empty context lines",
   "static_checks": {
@@ -17,7 +17,7 @@
     "failures": 0,
     "errors": 0,
     "command": "python3 tests/d8_5_physical_boot_test.py",
-    "log_sha256": "60e6c40988de53faee438a5092adcbc93b924d3e63a8890f7110e0c645d595aa",
+    "log_sha256": "3af731a0ea8fc675b67651be1ef6703cc76a287f90006f3c8dcdb55582aaadd3",
     "full_MAME_header_Cpp20_syntax": "PASS (-fsyntax-only -Werror)",
     "constant_evaluation": "PASS: six static_assert groups using extracted production C++ expressions; no guest program",
     "Python_AST": "PASS",
@@ -56,7 +56,8 @@
       "timer1_compare"
     ],
     "original_RAM_loader": "BYTE_IDENTICAL_AFTER_EARLY_IMAGE_CONFLICT_GUARD",
-    "GUI025_GUI026_versioned_patches": "UNCHANGED"
+    "GUI025_GUI026_versioned_patches": "UNCHANGED",
+    "no_updater_header_offset_assumption": true
   },
   "runtime_results": {
     "physical_boot": "PENDING_NO_AUTHENTIC_IMAGE_OR_NATIVE_AUTHORIZATION",
@@ -114,6 +115,5 @@
     "docs/HANDOFF.md",
     "docs/GENERAL_WORK_PLAN.md",
     "docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md"
-  ],
-  "implementation_commit": "512a760c864130b024637d9e6207d37bd2866eb6"
+  ]
 }
