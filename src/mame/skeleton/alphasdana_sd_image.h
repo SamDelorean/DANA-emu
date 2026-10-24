@@ -91,7 +91,9 @@ protected:
         bool const power=m_card.powered, selected=m_card.selected;
         m_card=dana_sd::card{}; m_card.blocks=bytes/512;
         m_card.power(power); m_card.select(selected);
-        logerror("DANA_SD_MOUNT slot=%s bytes=%llu read_only=%u\n",tag(),(unsigned long long)bytes,unsigned(write_protected()));
+        // Image loading occurs before input ports are initialized: never read SDWRITE here.
+        // The effective per-slot write permission is evaluated only at runtime.
+        logerror("DANA_SD_MOUNT slot=%s bytes=%llu backend_read_only=%u policy=runtime\n",tag(),(unsigned long long)bytes,unsigned(is_readonly()));
         return {};
     }
     virtual void call_unload() override
