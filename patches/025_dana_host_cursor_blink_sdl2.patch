@@ -1,0 +1,85 @@
+--- a/src/osd/sdl/window.cpp
++++ b/src/osd/sdl/window.cpp
+@@ -27,6 +27,7 @@
+ #include <algorithm>
+ #include <cassert>
+ #include <cmath>
++#include <cstring>
+ #include <list>
+ #include <memory>
+ 
+@@ -280,6 +281,49 @@
+ 	c=SDL_CreateCursor(data, data, 8, 8, 0, 0);
+ 	SDL_SetCursor(c);
+ #else
++	// Dana stylus UX (025): preserve absolute SDL lightgun input without
++	// capturing the desktop pointer.  The cursor is shown immediately during
++	// motion, and blinks only when stationary.  No guest mouse injection.
++	if (!std::strcmp(machine().system().name, "asmdana") && !fullscreen()
++			&& !(machine().debug_flags & DEBUG_FLAG_OSD_ENABLED))
++	{
++		char const *const mode = SDL_getenv("DANA_HOST_CURSOR");
++		if (!mode || std::strcmp(mode, "legacy"))
++		{
++			release_pointer(); // never enter SDL relative/grab mode for Dana
++			if (SDL_GetMouseFocus() != platform_window())
++			{
++				m_dana_cursor_tracking = false;
++				show_pointer();
++			}
++			else if (mode && !std::strcmp(mode, "show"))
++			{
++				m_dana_cursor_tracking = false;
++				show_pointer();
++			}
++			else
++			{
++				int x = 0, y = 0;
++				SDL_GetMouseState(&x, &y);
++				Uint32 const now = SDL_GetTicks();
++				if (!m_dana_cursor_tracking || (x != m_dana_cursor_x) || (y != m_dana_cursor_y))
++				{
++					m_dana_cursor_tracking = true;
++					m_dana_cursor_x = x;
++					m_dana_cursor_y = y;
++					m_dana_last_motion = now;
++				}
++				Uint32 const idle = now - m_dana_last_motion; // wrap-safe
++				if ((idle < 500U) || (((idle - 500U) % 1000U) < 600U))
++					show_pointer();
++				else
++					hide_pointer();
++			}
++			SDL_SetCursor(nullptr);
++			return;
++		}
++	}
++
+ 	// do not do mouse capture if the debugger's enabled to avoid
+ 	// the possibility of losing control
+ 	if (!(machine().debug_flags & DEBUG_FLAG_OSD_ENABLED))
+@@ -1336,6 +1380,10 @@
+ 	, m_extra_flags(0)
+ 	, m_mouse_captured(false)
+ 	, m_mouse_hidden(false)
++	, m_dana_cursor_tracking(false)
++	, m_dana_cursor_x(0)
++	, m_dana_cursor_y(0)
++	, m_dana_last_motion(0)
+ 	, m_pointer_mask(0)
+ 	, m_next_pointer(0)
+ 	, m_mouse_inside(false)
+--- a/src/osd/sdl/window.h
++++ b/src/osd/sdl/window.h
+@@ -122,6 +122,11 @@
+ 	// monitor info
+ 	bool                m_mouse_captured;
+ 	bool                m_mouse_hidden;
++	// Dana host cursor only; the guest PENX/PENY/PEN ports remain unchanged.
++	bool                m_dana_cursor_tracking;
++	int                 m_dana_cursor_x;
++	int                 m_dana_cursor_y;
++	Uint32              m_dana_last_motion;
+ 
+ 	// info on currently active pointers - 64 pointers ought to be enough for anyone
+ 	uint64_t m_pointer_mask;
