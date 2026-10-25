@@ -2,10 +2,10 @@
   "increment": "D7.5",
   "implementation": "IMPLEMENTED",
   "static": "PASS",
-  "native": "CMD24_CMD25_BOTH_SD_CPU_READBACK_PASS_NATIVE; NORMAL_CLOSE_REOPEN_PENDING",
+  "native": "CORE_WRITABLE_DUAL_SD_CPU_WRITE_READBACK_REOPEN_PASS_INSTALLED",
   "base_commit": "5be8beb797fdf40475f564f54ca3ebd243dc20a5",
   "qualified_SPI1_commit": "cfa77f248711d75b6e0b75090a05f4b3d1bc0102",
-  "installed_DIAG_unmodified_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
+  "installed_DIAG_unmodified_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
   "production_sha256": {
     "src/mame/skeleton/alphasdana.cpp": "4e8948509275b68997094e01abea2582644b1f2cc5d0ec9c0990382dbf27cb0a",
     "src/mame/skeleton/alphasdana_sd.h": "d1c2b63c9953c5644d9c95f63751061a404e7e8facebc6de6cd1b1efce697bcd",
@@ -45,7 +45,7 @@
       "stream range 0D + CMD13 80",
       "absent FF/no response"
     ],
-    "persistence": "Real in-place selected-image writes; normal close/reopen verification NATIVE_PENDING",
+    "persistence": "NATIVE_PASS: both raw SD0/SD1 files retained exact sector modifications after clean emulator exit and separate process reopen; actual CPU guest readback passed",
     "backend_flush": "Checked; pinned POSIX OSD does not fsync/fdatasync",
     "power_loss_durability": "UNQUALIFIED_NOT_CLAIMED",
     "failed_partial_host_write": "May modify part of sector; no atomicity/rollback; live quarantine; no acceptance or identity promotion",
@@ -54,12 +54,14 @@
       "Two full-image scans per accepted sector can be slow",
       "Exclusive ownership of distinct backing files required",
       "External concurrent resize/writers and writable aliases unsupported",
-      "Native write evidence absent; prepared fixture not executed"
+      "Power-loss durability unqualified (OSD flush without fsync)",
+      "Last SPI busy-tail timing and saved-state restore/policy mismatch native behavior unqualified",
+      "Host EIO/partial-write injection unqualified; no rollback/sector atomicity claim"
     ]
   },
   "preserved": "SPI1 controller/FIFO/scheduler/IRQ/GPIO bodies; LCD/ST/SPI2/pen/timer/UART/Flash/RESET/RAM loader; GUI025/026; EmuTOS024C",
   "native_campaign": {
-    "state": "NATIVE_QUALIFIED_WRITES_BOTH_SLOTS_RUNNER_ADJUSTED_PENDING_REOPEN_AND_DEPLOY",
+    "state": "CORE_PRODUCT_NATIVE_PASS_AND_DEPLOYED",
     "job": "tests/d7_5_native_HOLD.job.sh",
     "guard": "DANA_D75_NATIVE_AUTHORIZED=YES with fresh authorization; future maximum 5 Commander calls",
     "emulator": "Existing absolute dana-diag, measured new SHA and exact installed sources; no build fallback",
@@ -76,7 +78,9 @@
       "FAIL",
       "BLOCKED"
     ],
-    "previous_attempt": "Native D7.5 CMD24 and CMD25 completed on both slots; backend DANA_SD_WRITE recorded LBA2/4/5 each and CPU readback 1536B matched expected bytes for both cards. Guest CPU returned 0xA55A. Last status FAIL was nonterminal 0 busy samples at final response; not an SD read/write error. Core runner keeps exact CPU readback and whole-image comparison after separate-process reopen, but marks busy-tail/snapshot UNQUALIFIED rather than fail."
+    "previous_attempt": "Retained in older receipts; final scoped run on 2026-10-24 confirms actual CPU M68000 CMD24/CMD25 SD0+SD1 with LBA2/4/5 512B sectors, guest readback, separate MAME process reopen persistence; running single DIAG SHA254c834e...",
+    "success_receipt": "docs/D7_5_CORE_PRODUCT_NATIVE_20261024.json",
+    "case_results": "10/10 scoped functional PASS; backend_io_error and saved_state_restore_and_policy UNQUALIFIED (not tested); final busy-tail count UNQUALIFIED"
   },
   "restrictions": {
     "Commander_calls": 0,
@@ -94,9 +98,9 @@
   "continuity": {
     "workbook": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
     "records": "docs/D7_5_RECTOR_UPDATES.csv",
-    "status": "PREPARED_ONLY_SAME_BOOK_NOT_MODIFIED"
+    "status": "DRIVE_WORKBOOK_UNCHANGED;GITHUB_RECTOR_UPDATE_REQUIRED"
   },
-  "next_action": "With remaining Commander calls in current user-directed intervention, synchronize updated native.py/status.json on sole T tree; execute existing built D7.5 binary on disposable media, verify actual CMD24/CMD25 and close/reopen readback on BOTH slots; install same operating DIAG only after core PASS.",
+  "next_action": "Progress product emulator beyond verified dual-SD block I/O; when genuine Dana Palm firmware is available, qualify authentic Palm boot and guest SD filesystem access. Do not repeat D7.5 core native tests.",
   "native_preinit_fixed_in_commit": "d4d83624c8e0e68d55f5daf3c2652617880c264b",
   "native_attempt_evidence": "docs/D7_5_NATIVE_RUN_20261024.json"
 }
