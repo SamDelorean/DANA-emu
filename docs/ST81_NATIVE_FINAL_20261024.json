@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-24",
+  "increment": "Full Dana ST physical keyboard",
+  "scope": "single canonical DIAG",
+  "native_qualification": "PARTIAL_NOT_QUALIFIED",
+  "deployed": "NO",
+  "installed_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+  "candidate_sha256": "abb35b161b88d6e639c7ee6898ee7a16fae11c729f3451076ec40bc150ceee45",
+  "guest_cpu_observed_spi2": "A=true Q=false PORT_A=true PORT_Q=true SPI2_READS=136 FRAMES=650",
+  "exit_rc": 0,
+  "further_Commander_calls_permitted": 0,
+  "log_tail": [
+    "Warning: -video none doesn't make much sense without -seconds_to_run",
+    "Average speed: 637.44% (10 seconds)"
+  ]
+}
