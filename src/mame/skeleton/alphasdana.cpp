@@ -94,6 +94,10 @@ private:
     u16 physical_r(offs_t offset, u16 mem_mask=0xffff);
     u16 physical_mmio_r(offs_t offset, u16 mem_mask);
     void physical_mmio_w(offs_t offset, u16 data, u16 mem_mask);
+    // Philips ISP1161(A) HC external 16-bit command/data bus: real Dana
+    // UK1.5 initialization, not a fabricated USB packet engine.
+    u16 isp1161_r(offs_t offset, u16 mem_mask);
+    void isp1161_w(offs_t offset, u16 data, u16 mem_mask);
     void physical_w(offs_t offset, u16 data, u16 mem_mask);
     u32 cs_base(unsigned group) const { return u32(m_cs_base[group] & 0xfffe) << 13; }
     u32 physical_sdram_bytes() const { return (m_sdram_profile->read() & 1) ? 0x1000000U : 0x800000U; }
@@ -364,6 +368,11 @@ private:
     u16 m_cs_base[4]={}, m_cs_select[4]={};
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
     u16 m_dram[4]={};
+    u8 m_isp_cmd=0, m_isp_phase=0;
+    u16 m_isp_low=0, m_isp_up_irq=0, m_isp_itl_len=0,
+        m_isp_atl_len=0, m_isp_hardware=0x0028;
+    u32 m_isp_control=0, m_isp_interrupt_status=0,
+        m_isp_interrupt_enable=0, m_isp_frame_interval=0x27782edf;
     u8 m_sdram_init_phase=0;
     // Upper physical SDRAM is separate from the qualified 4 MiB R-direct RAM.
     std::unique_ptr<u16[]> m_physical_ram_extra;
@@ -479,6 +488,12 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_cs_upper)); save_item(NAME(m_cs_control));
     save_item(NAME(m_emucs)); save_item(NAME(m_dram));
     save_item(NAME(m_sdram_init_phase));
+    save_item(NAME(m_isp_cmd)); save_item(NAME(m_isp_phase));
+    save_item(NAME(m_isp_low)); save_item(NAME(m_isp_up_irq));
+    save_item(NAME(m_isp_itl_len)); save_item(NAME(m_isp_atl_len));
+    save_item(NAME(m_isp_hardware)); save_item(NAME(m_isp_control));
+    save_item(NAME(m_isp_interrupt_status)); save_item(NAME(m_isp_interrupt_enable));
+    save_item(NAME(m_isp_frame_interval));
     machine().save().register_postload(save_prepost_delegate(FUNC(alphasdana_state::boot_postload),this));
     m_spi1_timer=timer_alloc(FUNC(alphasdana_state::spi1_complete),this);
 #define DANA_SPI1_SAVE(member) save_item(NAME(m_spi1.member))
@@ -602,6 +617,11 @@ void alphasdana_state::physical_reset()
     m_emucs=0x0060;
     m_dram[0]=0; m_dram[1]=0; m_dram[2]=0x003c; m_dram[3]=0;
     m_sdram_init_phase=0;
+    m_isp_cmd=0; m_isp_phase=0; m_isp_low=0;
+    m_isp_up_irq=0; m_isp_itl_len=0; m_isp_atl_len=0;
+    m_isp_hardware=0x0028; m_isp_control=0;
+    m_isp_interrupt_status=0; m_isp_interrupt_enable=0;
+    m_isp_frame_interval=0x27782edf;
     m_pcpden=0xff; m_pcsel=0xff; m_pfsel=0x87;
     // Open VZ reference pin-latch reset, not a measured Dana electrical state.
     static constexpr u8 reset_gpio[32]={
@@ -740,6 +760,89 @@ u16 alphasdana_state::physical_mmio_r(offs_t offset, u16 mem_mask)
     if (machine().side_effects_disabled()) return 0xffff;
     logerror("DANA_PHYSICAL_UNIMPLEMENTED_MMIO read address=%08x mask=%04x\n",0xfffff000+(u32(offset)<<1),mem_mask);
     physical_block("MMIO_READ_UNIMPLEMENTED",0xfffff000+(u32(offset)<<1));
+    return 0xffff;
+}
+
+// Philips ISP1161A HC §§8.3,10: 16-bit command (A0=1) and data (A0=0).
+// 32-bit HC registers transfer LOW word before HIGH word. Command bit7=write.
+// Every supported command here is sourced to the authentic UK1.5 reset trace.
+void alphasdana_state::isp1161_w(offs_t offset, u16 data, u16 mem_mask)
+{
+    u32 const address=0x1f000000U+u32(offset)*2;
+    if (mem_mask!=0xffff)
+    { physical_block("ISP1161_REQUIRES_WORD_ACCESS",address,data); return; }
+    if (offset==1)
+    {
+        if (data & 0xff00)
+        { physical_block("ISP1161_COMMAND_UPPER_BYTE",address,data); return; }
+        if (m_isp_phase)
+        { physical_block("ISP1161_INCOMPLETE_REGISTER_WRITE",address,data); return; }
+        switch(data)
+        {
+        case 0x85: case 0x83: case 0x8d: case 0x81:
+        case 0xa4: case 0xaa: case 0xab: case 0xa0:
+            m_isp_cmd=u8(data); m_isp_phase=0; return;
+        default:
+            physical_block("ISP1161_COMMAND_UNIMPLEMENTED",address,data);
+            return;
+        }
+    }
+    if (offset)
+    { physical_block("ISP1161_BAD_ADDRESS",address,data); return; }
+    u8 const cmd=m_isp_cmd;
+    if (cmd==0x85 || cmd==0x83 || cmd==0x8d || cmd==0x81)
+    {
+        if (!m_isp_phase)
+        { m_isp_low=data; m_isp_phase=1; return; }
+        u32 const value=u32(m_isp_low)|(u32(data)<<16);
+        m_isp_phase=0;
+        switch(cmd)
+        {
+        case 0x85: m_isp_interrupt_enable &= ~value; break;
+        case 0x83: m_isp_interrupt_status &= ~value; break;
+        case 0x8d: m_isp_frame_interval=value; break;
+        case 0x81:
+            // HCFS bits 7:6: 10 operational, 11 suspend.
+            // Record state; USB transfers/port traffic are not synthesized.
+            if ((value & ~0x000000c0U) != 0)
+            { physical_block("ISP1161_CONTROL_UNMODELLED",address,data); return; }
+            m_isp_control=value;
+            break;
+        }
+    }
+    else if (cmd==0xa4)
+        m_isp_up_irq &= ~(data & 0x0077U); // W1C microprocessor interrupt.
+    else if (cmd==0xaa || cmd==0xab)
+    {
+        u16 const itl=cmd==0xaa ? data : m_isp_itl_len;
+        u16 const atl=cmd==0xab ? data : m_isp_atl_len;
+        if (u32(atl)+2U*itl>0x1000U)
+        { physical_block("ISP1161_FIFO_ALLOCATION_INVALID",address,data); return; }
+        if (cmd==0xaa) m_isp_itl_len=itl;
+        else m_isp_atl_len=atl;
+    }
+    else if (cmd==0xa0)
+    {
+        // Datasheet HW config: lower data bus width bits4:3 must be 01.
+        if ((data & 0x0018)!=0x0008 || (data & 0xe200))
+        { physical_block("ISP1161_HARDWARE_MODE_UNMODELLED",address,data); return; }
+        m_isp_hardware=data;
+    }
+    else
+    { physical_block("ISP1161_DATA_WITHOUT_COMMAND",address,data); return; }
+    if (!m_isp_phase)
+        logerror("DANA_ISP1161 cmd=%02x value=%04x control=%08x atl=%04x itl=%04x\n",
+            cmd,data,m_isp_control,m_isp_atl_len,m_isp_itl_len);
+}
+
+u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
+{
+    u32 const address=0x1f000000U+u32(offset)*2;
+    if (mem_mask!=0xffff || offset!=0)
+    { physical_block("ISP1161_READ_ACCESS_UNSUPPORTED",address); return 0xffff; }
+    // This boot sequence only writes the HC. No fabricated chip ID or
+    // USB interrupt/packet status is provided before a real read is observed.
+    physical_block("ISP1161_READ_UNIMPLEMENTED",address);
     return 0xffff;
 }
 
@@ -1603,6 +1706,8 @@ void alphasdana_state::program_map(address_map &map)
     map(0x00000000,0xffffffff).view(m_boot_memory);
     m_boot_memory[0](0x00000000,0x003fffff).ram().share("ram");
     m_boot_memory[1](0x00000000,0xffffefff).rw(FUNC(alphasdana_state::physical_r),FUNC(alphasdana_state::physical_w));
+    // Dana's external ISP1161 USB HC: indexed 16-bit data then command word.
+    m_boot_memory[1](0x1f000000,0x1f000003).rw(FUNC(alphasdana_state::isp1161_r),FUNC(alphasdana_state::isp1161_w));
     m_boot_memory[1](0xfffff000,0xffffffff).rw(FUNC(alphasdana_state::physical_mmio_r),FUNC(alphasdana_state::physical_mmio_w));
     // Additional system/chip-select/DRAM registers exist only in physical mode.
     m_boot_memory[1](0xfffff000,0xfffff000).rw(FUNC(alphasdana_state::scr_r),FUNC(alphasdana_state::scr_w));
