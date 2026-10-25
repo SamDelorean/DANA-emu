@@ -1,5 +1,68 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## PLLCR code delivery — GPT native validation pending
+
+Closed contract implemented from `PALM_UK15_NATIVE_PLLCR_20261025.md`.
+Codex performs implementation/local checks/publication; GPT owns T compilation,
+native execution and analysis. No Codex T calls were made in this increment.
+
+Base: canonical main `8e41f5dd449c1170adcebc46be1094203c48c0d2`.
+Old driver SHA256:
+`3bd7383160278ea67b00f2f827670d2dcca82704a2bdbe6aa32d844ea3643730`.
+New driver SHA256:
+`207bf697be4ddafc90ab4b36103d15963f7871b22a1c72ba1dd3cf1a0dceaea1`.
+
+Added a physical-only 16-bit PLLCR decoder at FFFFF200–FFFFF201, reset 24B3,
+saved register state, lane-selected writes and reserved-zero mask 3FBB.
+The observed ANDI.W transaction can now read 24B3 and write 24A3. CLKEN bit4
+only gates the requested CLKO output. Its logical enabled state also requires
+PFSEL bit2=0 (peripheral selected), computed from the existing live PFSEL
+value. No new pin waveform or calibrated electrical output is claimed.
+The transition log is `DANA_PLLCR value=... clko_enabled=... pfsel=...
+clock_tree_unchanged=1`; it reports output gating, not a changed CPU frequency.
+No change to PFSEL handlers, PLLFSR, CPU clock updates or peripheral timers.
+
+Unsupported writes are rejected before committing the attempted value:
+- DISPLL change: `PLL_SLEEP_MODE_UNIMPLEMENTED`.
+- LCDCLKSEL/SYSCLKSEL/PRESC1/PRESC2 change:
+  `PLL_CLOCK_MODE_UNIMPLEMENTED`.
+- WKSEL change: `PLL_WAKE_DELAY_UNIMPLEMENTED`.
+These modes are not silently latched as working hardware. This is the closed
+CLKEN transition implementation, not a complete PLL sleep/divider model.
+SCR, WATCHDOG, original coverage, IRQ, LCD, keyboard, SPI/SD and the installed
+operative are preserved. ICE handlers were not implemented speculatively.
+
+Local verification executed:
+- `python3 tests/pllcr_register_test.py`: PASS. Compile-time evaluation of the
+  actual production handlers for reset read, native ANDI.W result, byte lanes,
+  reserved bits, zero-mask write, CLKO/PFSEL gating, and guarded modes with
+  unmodified register state after rejection. No synthetic guest execution.
+- Full driver C++20 g++14 `-fsyntax-only -Werror` with existing MAME headers:
+  PASS. No object, linked candidate or executable SHA produced by Codex.
+- Exact comparison of production PLLFSR, clock formula, SCR, WATCHDOG, Flash
+  read/write, Timer1 scheduling and SD-line methods: unchanged, PASS.
+- `git diff --check`: PASS. No unrelated closed suite replayed.
+
+### Ready for GPT: one incremental build and UK1.5 native retry
+
+Match the old source SHA above in the sole existing T DIAG tree before applying
+this increment; do not reapply SCR/WATCHDOG/coverage patches already qualified.
+Build the same staged `source/danadiagd` with the established Clang21 command
+and cache. Record its new SHA. Preserve `bin/dana-diag` and its original SHA
+`0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`.
+Use only original UK1.5 raw SHA
+`2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`,
+physical `-rom`, bounded run, existing observer and no guest-state injection.
+Use GPT's current explicit T authorization; this document grants none.
+
+Expected but not yet measured after this code change: PLLCR READ=24B3 and
+WRITE=24A3 at CURPC=10005158, with no clock-tree retuning. Return the actual
+next CPU transaction including CURPC/PC/IR/SP/SR, address/data/mask, build log,
+CLI and candidate SHA. ICE writes remain static predictions until observed.
+No native continuation or Palm UI PASS is claimed by this source delivery.
+The prior candidate hash d6285e... is historical and is not the new binary.
+
+
 ## NEW AUTHORITY — WATCHDOG NATIVE PASS; PLLCR NATIVE READ FIRST BLOCKER (2026-10-25)
 
 **Read the complete precise researched coding contract:** `docs/PALM_UK15_NATIVE_PLLCR_20261025.md` (commit `eefcbd5`). This ChatGPT chat has compiled and executed published Codex WATCHDOG commit `8b184b0` on sole T DIAG using authentic private UK1.5 -rom reset (not -quickload): source SHA256 `3bd7383160278ea67b00f2f827670d2dcca82704a2bdbe6aa32d844ea3643730`, staged candidate SHA256 `d6285e2947f2cba0c452bc00ba34d276020d26504c155b8d7b91db202b1bbf5c`, build/link PASS. Real CPU reads original SSP `00000316`, reset PC `100002a2`, executes accepted SCR, WATCHDOG writes; **first native subsequent failure** is 16-bit **PLLCR READ `0xFFFFF200`**, `CURPC=10005158`, instruction `ANDI.W #$FFEF,($0200,A0)`, next/preferred `PC=1000515C`, `SR=2704`. Motorola manual §4.4.1 Table 4-2 documents `PLLCR reset 0x24B3`; mask clears bit4 `CLKEN` → `0x24A3`, enabling CLKO output, not disabling PLL. `PLLFSR` at `0xFFFFF202` is already present and separate.

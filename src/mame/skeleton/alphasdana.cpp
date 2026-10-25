@@ -149,6 +149,9 @@ private:
     void uart1_umisc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_umisc1); }
     u16 uart1_prescaler_r() { return m_uart_prescaler1; }
     void uart1_prescaler_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_uart_prescaler1); }
+    u16 pllcr_r() { return m_pllcr; }
+    void pllcr_w(offs_t, u16 data, u16 mem_mask);
+    bool pllcr_clko_enabled() const { return !(m_pllcr & 0x0010) && !(m_pfsel & 0x04); }
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
@@ -292,6 +295,7 @@ private:
     u32 m_timer1_compares=0, m_timer1_iacks=0;
     u16 m_ustcnt1=0, m_ubaud1=0x0002, m_urx1=0, m_utx1=0, m_umisc1=0;
     u16 m_uart_prescaler1=0;
+    u16 m_pllcr = 0x24b3;
     u16 m_pllfsr = 0x0347;
     bool m_clk32_high = false;
     u8 m_ivr = 0;
@@ -328,6 +332,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_watchdog));
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
     m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
+    save_item(NAME(m_pllcr));
     save_item(NAME(m_pllfsr));
     save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
@@ -400,6 +405,7 @@ void alphasdana_state::machine_reset()
     m_watchdog_guard->adjust(attotime::never);
     // Existing peripheral implementation is shared by both boot profiles.
     // Motorola MC68VZ328UM 4.4.2: actual VZ reset, not MAME EZ/POSE 0x0123.
+    m_pllcr = 0x24b3;
     m_pllfsr = 0x0347;
     m_clk32_high = false;
     // As in the pinned MAME DragonBall reference, advance CLK32 via
@@ -1138,6 +1144,25 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::clk32_tick)
     m_clk32_high = !m_clk32_high;
 }
 
+// VZ UM 4.4.1: CLKEN gates the CLKO output, not the PLL itself.
+// Keep the qualified PLLFSR-derived CPU/peripheral clocks unchanged. Reject
+// unsupported divider, sleep and wake-delay changes before committing them.
+void alphasdana_state::pllcr_w(offs_t, u16 data, u16 mem_mask)
+{
+    u16 const next=((m_pllcr & ~mem_mask) | (data & mem_mask)) & 0x3fbb;
+    u16 const changed=next ^ m_pllcr;
+    if (changed & 0x0008)
+    { physical_block("PLL_SLEEP_MODE_UNIMPLEMENTED",0xfffff200,next); return; }
+    if (changed & 0x3fa0)
+    { physical_block("PLL_CLOCK_MODE_UNIMPLEMENTED",0xfffff200,next); return; }
+    if (changed & 0x0003)
+    { physical_block("PLL_WAKE_DELAY_UNIMPLEMENTED",0xfffff200,next); return; }
+    m_pllcr=next;
+    if (changed)
+        logerror("DANA_PLLCR value=%04x clko_enabled=%u pfsel=%02x clock_tree_unchanged=1\n",
+            m_pllcr,unsigned(pllcr_clko_enabled()),m_pfsel);
+}
+
 void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
 {
     // Motorola MC68VZ328UM 4.4.2: CLK32 read-only; reserved bits stay 0.
@@ -1417,6 +1442,7 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff110,0xfffff117).rw(FUNC(alphasdana_state::cs_select_r),FUNC(alphasdana_state::cs_select_w));
     m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
+    m_boot_memory[1](0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
     m_boot_memory[1](0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
     m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
 
