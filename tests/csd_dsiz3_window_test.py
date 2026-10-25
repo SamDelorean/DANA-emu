@@ -34,7 +34,7 @@ constexpr bool check(){
  a.m_cs_select[3]=0x028f;
  if(a.cs_size(3)!=0x400000)return false; // siz 111, still 4MiB
  a.m_cs_select[0]=0x018d;
- if(a.cs_size(0)!=0x100000)return false; // CSA unchanged
+ if(a.cs_size(0)!=0x800000)return false; // CSA SIZ=110 => 8 MiB
  return true;
 }
 static_assert(check());
