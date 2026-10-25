@@ -174,7 +174,10 @@ private:
     u8 ivr_r();
     void ivr_w(u8 data);
     // R-direct GPIO configuration, not a claim about electrical cold reset.
-    void portc_reset() { m_pcpden = 0; m_pcsel = 0; }
+    void portc_reset() { m_pcdir = 0; m_pcpden = 0; m_pcsel = 0; }
+    // VZ Port C direction: each bit 0=input, 1=output; PCSEL may override the pin.
+    u8 pcdir_r() { return m_pcdir; }
+    void pcdir_w(u8 data) { m_pcdir = data; }
     u8 pcpden_r() { return m_pcpden; }
     void pcpden_w(u8 data) { m_pcpden = data; }
     u8 pcsel_r() { return m_pcsel; }
@@ -313,6 +316,7 @@ private:
     u16 m_icr = 0;
     u32 m_imr = 0x00ffffff;
     u32 m_pending = 0;
+    u8 m_pcdir = 0;
     u8 m_pcpden = 0;
     u8 m_pcsel = 0;
     u8 m_pfsel = 0xc5;
@@ -361,6 +365,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_ustcnt1)); save_item(NAME(m_ubaud1));
     save_item(NAME(m_urx1)); save_item(NAME(m_utx1));
     save_item(NAME(m_umisc1)); save_item(NAME(m_uart_prescaler1));
+    save_item(NAME(m_pcdir));
     save_item(NAME(m_pcpden));
     save_item(NAME(m_pcsel));
     save_item(NAME(m_pfsel));
@@ -1483,6 +1488,7 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
     m_boot_memory[1](0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
+    m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w));
     m_boot_memory[1](0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
     m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
     m_boot_memory[1](0xfffffd0c,0xfffffd0d).rw(FUNC(alphasdana_state::icemcr_r),FUNC(alphasdana_state::icemcr_w));
@@ -1513,8 +1519,8 @@ void alphasdana_state::program_map(address_map &map)
 
     // VZ Port C: eight pulldown enables and eight GPIO/function selects.
     // Native u8 handlers preserve the M68000 high/even and low/odd lanes,
-    // including a word spanning both registers. No PCDIR/PCDATA, external
-    // input values or LCD responses are synthesized by these latches.
+    // including a word spanning both registers. PCDIR is separately decoded
+    // in the physical view; no PCDATA/external input/LCD response is fabricated.
     // See docs/D2_2_PORTC_IMPLEMENTATION.md for the primary-source limitation.
     map(0xfffff412, 0xfffff412).rw(FUNC(alphasdana_state::pcpden_r), FUNC(alphasdana_state::pcpden_w));
     map(0xfffff413, 0xfffff413).rw(FUNC(alphasdana_state::pcsel_r), FUNC(alphasdana_state::pcsel_w));
