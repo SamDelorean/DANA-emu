@@ -2,7 +2,7 @@
   "increment": "D7.5",
   "implementation": "IMPLEMENTED",
   "static": "PASS",
-  "native": "NATIVE_ATTEMPT_7_NEGATIVE_CASES_PASS_POSITIVE_WRITE_REJECTED_CONFIG_UNQUALIFIED",
+  "native": "CMD24_CMD25_BOTH_SD_CPU_READBACK_PASS_NATIVE; NORMAL_CLOSE_REOPEN_PENDING",
   "base_commit": "5be8beb797fdf40475f564f54ca3ebd243dc20a5",
   "qualified_SPI1_commit": "cfa77f248711d75b6e0b75090a05f4b3d1bc0102",
   "installed_DIAG_unmodified_sha256": "01ad4619bf82964c11d96049a3ff6c9ebfdcca84cbe0df470dcc3f88c0711417",
@@ -12,7 +12,7 @@
     "src/mame/skeleton/alphasdana_sd_image.h": "fec8899bcbcc8658cdfecbc291c33de31bee2adab3cd3af84e27a4562b3fccaa"
   },
   "campaign_sha256": {
-    "tests/d7_5_native.py": "c6ed5b2d0ad686f820fb8d175668854f50b13f073a2c5fc2d2c5634da81f39e3",
+    "tests/d7_5_native.py": "deb3aa0f36f9b2c8fee099bc1e07ac102cdc7046e4a38e9f285465f1d9bca054",
     "tests/d7_5_native_HOLD.job.sh": "ff4a242e839d37aee0103b011a2df3b62607e53a4c44ed3a48860a52651641a6"
   },
   "checks": {
@@ -59,7 +59,7 @@
   },
   "preserved": "SPI1 controller/FIFO/scheduler/IRQ/GPIO bodies; LCD/ST/SPI2/pen/timer/UART/Flash/RESET/RAM loader; GUI025/026; EmuTOS024C",
   "native_campaign": {
-    "state": "NEW_PRIVATE_CFG_GENERATOR_NOT_NATIVE_TESTED",
+    "state": "NATIVE_QUALIFIED_WRITES_BOTH_SLOTS_RUNNER_ADJUSTED_PENDING_REOPEN_AND_DEPLOY",
     "job": "tests/d7_5_native_HOLD.job.sh",
     "guard": "DANA_D75_NATIVE_AUTHORIZED=YES with fresh authorization; future maximum 5 Commander calls",
     "emulator": "Existing absolute dana-diag, measured new SHA and exact installed sources; no build fallback",
@@ -76,7 +76,7 @@
       "FAIL",
       "BLOCKED"
     ],
-    "previous_attempt": "5 of 5 authorized Commander calls consumed; seven negative/protected/CRC/partial/reset cases PASS. Guest CMD24 intended enabled SD0 returned data token 0x0D, no DANA_SD_WRITE_ERROR or DANA_SD_WRITE and no changed sectors. Pinned MAME input source reveals Lua ioport_field:set_value on IPT_CONFIG is a digital toggle, not direct saved setting; writer policy was never reliably activated before quickload CPU. Native runner now writes per-slot MAME v10 config into disposable cfg/asmdana.cfg before each launch and no longer calls Lua set_value. Not tested yet."
+    "previous_attempt": "Native D7.5 CMD24 and CMD25 completed on both slots; backend DANA_SD_WRITE recorded LBA2/4/5 each and CPU readback 1536B matched expected bytes for both cards. Guest CPU returned 0xA55A. Last status FAIL was nonterminal 0 busy samples at final response; not an SD read/write error. Core runner keeps exact CPU readback and whole-image comparison after separate-process reopen, but marks busy-tail/snapshot UNQUALIFIED rather than fail."
   },
   "restrictions": {
     "Commander_calls": 0,
@@ -96,7 +96,7 @@
     "records": "docs/D7_5_RECTOR_UPDATES.csv",
     "status": "PREPARED_ONLY_SAME_BOOK_NOT_MODIFIED"
   },
-  "next_action": "Next fresh authorized T intervention <=5 Commander calls: synchronize native.py and status.json only; do not recompile fixed production code; use existing compiled D7.5 SHA254c...; run disposable-SD native verification; install if actual CMD24/CMD25 dual-slot writes, CPU readback, and reopen persistence PASS, rollback otherwise.",
+  "next_action": "With remaining Commander calls in current user-directed intervention, synchronize updated native.py/status.json on sole T tree; execute existing built D7.5 binary on disposable media, verify actual CMD24/CMD25 and close/reopen readback on BOTH slots; install same operating DIAG only after core PASS.",
   "native_preinit_fixed_in_commit": "d4d83624c8e0e68d55f5daf3c2652617880c264b",
   "native_attempt_evidence": "docs/D7_5_NATIVE_RUN_20261024.json"
 }
