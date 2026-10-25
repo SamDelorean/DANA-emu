@@ -113,7 +113,30 @@ private:
     u16 cs_control3_r() { return m_cs_control[2]; }
     void cs_control3_w(offs_t, u16 data, u16 mem_mask);
     u16 dram_r(offs_t offset) { return m_dram[offset]; }
-    void dram_w(offs_t offset, u16 data, u16 mem_mask) { COMBINE_DATA(&m_dram[offset]); }
+    // Motorola AN2148: SDRAM initialization is the ordered IP, RE, MR
+    // command sequence C83F -> D03F -> D43F. MR remains a register bit,
+    // not a permanently active prohibition on subsequent SDRAM accesses.
+    void dram_w(offs_t offset, u16 data, u16 mem_mask)
+    {
+        COMBINE_DATA(&m_dram[offset]);
+        if (offset==1 && !(m_dram[1] & 0x8000))
+            m_sdram_init_phase=0;
+        if (offset!=2) return;
+        u16 const commands=m_dram[2] & 0x1c00;
+        if (!(m_dram[2] & 0x8000))
+            m_sdram_init_phase=0;
+        else if (commands==0x0800 && (m_dram[1] & 0x8000))
+            m_sdram_init_phase=1;
+        else if (commands==0x1000 && m_sdram_init_phase==1)
+            m_sdram_init_phase=2;
+        else if (commands==0x1400 && m_sdram_init_phase==2)
+            m_sdram_init_phase=3;
+        else if (m_sdram_init_phase!=3)
+            m_sdram_init_phase=0;
+        if (m_physical_boot && m_sdram_init_phase)
+            logerror("DANA_SDRAM_INIT phase=%u sdctrl=%04x dramc=%04x\n",
+                unsigned(m_sdram_init_phase),m_dram[2],m_dram[1]);
+    }
     static bool firmware_vectors_valid(const u8 *rom)
     {
         u32 const pc=(u32(rom[4])<<24) | (u32(rom[5])<<16) | (u32(rom[6])<<8) | rom[7];
@@ -323,6 +346,7 @@ private:
     u16 m_cs_base[4]={}, m_cs_select[4]={};
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
     u16 m_dram[4]={};
+    u8 m_sdram_init_phase=0;
     u16 m_watchdog=0x0001;
     emu_timer *m_watchdog_guard=nullptr;
     emu_timer *m_clk32_timer = nullptr;
@@ -431,6 +455,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_cs_base)); save_item(NAME(m_cs_select));
     save_item(NAME(m_cs_upper)); save_item(NAME(m_cs_control));
     save_item(NAME(m_emucs)); save_item(NAME(m_dram));
+    save_item(NAME(m_sdram_init_phase));
     machine().save().register_postload(save_prepost_delegate(FUNC(alphasdana_state::boot_postload),this));
     m_spi1_timer=timer_alloc(FUNC(alphasdana_state::spi1_complete),this);
 #define DANA_SPI1_SAVE(member) save_item(NAME(m_spi1.member))
@@ -553,6 +578,7 @@ void alphasdana_state::physical_reset()
     m_cs_control[0]=0; m_cs_control[1]=0x1000; m_cs_control[2]=0x9c00;
     m_emucs=0x0060;
     m_dram[0]=0; m_dram[1]=0; m_dram[2]=0x003c; m_dram[3]=0;
+    m_sdram_init_phase=0;
     m_pcpden=0xff; m_pcsel=0xff; m_pfsel=0x87;
     // Open VZ reference pin-latch reset, not a measured Dana electrical state.
     static constexpr u8 reset_gpio[32]={
@@ -643,7 +669,7 @@ u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
     }
     if (ram && !flash && !(m_cs_select[3] & 0x6000))
     {
-        if (!physical_ram_ready() || ((m_dram[2] & 0x8000) && (m_dram[2] & 0x0c00)))
+        if (!physical_ram_ready() || ((m_dram[2] & 0x8000) && m_sdram_init_phase!=3))
         {
             physical_block("DRAM_DISABLED_OR_INIT_READ",address);
             return 0xffff;
@@ -662,9 +688,10 @@ void alphasdana_state::physical_w(offs_t offset, u16 data, u16 mem_mask)
     if (!boot && cs_hit(3,address) && !cs_hit(0,address) && !(m_cs_select[3] & 0xe000))
     {
         if (!physical_ram_ready()) { physical_block("DRAM_DISABLED",address,data); return; }
-        // SDRAM precharge/mode-register writes are controller commands, not
-        // guest data stores (M68VZ328Hwr.h INITPRECHG/INITMODE bits).
-        if ((m_dram[2] & 0x8000) && (m_dram[2] & 0x0c00)) return;
+        // Precharge/mode commands are triggered by SDCTRL writes. RAM data
+        // stores become legal only after IP -> RE -> MR has completed.
+        if ((m_dram[2] & 0x8000) && m_sdram_init_phase!=3)
+        { physical_block("SDRAM_NOT_INITIALIZED_WRITE",address,data); return; }
         u32 const index=address-cs_base(3);
         if (index<0x400000)
         {
