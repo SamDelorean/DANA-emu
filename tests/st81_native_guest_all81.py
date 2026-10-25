@@ -138,7 +138,11 @@ p=subprocess.run(cmd,capture_output=True,text=True,cwd='/tmp',timeout=180)
 (OUT/'native.stdout').write_text(p.stdout[-200000:])
 (OUT/'native.stderr').write_text(p.stderr[-200000:])
 print('ST81_CPU_GUEST_EXIT',p.returncode,flush=True)
-if not (OUT/'keyboard.json').is_file():raise SystemExit('No CPU guest keyboard result')
+if p.returncode or not (OUT/'keyboard.json').is_file():
+ print('ST81_NATIVE_STDERR_TAIL',p.stderr[-6000:],flush=True)
+ print('ST81_NATIVE_STDOUT_TAIL',p.stdout[-1600:],flush=True)
+ raise SystemExit('No valid native CPU guest keyboard result')
+
 j=json.loads((OUT/'keyboard.json').read_text())
 j['expected']=81
 j['status']='PASS' if p.returncode==0 and len(j['seen'])==81 and not j['missing'] and len(j['chords'])==5 and j['releases']>=81 else 'FAIL'
