@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-24",
+  "scope": "one canonical DIAG; no branch or parallel emulator",
+  "increment": "Full Dana physical ST keyboard",
+  "status": "CPU_ST_KEYBOARD_NOT_YET_QUALIFIED",
+  "deployed": "NO",
+  "operating_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+  "candidate_sha256": "abb35b161b88d6e639c7ee6898ee7a16fae11c729f3451076ec40bc150ceee45",
+  "lua_cpu_observation": "Q=true A=false SPI2_READS=219 FRAMES=600",
+  "remote_rc": 29,
+  "original_six_bindings": "preserved",
+  "key_count": "81 unique physical Dana scan codes",
+  "guest": "EmuTOS024C; guest translation/typing native outcome only if observed",
+  "closed_gui_campaigns": "NOT_RERUN",
+  "log_tail": [
+    "ST81_READY_BIN=abb35b161b88d6e639c7ee6898ee7a16fae11c729f3451076ec40bc150ceee45",
+    "ST81_EXKEY_PORTS=4",
+    "ST81_RAM_GUEST_START",
+    "ST81_RAM_GUEST_RC=0",
+    "ST81_EMUTOS_GUEST_BOOT_PASS",
+    "ST81_CPU_KEYBOARD_NATIVE_START",
+    "ST81_KEY_TEST_RC=0",
+    "ST81_KEY=Q=true A=false SPI2_READS=219 FRAMES=600",
+    "ST81_NO_DEPLOY_GUEST_KEY_CODE_UNVERIFIED",
+    "==> /tmp/DANA_ST81_NAT.5izO9AMx/keys.stdout <==",
+    "Average speed: 595.90% (9 seconds)",
+    "",
+    "==> /tmp/DANA_ST81_NAT.5izO9AMx/keys.stderr <==",
+    "Warning: -video none doesn't make much sense without -seconds_to_run"
+  ]
+}
