@@ -95,7 +95,19 @@ private:
     void physical_mmio_w(offs_t offset, u16 data, u16 mem_mask);
     void physical_w(offs_t offset, u16 data, u16 mem_mask);
     u32 cs_base(unsigned group) const { return u32(m_cs_base[group] & 0xfffe) << 13; }
-    u32 cs_size(unsigned group) const { return (group<2 ? 0x20000U : 0x8000U) << ((m_cs_select[group] >> 1) & 7); }
+    u32 cs_size(unsigned group) const
+    {
+        unsigned const siz=(m_cs_select[group] >> 1) & 7;
+        // Motorola AN2148 Table 5 / VZ UM CSCTRL1.DSIZ3: CSD SIZ=000/001
+        // with DSIZ3=1 selects 8/16 MiB, not the generic 32/64 KiB window.
+        if (group==3 && (m_cs_select[3] & 0x0200)
+            && (m_cs_control[0] & 0x0040) && siz<=1)
+        {
+            u32 const bank=(0x800000U << siz);
+            return (m_cs_select[3] & 0x0400) ? bank*2 : bank;
+        }
+        return (group<2 ? 0x20000U : 0x8000U) << siz;
+    }
     bool cs_hit(unsigned group, u32 address) const
     { return (m_cs_select[group] & 1) && !(cs_base(group) & (cs_size(group)-1)) && address>=cs_base(group) && u64(address)<u64(cs_base(group))+cs_size(group); }
     bool physical_ram_ready() const
