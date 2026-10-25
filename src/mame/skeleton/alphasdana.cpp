@@ -126,6 +126,7 @@ private:
     u8 irq_vector_r(offs_t offset);
     TIMER_CALLBACK_MEMBER(timer1_compare);
     u32 guest_system_clock_hz() const;
+    u32 physical_system_clock_hz() const;
     u32 timer1_source_hz() const;
     void timer1_schedule();
     u16 timer1_tctl_r() { return m_tctl1; }
@@ -562,7 +563,7 @@ void alphasdana_state::physical_reset()
     // No RAM clear, vector writes, CPU state injection or reset() call here.
     // Reuse the existing PLL/SYSCLK model, also used by Timer1. Electrical
     // reset/lock timing and PLLCR divisors remain unqualified.
-    m_maincpu->set_unscaled_clock(guest_system_clock_hz());
+    m_maincpu->set_unscaled_clock(physical_system_clock_hz());
     m_maincpu->resume(SUSPEND_REASON_DISABLE);
     logerror("DANA_PHYSICAL_RESET vectors=firmware CSA=%04x CSCTRL2=%04x CSCTRL3=%04x\n",
         m_cs_select[0],m_cs_control[1],m_cs_control[2]);
@@ -1233,14 +1234,26 @@ void alphasdana_state::pllcr_w(offs_t, u16 data, u16 mem_mask)
     u16 const changed=next ^ m_pllcr;
     if (changed & 0x0008)
     { physical_block("PLL_SLEEP_MODE_UNIMPLEMENTED",0xfffff200,next); return; }
-    if (changed & 0x3fa0)
+    // Physical VZ SYSCLK and prescaler changes are documented in UM 4.4.1.
+    // R-direct retains its previously qualified clock contract; LCD timing
+    // selection is separately unmodelled and must not silently succeed.
+    if ((changed & 0x3fa0) && (!m_physical_boot || (changed & 0x3800)))
     { physical_block("PLL_CLOCK_MODE_UNIMPLEMENTED",0xfffff200,next); return; }
     if (changed & 0x0003)
     { physical_block("PLL_WAKE_DELAY_UNIMPLEMENTED",0xfffff200,next); return; }
+    if (m_physical_boot && (changed & 0x07a0) && (m_tctl1 & 1))
+        m_tcn1=timer1_tcn_r(); // Snapshot before changing virtual SYSCLK.
     m_pllcr=next;
+    if (m_physical_boot && (changed & 0x07a0))
+    {
+        m_maincpu->set_unscaled_clock(physical_system_clock_hz());
+        if (m_tctl1 & 1) timer1_schedule();
+    }
     if (changed)
-        logerror("DANA_PLLCR value=%04x clko_enabled=%u pfsel=%02x clock_tree_unchanged=1\n",
-            m_pllcr,unsigned(pllcr_clko_enabled()),m_pfsel);
+        logerror("DANA_PLLCR value=%04x clko_enabled=%u pfsel=%02x sysclk_hz=%u physical_clock_change=%u\n",
+            m_pllcr,unsigned(pllcr_clko_enabled()),m_pfsel,
+            m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz(),
+            unsigned(m_physical_boot && bool(changed & 0x07a0)));
 }
 
 void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
@@ -1261,8 +1274,8 @@ void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
     // Preserve the 1 MHz no-guest diagnostic clock, which the R2.1 and
     // register-only fixtures already qualified. Authentic RAM guest runs
     // instead use the VZ PLL-derived M68000 clock, matching their Timer1.
-    if (m_guest_loaded)
-        m_maincpu->set_unscaled_clock(guest_system_clock_hz());
+    if (m_guest_loaded || m_physical_boot)
+        m_maincpu->set_unscaled_clock(m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
     if (m_tctl1 & 1)
         timer1_schedule();
 }
@@ -1341,14 +1354,27 @@ u8 alphasdana_state::irq_vector_r(offs_t offset)
 
 u32 alphasdana_state::guest_system_clock_hz() const
 {
-    // The exact original EmuTOS-Dana clock formula applied to PLLFSR.
+    // Preserve the qualified EmuTOS-Dana/R-direct base clock formula.
+    // This is HALF the manufacturer PLLCLK formula, before physical dividers.
     return (u32(m_pllfsr & 0xff)*14
         + u32((m_pllfsr >> 8) & 0x3f)+15)*32768;
+}
+u32 alphasdana_state::physical_system_clock_hz() const
+{
+    // Motorola MC68VZ328UM 4.3.2.2: PLLCLK =
+    // 2 * (14*(PC+1) + QC+1) * CLK32. Then PRESC1, PRESC2,
+    // and SYSCLKSEL: 000=/2, 001=/4, 010=/8, 011=/16, 1xx=/1.
+    u32 const pll_hz=guest_system_clock_hz()*2;
+    u32 const presc1=(m_pllcr & 0x0080) ? 2 : 1;
+    u32 const presc2=(m_pllcr & 0x0020) ? 2 : 1;
+    u32 const select=(m_pllcr >> 8) & 7;
+    u32 const sys_div=select>=4 ? 1 : (2U << select);
+    return pll_hz/(presc1*presc2*sys_div);
 }
 u32 alphasdana_state::timer1_source_hz() const
 {
     // CPU and SYSCLK-sourced Timer1 must advance in the SAME guest time.
-    u32 const guest_hz=guest_system_clock_hz();
+    u32 const guest_hz=m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz();
     switch(m_tctl1 & 0x000e)
     {
     case 0x0002: return guest_hz;
