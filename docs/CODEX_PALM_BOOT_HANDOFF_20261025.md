@@ -1,5 +1,67 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## ICE pair code delivery — GPT native validation pending
+
+Closed implementation of the ICEMCR/ICEMSR contract in
+`PALM_UK15_NATIVE_ICE_20261025.md`. Codex performed coding, local checks and
+publication only; GPT owns Clang21 compilation, T execution and analysis.
+Base: canonical main `c5d6787b272a9d7d82f656a1c0a0edb03541ec02`.
+Old driver SHA256:
+`207bf697be4ddafc90ab4b36103d15963f7871b22a1c72ba1dd3cf1a0dceaea1`.
+New driver SHA256:
+`1275509bbe091e23fd67d3a42d00cce0b332c662ef66224edcbbc024bce8e0e2`.
+
+Added two explicit physical word decoders: FFFFFD0C–FFFFFD0D (ICEMCR) and
+FFFFFD0E–FFFFFD0F (ICEMSR), both reset zero and saved independently.
+ICEMCR applies documented mask 005F with proper selected-lane merging;
+HMDIS=0008 is accepted and read back, with no ROM/SDRAM/ordinary decode change.
+Clearing HMDIS also leaves normal mode unchanged. Requests for SWEN, BBIEN,
+SB, PBEN or CEN terminate with `ICE_CONTROL_MODE_UNIMPLEMENTED` before state
+commit; their actual stopwatch/breakpoint/IRQ machinery is not fabricated.
+
+ICEMSR follows the VZ manufacturer order: EMUEN=bit3, event flags=bits2..0.
+Flags use W1C within the written lanes; reserved bits remain zero. A write
+0007 cannot set EMUEN and cannot manufacture events. EMUEN=1 requests stop
+with `ICE_EMULATION_MODE_UNIMPLEMENTED` before committing the mode or flag
+changes. No ICE interrupts, hard-map or hidden CPU state modifications were
+added. Registers remain ordinary readable state in the supported normal mode.
+The transition logs are `DANA_ICE ICEMCR ...` / `DANA_ICE ICEMSR ...` and include
+data, lane mask, resulting value and normal-mode classification.
+
+Local verification:
+- `python3 tests/ice_register_test.py`: PASS. Constant evaluation of actual
+  production handlers covers reset reads, native ICEMCR=0008 plus next static
+  ICEMSR=0007, word/high/low/zero masks, reserved bits, selective W1C, unchanged
+  HMDIS normal decode intent, every unsupported control bit and EMUEN guard.
+  Seeded flags are test fixtures, not emulated event generation.
+- Complete driver g++14 C++20 `-fsyntax-only -Werror` against existing MAME
+  headers: PASS. No object, linked binary or candidate SHA produced locally.
+- Every preexisting out-of-class method is byte-identical except additive
+  save/reset/map integration. This includes physical reset/coverage, SCR,
+  WATCHDOG, PLLCR/PLLFSR, clocks, IRQ, LCD, ST and SD implementations.
+- `git diff --check`: PASS. No unrelated closed suites rerun.
+
+### GPT continuation: build and next real CPU blocker
+
+Match the old source hash above on the same T DIAG, apply only this increment
+and build the staged `source/danadiagd` incrementally using the established
+Clang21 cache/command. Keep installed `bin/dana-diag` intact, historical SHA
+`0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`.
+Use the unchanged UK1.5 original raw stream, SHA
+`2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`,
+physical `-rom`, bounded observer and no register injection or firmware patch.
+Follow GPT's own explicit T authorization; this handoff grants none.
+
+Expected, not yet natively measured after this code change: the word write
+0008 to FFFFFD0C at CURPC=1000515E should read back 0008, then word write
+0007 to FFFFFD0E at CURPC=10005164 should leave normal-mode status 0000.
+Record accepted transactions, actual next CPU address/data/mask and
+CURPC/PC/IR/SP/SR, CLI/build log, candidate SHA and installed SHA readback.
+IVR/IMR continuation or a next missing peripheral must be demonstrated, not
+predicted. No new native blocker or Palm UI PASS is claimed by Codex.
+The prior candidate aa02f3... is historical, not the newly compiled binary.
+
+
 ## CURRENT CODEX-ONLY CONTRACT: ICEMCR + ICEMSR — PLLCR NATIVE PASS (2026-10-25)
 
 **New real T test and hardware research conducted HERE:** complete `docs/PALM_UK15_NATIVE_ICE_20261025.md` before making code edits (commit `4809dbb`). Published CodeX PLLCR `fb68ce6` exact source SHA256 `207bf697be4ddafc90ab4b36103d15963f7871b22a1c72ba1dd3cf1a0dceaea1`, Clang21 native build PASS, staged candidate SHA256 `aa02f3b4fcfbe3e661d6bd7532cd6ca179d9264b1219a92253a81eff8e84a708`; previous sole installed `bin/dana-diag` unchanged `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`. Guest UK1.5 original ROM reset SSP `00000316` PC `100002A2`; SCR, WATCHDOG and **PLLCR 24B3→24A3 now all native PASS**. NEW first native blocked write **`FFFFFD0C`, ICEMCR, `0008`, `CURPC=1000515E`, `SR=2700`**. Next immediate original disassembly `MOVE.W #0007,(FFFFFD0E)` ICEMSR remains unexecuted.
