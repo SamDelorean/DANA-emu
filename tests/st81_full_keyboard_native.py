@@ -15,6 +15,7 @@ from pathlib import Path
 PORT = re.compile(r'PORT_START\("(KEYS|EXKEY[0-3])"\)')
 LABEL = re.compile(r'PORT_NAME\("((?:\\.|[^"\\])*)"\)')
 SCAN = re.compile(r'st_key_changed\),(\d+)\)')
+MASK = re.compile(r'PORT_BIT\(0x([0-9a-f]+),', re.IGNORECASE)
 
 
 def inventory(source):
@@ -25,11 +26,11 @@ def inventory(source):
         if p:
             tag = p.group(1)
         if tag and 'PORT_BIT(' in line and 'st_key_changed' in line:
-            m, n = LABEL.search(line), SCAN.search(line)
-            if not m or not n:
+            m, n, b = LABEL.search(line), SCAN.search(line), MASK.search(line)
+            if not m or not n or not b:
                 raise ValueError('Unparseable physical key mapping: '+line)
-            result.append((tag, json.loads('"'+m.group(1)+'"'), int(n.group(1))))
-    codes = [scan for _, _, scan in result]
+            result.append((tag, json.loads('"'+m.group(1)+'"'), int(n.group(1)), int(b.group(1), 16)))
+    codes = [scan for _, _, scan, _ in result]
     if len(codes) != 81 or len(set(codes)) != 81:
         raise ValueError('Expected 81 distinct physical Dana scan codes')
     if not all(0 < x < 128 for x in codes):
@@ -42,7 +43,7 @@ def lua_program(keys, result_path):
     # memory reads of SPI2: 0xfffff800, with ST packet header followed by codes.
     encoded = ',\n'.join(
         ('{tag='+json.dumps(':'+tag)+',name='+json.dumps(label)+
-         ',scan='+str(scan)+'}') for tag, label, scan in keys)
+         ',scan='+str(scan)+',mask='+str(mask)+'}') for tag, label, scan, mask in keys)
     return """local machine=manager.machine
 local cpu=assert(machine.devices[":maincpu"])
 local bus=assert(cpu.spaces["program"])
@@ -54,6 +55,8 @@ for i,e in ipairs(entries) do
 end
 local frames=0
 local seen={}
+local host_seen={}
+local host_samples=0
 local headers=0
 local releases=0
 local physical=0
@@ -134,6 +137,13 @@ emu.register_frame_done(function()
         last_key=idx
         if idx<=#entries then
             inputs[idx]:set_value(t<hold and 1 or 0)
+            if t>=5 and t<hold then
+                local port=machine.ioport.ports[entries[idx].tag]:read()
+                host_samples=host_samples+1
+                if (port & entries[idx].mask)~=0 then
+                    host_seen[entries[idx].scan]=true
+                end
+            end
         end
     elseif frames>=combo_start and frames<ending-gap then
         if last_key>0 then
@@ -177,6 +187,10 @@ emu.register_frame_done(function()
             end
         end
         table.sort(found)
+        local host_count=0
+        for _,e in ipairs(entries) do
+            if host_seen[e.scan] then host_count=host_count+1 end
+        end
         local pairs={}
         for i=1,#combos do
             if chords[i] then pairs[#pairs+1]=i end
@@ -185,6 +199,8 @@ emu.register_frame_done(function()
             '],"missing":['..table.concat(absent,',')..
             '],"chords_seen":['..table.concat(pairs,',')..
             '],"headers":'..headers..',"releases":'..releases..
+            ',"host_inputs_seen":'..host_count..
+            ',"host_samples":'..host_samples..
             ',"physical_reads":'..physical..
             ',"guest_data_reads":'..guest_data_reads..
             ',"guest_control_reads":'..guest_control_reads..
