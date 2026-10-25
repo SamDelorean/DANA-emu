@@ -124,7 +124,7 @@ end
 emu.register_frame_done(function()
     frames=frames+1
     if frames==start then guest_pc_first=cpu.state["PC"].value end
-    if frames%120==0 then
+    if frames%%120==0 then
         local pc=cpu.state["PC"].value
         if guest_pc_last>=0 and pc~=guest_pc_last then guest_pc_changed=true end
         guest_pc_last=pc
