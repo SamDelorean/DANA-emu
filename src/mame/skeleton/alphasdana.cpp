@@ -54,6 +54,7 @@ public:
         , m_boot_memory(*this, "boot_memory")
         , m_sd(*this, "sd%u", 0U)
         , m_sd_irq(*this, "SDIRQ")
+        , m_pd7_pin(*this, "PDPIN7")
     {
     }
 
@@ -335,6 +336,7 @@ private:
     memory_view m_boot_memory;
     required_device_array<dana_sd_image_device,2> m_sd;
     required_ioport m_sd_irq;
+    required_ioport m_pd7_pin;
     dana_sd::controller m_spi1;
     emu_timer *m_spi1_timer=nullptr;
     u16 m_spi1_word=0,m_spi1_control=0,m_spi1_received=0,m_ilcr=0x6533;
@@ -1124,7 +1126,15 @@ u8 alphasdana_state::pd_r(offs_t reg)
 {
     u8 result=m_gpio[4+reg];
     if (reg==1)
-    { u8 const inputs=~m_gpio[4] & 0x0c; result=(result & ~inputs)|(m_sd_irq->read() & inputs); }
+    {
+        u8 const inputs=~m_gpio[4] & 0x0c;
+        result=(result & ~inputs)|(m_sd_irq->read() & inputs);
+        // Motorola VZ PD7/IRQ6: input DATA reads the actual external pin.
+        // UK1.5 boot samples PD7 after disabling its internal pull-up; do
+        // not conflate the DATA output latch with board input voltage.
+        u8 const pd7_input=~m_gpio[4] & 0x80;
+        result=(result & ~pd7_input)|(m_pd7_pin->read() & pd7_input);
+    }
     return result;
 }
 void alphasdana_state::pd_w(offs_t reg,u8 value)
@@ -1688,6 +1698,13 @@ static INPUT_PORTS_START(alphasdana)
     // The pinned port labels PD2/3 as SD IRQ, but does not prove that they
     // are insertion switches or give board polarity. Expose actual pin levels
     // for independent qualification; never fabricate an insertion interrupt.
+    // User-selectable external PD7/IRQ6 level. The Dana board voltage is
+    // not established from CPU documentation; default high models a released
+    // active-low interrupt line, while low tests the original sleep path.
+    PORT_START("PDPIN7")
+    PORT_CONFNAME(0x80,0x80,"PD7/IRQ6 external level (startup board assumption)")
+    PORT_CONFSETTING(0x80,"High / released (boot path)")
+    PORT_CONFSETTING(0x00,"Low / asserted (sleep path)")
     PORT_START("SDIRQ")
     PORT_CONFNAME(0x04,0x04,"SD0 PD2 external pin level (board function unqualified)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::sd_irq_changed),0)
     PORT_CONFSETTING(0x04,"High / released")
