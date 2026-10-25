@@ -1,5 +1,14 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## CURRENT VERIFIED UK1.5 DMAP NATIVE RESULT — WATCHDOG NEXT (2026-10-25)
+
+**IMPORTANT: actual native test now performed by this ChatGPT chat, not CodeX**. Owner authorized a new set of five remote calls. Four were used; we did not need another. `main` Codex SCR patch `a6badeb` source SHA256 `ac32db33a52abe8c81479fef2605ecc52ee9e62ec1477a2131a63cc55e3b72ec` verified as ONLY scr_w edit, installed in SAME existing T DIAG source and compiled with Clang21 (actual compiler/link PASS), CANDIDATE `source/danadiagd` SHA256 `cdd98381dba484396ba709468cffa137b97bd8a0e955e9006ed9931b2b1ed499`, **NOT DEPLOYED** (previous only operating `bin/dana-diag` intact SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`). 0x5D0000 original unpadded UK1.5 Flas stream SHA256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3` verified and loaded via actual `-rom`; CPU reset from Small ROM SSP=0x00000316 and PC=0x100002A2. SCR write to FFFFF000 now PASS in CPU execution. NEW TRUE FIRST FAIL is **WATCHDOG** `0xFFFFFB0A`, guest `MOVE.W #0,($0B0A,A0)` at `CURPC=10005152`, 16-bit write `0000`, mask `FFFF`, CPU `SR=2704`; `DANA_PHYSICAL_BLOCKED reason=MMIO_WRITE_UNIMPLEMENTED ... pc=10005158` reports the prefetched NEXT PC, not failed opcode. MAME process exit 0 is observer stop, **NOT PALM BOOT**. No guest UI.
+
+**AUTHORITATIVE RESEARCH & CODING INPUT**: `docs/PALM_UK15_NATIVE_WATCHDOG_20261025.md` contains real T traces, reset & candidate hashes, Motorola MC68VZ328UM §11.2.5 WATCHDOG bit/semantic contract, and static ONLY next disassembly (PLLCR, ICE, IVR, IMR). **Codex implement only the now proven missing 16-bit WATCHDOG register @ FFFFFB0A**, reset 0001, correct enable/counter/INTF/ISEL semantics, physical MMIO decode, preserving user-valid SCR fix and all existing peripheral code. Compile existing DIAG incremental, retry real UK1.5 -rom, return first new native block (do not pre-implement PLLCR/ICE just because they follow statically). No other research/Ghidra in Codex. No new branch/tree/clone, no modified ROM, no operating executable replacement until qualified. The user researches hardware HERE.
+
+---
+
+
 ## Current code delivery — SCR.DMAP fix, GPT native validation pending
 
 Implemented the closed finding in `PALM_UK15_NATIVE_SCR_DMAP_20261025.md`.
