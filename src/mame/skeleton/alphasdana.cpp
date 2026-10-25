@@ -46,6 +46,7 @@ public:
         , m_screen(*this, "screen")
         , m_ram(*this, "ram")
         , m_keys(*this, "KEYS")
+        , m_st_extended_keys(*this, "EXKEY%u", 0U)
         , m_pen_contact(*this, "PEN")
         , m_pen_x(*this, "PENX")
         , m_pen_y(*this, "PENY")
@@ -259,6 +260,7 @@ private:
     required_device<screen_device> m_screen;
     required_shared_ptr<u16> m_ram;
     required_ioport m_keys;
+    required_ioport_array<4> m_st_extended_keys;
     required_ioport m_pen_contact;
     required_ioport m_pen_x;
     required_ioport m_pen_y;
@@ -300,7 +302,8 @@ private:
     u8 m_pen_command = 0;
     u16 m_pen_sample = 0;
     bool m_st_ready = false, m_st_hello = false, m_st_reset_held = false;
-    u8 m_st_old_keys = 0, m_st_pending_keys = 0, m_st_queue_left = 0;
+    u32 m_st_old_keys[4]={}, m_st_pending_keys[4]={};
+    u8 m_st_queue_left=0;
     u32 m_lssa = 0;
     u8 m_lvpw = 0xff;
     u16 m_lxmax = 0x03f0;
@@ -646,7 +649,8 @@ void alphasdana_state::st_input_reset()
     // The reference Dana has a separate ST controller; initialize the
     // interface to unready, not a permanently asserted input pin.
     m_st_ready=false; m_st_hello=false; m_st_reset_held=false;
-    m_st_old_keys=0; m_st_pending_keys=0; m_st_queue_left=0;
+    for (unsigned i=0;i<4;++i) { m_st_old_keys[i]=0; m_st_pending_keys[i]=0; }
+    m_st_queue_left=0;
     m_spi2_data=0; m_spi2_ctrl=0;
 }
 
@@ -701,8 +705,7 @@ void alphasdana_state::pk_w(offs_t reg, u8 value)
 
 u8 alphasdana_state::st_exchange(u8 command)
 {
-    // ST selection is active-low PE3; pen ADC and other SPI slaves are not
-    // claimed as implemented. A deselected ST returns an idle data level.
+    // The auxiliary Dana ST reports physical scan codes, not OS key events.
     if (!m_st_ready || (m_gpio[2*4+1] & 0x08))
         return 0xff;
     if (m_st_hello)
@@ -710,32 +713,57 @@ u8 alphasdana_state::st_exchange(u8 command)
         m_st_hello=false;
         return 0xaa;
     }
-    // Version/query commands are not fabricated. No queued host event while
-    // not polling means zero data, exactly as the guest tests.
     if (command)
         return 0;
     if (m_st_queue_left)
     {
-        u8 const bits=m_st_pending_keys;
-        --m_st_queue_left;
-        // Six real ST scan-code keys: A, B, Return, Space, Left Alt, C. In real Dana protocol
-        // these are ST scan bytes, not Atari/Amiga key codes.
-        static constexpr u8 st_scan[6]={0x2b,0x7a,0x2e,0x7e,0x46,0x6d};
-        for(unsigned i=0;i<6;++i)
-            if (bits & (1<<i)) { m_st_pending_keys &= ~(1<<i); return st_scan[i]; }
+        for (unsigned scan=0;scan<128;++scan)
+        {
+            u32 const bit=u32(1)<<(scan & 31);
+            u32 &pending=m_st_pending_keys[scan>>5];
+            if (pending & bit)
+            {
+                pending &= ~bit;
+                --m_st_queue_left;
+                return u8(scan);
+            }
+        }
+        m_st_queue_left=0;
         return 0;
     }
-    u8 const keys=m_keys->read() & 0x3f;
-    if (keys!=m_st_old_keys)
+    u32 held[4]={};
+    // Preserve the six existing input bindings and their raw Dana scan codes.
+    static constexpr u8 original_scan[6]={0x2b,0x7a,0x2e,0x7e,0x46,0x6d};
+    u8 const originals=m_keys->read() & 0x3f;
+    for (unsigned i=0;i<6;++i)
+        if (BIT(originals,i))
+            held[original_scan[i]>>5] |= u32(1) << (original_scan[i]&31);
+    for (unsigned i=0;i<4;++i)
+        held[i] |= m_st_extended_keys[i]->read();
+    bool changed=false;
+    for (unsigned i=0;i<4;++i)
+        changed |= held[i]!=m_st_old_keys[i];
+    if (!changed)
+        return 0;
+    for (unsigned i=0;i<4;++i)
     {
-        m_st_old_keys=keys;
-        m_st_pending_keys=keys;
-        unsigned count=0;
-        for(unsigned i=0;i<6;++i) count+=BIT(keys,i);
-        m_st_queue_left=count;
-        return u8(0x40 | count);
+        m_st_old_keys[i]=held[i];
+        m_st_pending_keys[i]=0;
     }
-    return 0;
+    // The pinned Dana guest port has an eight-byte key packet buffer.
+    // Never advertise more than eight simultaneously held scan codes.
+    unsigned count=0;
+    for (unsigned scan=0;scan<128 && count<8;++scan)
+    {
+        u32 const bit=u32(1)<<(scan & 31);
+        if (held[scan>>5] & bit)
+        {
+            m_st_pending_keys[scan>>5] |= bit;
+            ++count;
+        }
+    }
+    m_st_queue_left=u8(count);
+    return u8(0x40 | count);
 }
 
 u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
@@ -1404,6 +1432,94 @@ static INPUT_PORTS_START(alphasdana)
     PORT_BIT(0x10,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Left Alt") PORT_CODE(KEYCODE_LALT)
     PORT_BIT(0x20,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("C") PORT_CODE(KEYCODE_C) PORT_CHAR('c')
     PORT_BIT(0xc0,IP_ACTIVE_HIGH,IPT_UNUSED)
+
+    // Extended physical Dana scan code inputs (no guest OS translation).
+    PORT_START("EXKEY0")
+    PORT_BIT(0x00000010,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("[") PORT_CODE(KEYCODE_OPENBRACE)
+    PORT_BIT(0x00000020,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F7") PORT_CODE(KEYCODE_F7)
+    PORT_BIT(0x00000080,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("]") PORT_CODE(KEYCODE_CLOSEBRACE)
+    PORT_BIT(0x00000100,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Y") PORT_CODE(KEYCODE_Y) PORT_CHAR('y')
+    PORT_BIT(0x00000200,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Left shift") PORT_CODE(KEYCODE_LSHIFT)
+    PORT_BIT(0x00000400,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("T") PORT_CODE(KEYCODE_T) PORT_CHAR('t')
+    PORT_BIT(0x00000800,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Tab") PORT_CODE(KEYCODE_TAB)
+    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Caps lock (control)") PORT_CODE(KEYCODE_CAPSLOCK)
+    PORT_BIT(0x00002000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F3") PORT_CODE(KEYCODE_F3)
+    PORT_BIT(0x00004000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Backspace") PORT_CODE(KEYCODE_BACKSPACE)
+    PORT_BIT(0x00008000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("On/off (escape)")
+    PORT_BIT(0x00040000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Down") PORT_CODE(KEYCODE_DOWN)
+    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Command")
+    PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("'") PORT_CODE(KEYCODE_QUOTE)
+    PORT_BIT(0x00800000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F6") PORT_CODE(KEYCODE_F6)
+    PORT_BIT(0x01000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("H") PORT_CODE(KEYCODE_H) PORT_CHAR('h')
+    PORT_BIT(0x04000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("G") PORT_CODE(KEYCODE_G) PORT_CHAR('g')
+    PORT_BIT(0x20000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F4") PORT_CODE(KEYCODE_F4)
+    PORT_BIT(0x40000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F5") PORT_CODE(KEYCODE_F5)
+    PORT_BIT(0x9a63004f,IP_ACTIVE_HIGH,IPT_UNUSED)
+
+    PORT_START("EXKEY1")
+    PORT_BIT(0x00000010,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME(";") PORT_CODE(KEYCODE_COLON)
+    PORT_BIT(0x00000020,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("L") PORT_CODE(KEYCODE_L) PORT_CHAR('l')
+    PORT_BIT(0x00000080,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("K") PORT_CODE(KEYCODE_K) PORT_CHAR('k')
+    PORT_BIT(0x00000100,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("J") PORT_CODE(KEYCODE_J) PORT_CHAR('j')
+    PORT_BIT(0x00000200,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("\\") PORT_CODE(KEYCODE_BACKSLASH)
+    PORT_BIT(0x00000400,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F") PORT_CODE(KEYCODE_F) PORT_CHAR('f')
+    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("S") PORT_CODE(KEYCODE_S) PORT_CHAR('s')
+    PORT_BIT(0x00002000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("D") PORT_CODE(KEYCODE_D) PORT_CHAR('d')
+    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Search") PORT_CODE(KEYCODE_F11)
+    PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("P") PORT_CODE(KEYCODE_P) PORT_CHAR('p')
+    PORT_BIT(0x00200000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("O") PORT_CODE(KEYCODE_O) PORT_CHAR('o')
+    PORT_BIT(0x00800000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("I") PORT_CODE(KEYCODE_I) PORT_CHAR('i')
+    PORT_BIT(0x01000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("U") PORT_CODE(KEYCODE_U) PORT_CHAR('u')
+    PORT_BIT(0x04000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("R") PORT_CODE(KEYCODE_R) PORT_CHAR('r')
+    PORT_BIT(0x08000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Q") PORT_CODE(KEYCODE_Q) PORT_CHAR('q')
+    PORT_BIT(0x10000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("W") PORT_CODE(KEYCODE_W) PORT_CHAR('w')
+    PORT_BIT(0x20000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("E") PORT_CODE(KEYCODE_E) PORT_CHAR('e')
+    PORT_BIT(0xc247c84f,IP_ACTIVE_HIGH,IPT_UNUSED)
+
+    PORT_START("EXKEY2")
+    PORT_BIT(0x00000001,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Beam (Help)")
+    PORT_BIT(0x00000002,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Home") PORT_CODE(KEYCODE_HOME)
+    PORT_BIT(0x00000010,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("-") PORT_CODE(KEYCODE_MINUS)
+    PORT_BIT(0x00000020,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F8") PORT_CODE(KEYCODE_F8)
+    PORT_BIT(0x00000080,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("=") PORT_CODE(KEYCODE_EQUALS)
+    PORT_BIT(0x00000100,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("6") PORT_CODE(KEYCODE_6) PORT_CHAR('6')
+    PORT_BIT(0x00000400,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("5") PORT_CODE(KEYCODE_5) PORT_CHAR('5')
+    PORT_BIT(0x00000800,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("`") PORT_CODE(KEYCODE_TILDE)
+    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F1") PORT_CODE(KEYCODE_F1)
+    PORT_BIT(0x00002000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F2") PORT_CODE(KEYCODE_F2)
+    PORT_BIT(0x00004000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Calendar (F9)") PORT_CODE(KEYCODE_F9)
+    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Memo pad (F12)") PORT_CODE(KEYCODE_F12)
+    PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("0") PORT_CODE(KEYCODE_0) PORT_CHAR('0')
+    PORT_BIT(0x00200000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("9") PORT_CODE(KEYCODE_9) PORT_CHAR('9')
+    PORT_BIT(0x00800000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("8") PORT_CODE(KEYCODE_8) PORT_CHAR('8')
+    PORT_BIT(0x01000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("7") PORT_CODE(KEYCODE_7) PORT_CHAR('7')
+    PORT_BIT(0x04000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("4") PORT_CODE(KEYCODE_4) PORT_CHAR('4')
+    PORT_BIT(0x08000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("1") PORT_CODE(KEYCODE_1) PORT_CHAR('1')
+    PORT_BIT(0x10000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("2") PORT_CODE(KEYCODE_2) PORT_CHAR('2')
+    PORT_BIT(0x20000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("3") PORT_CODE(KEYCODE_3) PORT_CHAR('3')
+    PORT_BIT(0x40000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Addressbook (F10)") PORT_CODE(KEYCODE_F10)
+    PORT_BIT(0x8247824c,IP_ACTIVE_HIGH,IPT_UNUSED)
+
+    PORT_START("EXKEY3")
+    PORT_BIT(0x00000001,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("To-do list (Insert)") PORT_CODE(KEYCODE_INSERT)
+    PORT_BIT(0x00000004,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Menu (Undo)")
+    PORT_BIT(0x00000020,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME(".") PORT_CODE(KEYCODE_STOP)
+    PORT_BIT(0x00000040,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Delete") PORT_CODE(KEYCODE_DEL)
+    PORT_BIT(0x00000080,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME(",") PORT_CODE(KEYCODE_COMMA)
+    PORT_BIT(0x00000100,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("M") PORT_CODE(KEYCODE_M) PORT_CHAR('m')
+    PORT_BIT(0x00000200,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Right shift") PORT_CODE(KEYCODE_RSHIFT)
+    PORT_BIT(0x00000400,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("V") PORT_CODE(KEYCODE_V) PORT_CHAR('v')
+    PORT_BIT(0x00000800,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Z") PORT_CODE(KEYCODE_Z) PORT_CHAR('z')
+    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("X") PORT_CODE(KEYCODE_X) PORT_CHAR('x')
+    PORT_BIT(0x00004000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("#")
+    PORT_BIT(0x00010000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Up") PORT_CODE(KEYCODE_UP)
+    PORT_BIT(0x00020000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Right") PORT_CODE(KEYCODE_RIGHT)
+    PORT_BIT(0x00040000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Left") PORT_CODE(KEYCODE_LEFT)
+    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Esc") PORT_CODE(KEYCODE_ESC)
+    PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("/") PORT_CODE(KEYCODE_SLASH)
+    PORT_BIT(0x01000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("N") PORT_CODE(KEYCODE_N) PORT_CHAR('n')
+    PORT_BIT(0x08000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Left ctrl (caps lock)") PORT_CODE(KEYCODE_LCONTROL)
+    PORT_BIT(0xf6e0a01a,IP_ACTIVE_HIGH,IPT_UNUSED)
 INPUT_PORTS_END
 
 ROM_START(asmdana)
