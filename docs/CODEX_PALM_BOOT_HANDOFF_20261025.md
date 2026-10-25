@@ -1,5 +1,14 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## CURRENT CODEX-ONLY CONTRACT: ICEMCR + ICEMSR — PLLCR NATIVE PASS (2026-10-25)
+
+**New real T test and hardware research conducted HERE:** complete `docs/PALM_UK15_NATIVE_ICE_20261025.md` before making code edits (commit `4809dbb`). Published CodeX PLLCR `fb68ce6` exact source SHA256 `207bf697be4ddafc90ab4b36103d15963f7871b22a1c72ba1dd3cf1a0dceaea1`, Clang21 native build PASS, staged candidate SHA256 `aa02f3b4fcfbe3e661d6bd7532cd6ca179d9264b1219a92253a81eff8e84a708`; previous sole installed `bin/dana-diag` unchanged `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`. Guest UK1.5 original ROM reset SSP `00000316` PC `100002A2`; SCR, WATCHDOG and **PLLCR 24B3→24A3 now all native PASS**. NEW first native blocked write **`FFFFFD0C`, ICEMCR, `0008`, `CURPC=1000515E`, `SR=2700`**. Next immediate original disassembly `MOVE.W #0007,(FFFFFD0E)` ICEMSR remains unexecuted.
+
+**CODEX WORK ONLY:** implement **both adjacent ICE initialization registers** as **one source-backed, cohesive hardware module** in the current single `alphasdana.cpp` (not two fake gates). Motorola **MC68VZ328UM chapter 16 Tables16-4,16-6** ICEMCR 16-bit reset 0000 bits6/4/3/2/1/0, HMDIS bit3; ICEMSR 16-bit reset0000 EMUEN **bit3**, three W1C interrupt flags **bits2/1/0**. `0008` sets ICEMCR HMDIS, and `0007` clears ICEMSR flags while preserving normal (not ICE) mode. Caution: Linux MC68VZ328.h header bit labels for ICEMSR conflict with VZ primary manual, do not use secondary header bit mapping uncritically. Map `FFFFFD0C-F`, accurate 68k lanes, reset/save, guard unsupported genuine ICE/breakpoint/real hardmap behaviors (do not fabricate them). Preserve all previous peripherals and guest execution. Codex publishes `main` source and local tests; **GPT compiles/tests on T and analyzes NEXT first real MMIO failure**. No Codex Ghidra general investigation, no extra branches/trees/alternate emulator, no artificial PC or BigROM entry. Still no Palm OS GUI.
+
+---
+
+
 ## PLLCR code delivery — GPT native validation pending
 
 Closed contract implemented from `PALM_UK15_NATIVE_PLLCR_20261025.md`.
