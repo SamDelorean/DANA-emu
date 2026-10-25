@@ -57,12 +57,18 @@ local seen={}
 local headers=0
 local releases=0
 local physical=0
+local guest_data_reads=0
+local guest_control_reads=0
+local guest_pc_first=-1
+local guest_pc_last=-1
+local guest_pc_changed=false
 local expected=0
 local current={}
 local chords={}
 local combos={{9,43},{123,109},{114,112},{19,52},{70,11}}
 local tap=bus:install_read_tap(0xfffff800,0xfffff801,
     "st81_all_cpu_spi2",function(offset,data,mask)
+    guest_data_reads=guest_data_reads+1
     local v=data & 255
     if expected>0 then
         physical=physical+1
@@ -87,6 +93,10 @@ local tap=bus:install_read_tap(0xfffff800,0xfffff801,
         if expected==0 then releases=releases+1 end
     end
 end)
+local control_tap=bus:install_read_tap(0xfffff802,0xfffff803,
+    "st81_cpu_spi2_ctrl",function(offset,data,mask)
+    guest_control_reads=guest_control_reads+1
+end)
 local start=240
 local interval=96
 local hold=64
@@ -109,6 +119,12 @@ for i,pair in ipairs(combos) do
 end
 emu.register_frame_done(function()
     frames=frames+1
+    if frames==start then guest_pc_first=cpu.state["PC"].value end
+    if frames%120==0 then
+        local pc=cpu.state["PC"].value
+        if guest_pc_last>=0 and pc~=guest_pc_last then guest_pc_changed=true end
+        guest_pc_last=pc
+    end
     if frames>=start and frames<combo_start-gap then
         local idx=math.floor((frames-start)/interval)+1
         local t=(frames-start)%%interval
@@ -169,7 +185,13 @@ emu.register_frame_done(function()
             '],"missing":['..table.concat(absent,',')..
             '],"chords_seen":['..table.concat(pairs,',')..
             '],"headers":'..headers..',"releases":'..releases..
-            ',"physical_reads":'..physical..',"frames":'..frames..'}')
+            ',"physical_reads":'..physical..
+            ',"guest_data_reads":'..guest_data_reads..
+            ',"guest_control_reads":'..guest_control_reads..
+            ',"guest_pc_first":'..guest_pc_first..
+            ',"guest_pc_last":'..guest_pc_last..
+            ',"guest_pc_changed":'..tostring(guest_pc_changed)..
+            ',"frames":'..frames..'}')
         f:close()
         machine:exit()
     end
