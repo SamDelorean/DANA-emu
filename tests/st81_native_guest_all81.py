@@ -36,9 +36,11 @@ c.jump('poll')
 fixture=c.finish()
 OUT.mkdir()
 (OUT/'cpu_st81.dana').write_bytes(fixture)
-entries=',\n'.join('{tag='+json.dumps(':'+tag)+',name='+json.dumps(name)+',scan='+str(scan)+'}' for tag,name,scan,mask in keys)
+entries=',\n'.join('{tag='+json.dumps(':'+tag)+',name='+json.dumps(name)+',scan='+str(scan)+',mask='+str(mask)+'}' for tag,name,scan,mask in keys)
 template=r'''
 local machine=manager.machine
+local ui=manager.ui
+ui.ui_active=false
 local cpu=assert(machine.devices[":maincpu"])
 local bus=assert(cpu.spaces["program"])
 local keys={__ENTRIES__}
@@ -47,6 +49,12 @@ for i,k in ipairs(keys) do
  fields[i]=assert(machine.ioport.ports[k.tag].fields[k.name],"Missing "..k.name)
 end
 local seen,chords={},{}
+local host_seen={}
+local host_sample_frames=0
+local ui_menu_frames=0
+local first_menu_frame=0
+local ui_active_frames=0
+local paused_frames=0
 local header_count,release_count,read_count,remaining=0,0,0,0
 local guest_last_reply,guest_poll_count=0,0
 local buffer={}
@@ -93,12 +101,25 @@ local stop=first_combo+#combos*combo_interval+80
 local previous,active_combo=0,0
 emu.register_frame_done(function()
  frames=frames+1
+ if ui.menu_active then
+  ui_menu_frames=ui_menu_frames+1
+  if first_menu_frame==0 then first_menu_frame=frames end
+ end
+ if ui.ui_active then ui_active_frames=ui_active_frames+1 end
+ if machine.paused then paused_frames=paused_frames+1 end
  if frames>=first and frames<first_combo-45 then
   local idx=math.floor((frames-first)/interval)+1
   local t=(frames-first)%interval
   if previous~=idx and previous>0 then fields[previous]:set_value(0) end
   previous=idx
-  if idx<=#keys then fields[idx]:set_value(t<hold and 1 or 0) end
+  if idx<=#keys then
+   fields[idx]:set_value(t<hold and 1 or 0)
+   if t>3 and t<hold then
+    local v=machine.ioport.ports[keys[idx].tag]:read()
+    host_sample_frames=host_sample_frames+1
+    if (v & keys[idx].mask)~=0 then host_seen[keys[idx].scan]=true end
+   end
+  end
  elseif frames>=first_combo and frames<stop-80 then
   if previous>0 then fields[previous]:set_value(0);previous=0 end
   local idx=math.floor((frames-first_combo)/combo_interval)+1
@@ -127,6 +148,12 @@ emu.register_frame_done(function()
    if seen[k.scan] then found[#found+1]=k.scan else missing[#missing+1]=k.scan end
   end
   for i=1,#combos do if chords[i] then matched[#matched+1]=i end end
+  local host_missing={}
+  local host_count=0
+  for _,k in ipairs(keys) do
+   if host_seen[k.scan] then host_count=host_count+1
+   else host_missing[#host_missing+1]=k.scan end
+  end
   local out=assert(io.open(__RESULT__,"w"))
   out:write('{"seen":['..table.concat(found,',')..'],"missing":['..
    table.concat(missing,',')..'],"chords":['..table.concat(matched,',')..
@@ -134,6 +161,13 @@ emu.register_frame_done(function()
    ',"cpu_spi2_reads":'..read_count..
    ',"cpu_guest_poll_count_mod65536":'..guest_poll_count..
    ',"cpu_guest_last_spi2_reply":'..guest_last_reply..
+   ',"host_seen_count":'..host_count..
+   ',"host_missing":['..table.concat(host_missing,',')..']'..
+   ',"host_sample_frames":'..host_sample_frames..
+   ',"ui_menu_frames":'..ui_menu_frames..
+   ',"first_ui_menu_frame":'..first_menu_frame..
+   ',"ui_active_frames":'..ui_active_frames..
+   ',"paused_frames":'..paused_frames..
    ',"frames":'..frames..'}')
   out:close()
   machine:exit()
@@ -143,7 +177,7 @@ end)
 (OUT/'keyboard.lua').write_text(template.replace('__ENTRIES__',entries).replace('__RESULT__',json.dumps(str(OUT/'keyboard.json'))))
 cmd=[str(BIN),'asmdana','-quickload',str(OUT/'cpu_st81.dana'),
  '-autoboot_script',str(OUT/'keyboard.lua'),'-autoboot_delay','0',
- '-video','none','-sound','none','-nothrottle','-skip_gameinfo','-nowriteconfig','-log','-oslog']
+ '-video','none','-sound','none','-nothrottle','-skip_gameinfo','-nowriteconfig','-noui_active','-log','-oslog']
 p=subprocess.run(cmd,capture_output=True,text=True,cwd='/tmp',timeout=180)
 (OUT/'native.stdout').write_text(p.stdout[-200000:])
 (OUT/'native.stderr').write_text(p.stderr[-200000:])
@@ -155,7 +189,16 @@ if p.returncode or not (OUT/'keyboard.json').is_file():
 
 j=json.loads((OUT/'keyboard.json').read_text())
 j['expected']=81
-j['status']='PASS' if p.returncode==0 and j.get('cpu_guest_poll_count_mod65536',0)>0 and len(j['seen'])==81 and not j['missing'] and len(j['chords'])==5 and j['releases']>=81 else 'FAIL'
+if j.get('ui_menu_frames', 0)>0:
+ j['status']='FAIL_MAME_UI_MENU'
+elif j.get('host_seen_count', -1)!=81 or j.get('host_missing'):
+ j['status']='FAIL_HOST_KEY_INPUT'
+elif j.get('cpu_guest_poll_count_mod65536',0)==0:
+ j['status']='FAIL_GUEST_CPU_SPI2'
+elif len(j['seen'])!=81 or j['missing'] or len(j['chords'])!=5 or j['releases']<81:
+ j['status']='FAIL_ST_KEY_PACKETS'
+else:
+ j['status']='PASS'
 (OUT/'keyboard.json').write_text(json.dumps(j,indent=2)+'\n')
 print(json.dumps(j,indent=2),flush=True)
 if j['status']!='PASS':raise SystemExit(1)
