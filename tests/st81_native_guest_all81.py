@@ -25,6 +25,10 @@ c.move_w(0,0xfffff800)
 c.move_w(0x2200,0xfffff802)
 c.move_w(0x2307,0xfffff802)
 c.w(0x3039);c.l(0xfffff800)
+# The real M68000 guest records each SPI2 response to RAM independently
+# from the passive Lua observer.
+c.record(d7.MARKER+4)
+c.w(0x5279);c.l(d7.MARKER+6)  # ADDQ.W #1,absolute long
 c.w(0x3e3c,4095)
 c.label('delay')
 c.w(0x51cf,(c.labels['delay']-(d7.ENTRY+len(c.data)+2))&65535)
@@ -44,6 +48,7 @@ for i,k in ipairs(keys) do
 end
 local seen,chords={},{}
 local header_count,release_count,read_count,remaining=0,0,0,0
+local guest_last_reply,guest_poll_count=0,0
 local buffer={}
 local combos={{9,43},{123,109},{114,112},{19,52},{70,11}}
 local pairfields={}
@@ -115,6 +120,8 @@ emu.register_frame_done(function()
   end
  end
  if frames>=stop then
+  guest_last_reply=bus:read_u16(131076)
+  guest_poll_count=bus:read_u16(131078)
   local found,missing,matched={},{},{}
   for _,k in ipairs(keys) do
    if seen[k.scan] then found[#found+1]=k.scan else missing[#missing+1]=k.scan end
@@ -124,7 +131,10 @@ emu.register_frame_done(function()
   out:write('{"seen":['..table.concat(found,',')..'],"missing":['..
    table.concat(missing,',')..'],"chords":['..table.concat(matched,',')..
    '],"releases":'..release_count..',"headers":'..header_count..
-   ',"cpu_spi2_reads":'..read_count..',"frames":'..frames..'}')
+   ',"cpu_spi2_reads":'..read_count..
+   ',"cpu_guest_poll_count_mod65536":'..guest_poll_count..
+   ',"cpu_guest_last_spi2_reply":'..guest_last_reply..
+   ',"frames":'..frames..'}')
   out:close()
   machine:exit()
  end
@@ -139,13 +149,13 @@ p=subprocess.run(cmd,capture_output=True,text=True,cwd='/tmp',timeout=180)
 (OUT/'native.stderr').write_text(p.stderr[-200000:])
 print('ST81_CPU_GUEST_EXIT',p.returncode,flush=True)
 if p.returncode or not (OUT/'keyboard.json').is_file():
- print('ST81_NATIVE_STDERR_TAIL',p.stderr[-6000:],flush=True)
+ print('ST81_NATIVE_STDERR_TAIL',p.stderr[-16000:],flush=True)
  print('ST81_NATIVE_STDOUT_TAIL',p.stdout[-1600:],flush=True)
  raise SystemExit('No valid native CPU guest keyboard result')
 
 j=json.loads((OUT/'keyboard.json').read_text())
 j['expected']=81
-j['status']='PASS' if p.returncode==0 and len(j['seen'])==81 and not j['missing'] and len(j['chords'])==5 and j['releases']>=81 else 'FAIL'
+j['status']='PASS' if p.returncode==0 and j.get('cpu_guest_poll_count_mod65536',0)>0 and len(j['seen'])==81 and not j['missing'] and len(j['chords'])==5 and j['releases']>=81 else 'FAIL'
 (OUT/'keyboard.json').write_text(json.dumps(j,indent=2)+'\n')
 print(json.dumps(j,indent=2),flush=True)
 if j['status']!='PASS':raise SystemExit(1)
