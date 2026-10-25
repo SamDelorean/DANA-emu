@@ -1,5 +1,14 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## NEW AUTHORITY — WATCHDOG NATIVE PASS; PLLCR NATIVE READ FIRST BLOCKER (2026-10-25)
+
+**Read the complete precise researched coding contract:** `docs/PALM_UK15_NATIVE_PLLCR_20261025.md` (commit `eefcbd5`). This ChatGPT chat has compiled and executed published Codex WATCHDOG commit `8b184b0` on sole T DIAG using authentic private UK1.5 -rom reset (not -quickload): source SHA256 `3bd7383160278ea67b00f2f827670d2dcca82704a2bdbe6aa32d844ea3643730`, staged candidate SHA256 `d6285e2947f2cba0c452bc00ba34d276020d26504c155b8d7b91db202b1bbf5c`, build/link PASS. Real CPU reads original SSP `00000316`, reset PC `100002a2`, executes accepted SCR, WATCHDOG writes; **first native subsequent failure** is 16-bit **PLLCR READ `0xFFFFF200`**, `CURPC=10005158`, instruction `ANDI.W #$FFEF,($0200,A0)`, next/preferred `PC=1000515C`, `SR=2704`. Motorola manual §4.4.1 Table 4-2 documents `PLLCR reset 0x24B3`; mask clears bit4 `CLKEN` → `0x24A3`, enabling CLKO output, not disabling PLL. `PLLFSR` at `0xFFFFF202` is already present and separate.
+
+**NEXT CODEX CODE ONLY:** in same `src/mame/skeleton/alphasdana.cpp` implement true read/write 16-bit `PLLCR` at `0xFFFFF200`, reset `0x24B3`, lane-accurate write, state save, bit fields per Motorola, preserve real high MMIO and prior SCR/WATCHDOG behavior; do not fake SYSCLK divider/PLL sleep if demanded later. Build staged Clang21, native `-rom` UK1.5, report next **real CPU** MMIO/blocker, not inferred future ICE; no new gate, file branches, Ghidra work, firmware copying or alternate DIAG. Previous only installed operating binary SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a` still untouched. No Palm GUI yet. Research stays in this chat.
+
+---
+
+
 ## WATCHDOG guarded register delivery — GPT native validation pending
 
 **CODEX: LOCAL IMPLEMENTATION/STATIC CHECKS ONLY. GPT: T BUILD, NATIVE RUN,
