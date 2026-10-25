@@ -517,8 +517,21 @@ void alphasdana_state::physical_block(const char *reason, u32 address, u16 data)
 {
     if (machine().side_effects_disabled()) return;
     if (!m_physical_blocked)
+    {
         logerror("DANA_PHYSICAL_BLOCKED reason=%s address=%08x data=%04x pc=%08x\n",
             reason,address,data,u32(m_maincpu->pc()));
+        // PC is the core's prefetch/bus position, not necessarily the start
+        // of the offending instruction. Capture native state without reads
+        // through the guest bus (which could cause another blocked access).
+        logerror("DANA_PHYSICAL_CPU curpc=%08x ir=%04x sp=%08x usp=%08x sr=%04x a4=%08x\n",
+            u32(m_maincpu->state_int(STATE_GENPCBASE)),u16(m_maincpu->state_int(M68K_IR)),
+            u32(m_maincpu->state_int(M68K_SP)),u32(m_maincpu->state_int(M68K_USP)),
+            u16(m_maincpu->state_int(M68K_SR)),u32(m_maincpu->state_int(M68K_A4)));
+        logerror("DANA_PHYSICAL_DECODE csa=%04x csd=%04x csgba=%04x csgbd=%04x csugba=%04x csctrl=%04x/%04x/%04x dram=%04x/%04x/%04x/%04x\n",
+            m_cs_select[0],m_cs_select[3],m_cs_base[0],m_cs_base[3],m_cs_upper,
+            m_cs_control[0],m_cs_control[1],m_cs_control[2],
+            m_dram[0],m_dram[1],m_dram[2],m_dram[3]);
+    }
     m_physical_blocked=true;
     m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
 }
@@ -577,6 +590,8 @@ void alphasdana_state::physical_w(offs_t offset, u16 data, u16 mem_mask)
     }
     // Exact NOR part/command set is not established. Do not fabricate an ID,
     // completed erase/program, or persistent write to the original dump.
+    if (!m_physical_blocked && !machine().side_effects_disabled())
+        logerror("DANA_PHYSICAL_WRITE address=%08x data=%04x mask=%04x\n",address,data,mem_mask);
     physical_block(boot || cs_hit(0,address) ? "FLASH_COMMAND_SET_UNVERIFIED" : "EXTERNAL_WRITE_OR_PROTECTION",address,data);
 }
 

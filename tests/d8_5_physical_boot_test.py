@@ -129,11 +129,12 @@ using u8=std::uint8_t;using u16=std::uint16_t;using u32=std::uint32_t;using u64=
 template<typename... T> constexpr void discard(T&&...) {}
 #define logerror(...) discard(__VA_ARGS__)
 #define SUSPEND_REASON_DISABLE 1
+enum {STATE_GENPCBASE, M68K_IR, M68K_SP, M68K_USP, M68K_SR, M68K_A4};
 // Constant register/data controls only. No guest program or emulator instance.
 struct Slot {std::array<u8,0x20000> bytes{};u32 size=0x20000;
  constexpr u32 get_rom_size()const{return size;}constexpr const u8*get_rom_base()const{return bytes.data();}};
 struct Ram {u16 low[32]={},last=0;constexpr u16 &operator[](unsigned i){if(i<32)return low[i];if(i==0x1fffff)return last;throw "UNEXPECTED_RAM_INDEX";}};
-struct CPU {u32 clock=0;constexpr void set_unscaled_clock(u32 c){clock=c;}bool resumed=false,suspended=false;constexpr void resume(int){resumed=true;}constexpr void suspend(int,bool){suspended=true;}constexpr u32 pc()const{return 0x1234;}};
+struct CPU {u32 clock=0;constexpr void set_unscaled_clock(u32 c){clock=c;}bool resumed=false,suspended=false;constexpr void resume(int){resumed=true;}constexpr void suspend(int,bool){suspended=true;}constexpr u32 pc()const{return 0x1234;}constexpr u32 state_int(int)const{return 0;}};
 struct alphasdana_state {
  Slot storage;Slot*m_firmware=&storage;Ram m_ram;CPU cpu;CPU*m_maincpu=&cpu;
  bool peek=false;constexpr auto &machine(){return *this;}constexpr bool side_effects_disabled()const{return peek;}

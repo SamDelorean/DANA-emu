@@ -2,6 +2,106 @@
 
 **This file is the complete executable work brief for Codex. Start implementation, not a proposal or additional handoff.** User-facing conversation: Spanish. Git commits, code and repository technical records: English.
 
+## Continuation result — 2026-10-25 (Cloud source work, no native run)
+
+**STATIC_ROOT_CAUSE_EVIDENCE / DIAGNOSTICS_IMPLEMENTED / PALM_NOT_BOOTED.**
+
+The previous write is explained by a concrete image-layout discrepancy, rather
+than evidence that address zero should accept RAM writes during CSA boot:
+
+| Check | US 1.5 | US 1.2 |
+| --- | --- | --- |
+| Verified Flas resources, consecutive IDs, valid byte sums | 119, 2000–2118 | 75, 2000–2074 |
+| Concatenated payload size | 0x5C8000 | 0x3A8000 |
+| Header PC field | 0x1000C80A | 0x1000C776 |
+| Entry offset under previous zero-origin array | 0xC80A | 0xC776 |
+| Nearby byte clear through A4 | 0xC80E | 0xC77A |
+| Entry offset with payload base 0x10008000 | 0x480A | 0x4776 |
+| PC-relative entry jump target (payload offset) | 0x48FE | 0x486A |
+| Updater code/1 literal 0x10008000 offset | 0x978 | 0x900 |
+
+Downloaded the exact source archive through connected Drive file
+`1LY_Ykm3RysWe4vutxWeFRnwSTCxlIcFg`; archive, both PRCs and both extracted
+payload hashes match section 1. No originals modified, padded image created,
+ROM uploaded, or firmware bytes committed. Private reports and temporary bytes
+are outside the repository in `/workspace/work/palm-boot/`.
+
+At the old US15 entry, linear disassembly gives a move from D0 to D3, conditional
+backward branch, then **CLR.B through A4 at guest 0x1000C80E**, inside
+PrvConvertIToA. This matches a zero write through a reset-valued A4 and the old
+prefetch PC 0x1000C812. The previous receipt does not contain CURPC, IR, A4 or
+lane mask, so this is static identification of the consistent offending
+instruction, not a newly observed native bus trace. A CLR.B bus transaction
+must not be described as a guest word-write solely from the 16-bit handler.
+
+Both payload headers contain 0x10008000 at offset 0x68; the updater explicitly
+loads that address before reading version metadata. With this base, both PC
+fields land on a coherent entry jump rather than the conversion routine. In
+US15 the entry proceeds to the payload's 0x48FE startup dispatch, computes its
+base using the PC-relative offset at 0x48FA, then uses header offset 0x7A
+(0x7063A) to dispatch to board startup. That entry jumps to payload 0x71A2E:
+real VZ MMIO initialization, followed by CSA group base 0x10000000,
+CSA=0x018D, and checks for a separate Palm header at guest 0x10000000
+(and 0x10400000 for the other bank). Later instructions initialize CSD and
+DRAM/SDRAM. These are disassembled instructions, not executed events.
+
+**Missing authenticated input:** with the evidenced 0x10008000 payload
+placement, no original bytes have been recovered for the preceding Flash
+0x00000000–0x00007FFF region (guest 0x10000000–0x10007FFF once mapped),
+including its reset vectors and separate initial card header. The exact
+physical part, sector protection and contents remain unverified. The archive
+alone does not establish these missing bytes. Do not fill that prefix, move
+PC/SP from the host, or reinterpret the updater header as physical reset
+vectors. Placement evidence does not establish a complete chip image.
+
+Implementation in the same driver: terminal physical failures now record native
+CURPC/IR/SP/USP/SR/A4 and CSA/CSD/group/control/DRAM state; rejected writes also
+record the lane mask. No extra guest memory reads, memory decoding changes,
+Flash write bypass, CPU state injection or changes to existing peripheral
+functions. `tools/palm_boot_observer.lua` uses the actual `SP` binding, lists
+available bindings, retains read/write taps, limits output to 512 events and
+marks UI boot unproven. `tools/palm_updater_audit.py` verifies resource structure,
+consecutive IDs, byte-sum checksums and hashes; optional binutils disassembly
+is written only to the explicitly chosen private report.
+
+Executed validation:
+- Full driver: g++ 14, C++20 `-fsyntax-only -Werror` against the existing MAME
+  donor headers, PASS. **No Clang21 object/link or native executable built.**
+- Six parser error/ordering/checksum tests, PASS.
+- Lua mocked API test via `texlua`, PASS (SP, unavailable optional bindings,
+  unchanged CPU values, byte-lane logging, event cap and trace close).
+- Existing D8.5 constant-evaluation test, PASS. Its old preservation suite has
+  eight failure records across three test methods, identically reproduced
+  against untouched `f73aba8` and the new driver; zero errors. It predates later
+  ST81/SD/reset changes. Do not report the whole historical suite as PASS.
+- Whole-driver text comparison against f73aba8 after removing just
+  physical_block/physical_w: identical, PASS; git diff whitespace check PASS.
+
+Repository continuity: checkpoint 3dde150 is the parent of starting f73aba8;
+the cached origin/main ba40acd is an ancestor 160 commits behind. Renamed the
+provided local `work` branch to `main`; no branch, clone or worktree created.
+`git fetch origin main` failed because the configured proxy refused connection;
+remote HEAD freshness and push are not verified.
+
+Access correction: Cloud has neither T filesystem nor its Clang21 build cache.
+Desktop Commander discovery subsequently found `spc-HP-t640-Thin-Client` online,
+ID `dee0b4b6-578a-41a5-88de-73dbeb808983`. Discovery only; no process launched,
+T file read/written, build, replacement or guest run. Section 5's explicit
+exhausted remote-call authorization remains in force. The installed binary
+hash is still historical, not independently remeasured in this intervention.
+
+Reproduce static auditing (set LD_LIBRARY_PATH for the existing cached binutils):
+```
+python3 tools/palm_updater_audit.py PRIVATE_US15.prc --candidate-base 0x10008000 --objdump M68K_OBJDUMP --output PRIVATE_REPORT.json
+python3 tests/palm_updater_audit_test.py
+texlua tests/palm_boot_observer_test.lua
+```
+Native CLI **not run** (requires authentic complete Flash and authorized T access):
+```
+DANA_PALM_TRACE=PRIVATE_TRACE /home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag/bin/dana-diag asmdana -rom PRIVATE_AUTHENTIC_FULL_FLASH -autoboot_script tools/palm_boot_observer.lua -seconds_to_run 2 -log
+```
+Do not use either extracted updater payload as PRIVATE_AUTHENTIC_FULL_FLASH.
+
 ## 0. Product outcome and exact starting point
 
 **Deliver a working AlphaSmart Dana stock Palm OS startup in the one existing MAME-based `dana-diag`.** Use actual MC68VZ328 68k instruction execution, actual reset/Flash/DRAM/chip-select/MMIO and the already present user-owned Palm firmware. Reach a genuine, guest-generated Palm OS startup/UI if achievable from these files. If the files lack necessary boot sectors or other original hardware behavior, prove that exact missing dependency with CPU/disassembly/bus evidence; never invent code, suppress blocked accesses, or report a successful boot without genuine guest execution.
