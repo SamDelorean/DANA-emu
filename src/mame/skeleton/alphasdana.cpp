@@ -149,6 +149,10 @@ private:
     void uart1_umisc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_umisc1); }
     u16 uart1_prescaler_r() { return m_uart_prescaler1; }
     void uart1_prescaler_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_uart_prescaler1); }
+    // VZ UM 5.2.4: pad drive strength only (0=2 mA, 1=4 mA).
+    // Stored configuration has no effect on logical GPIO, bus or clocks.
+    u16 iodcr_r() { return m_iodcr & 0x1fff; }
+    void iodcr_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_iodcr); m_iodcr &= 0x1fff; }
     u16 icemcr_r() { return m_icemcr; }
     void icemcr_w(offs_t, u16 data, u16 mem_mask);
     u16 icemsr_r() { return m_icemsr; }
@@ -299,6 +303,7 @@ private:
     u32 m_timer1_compares=0, m_timer1_iacks=0;
     u16 m_ustcnt1=0, m_ubaud1=0x0002, m_urx1=0, m_utx1=0, m_umisc1=0;
     u16 m_uart_prescaler1=0;
+    u16 m_iodcr=0x1fff;
     u16 m_icemcr=0, m_icemsr=0;
     u16 m_pllcr = 0x24b3;
     u16 m_pllfsr = 0x0347;
@@ -337,6 +342,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_watchdog));
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
     m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
+    save_item(NAME(m_iodcr));
     save_item(NAME(m_icemcr)); save_item(NAME(m_icemsr));
     save_item(NAME(m_pllcr));
     save_item(NAME(m_pllfsr));
@@ -411,6 +417,7 @@ void alphasdana_state::machine_reset()
     m_watchdog_guard->adjust(attotime::never);
     // Existing peripheral implementation is shared by both boot profiles.
     // Motorola MC68VZ328UM 4.4.2: actual VZ reset, not MAME EZ/POSE 0x0123.
+    m_iodcr=0x1fff;
     m_icemcr=0; m_icemsr=0;
     m_pllcr = 0x24b3;
     m_pllfsr = 0x0347;
@@ -1470,6 +1477,7 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff000,0xfffff000).rw(FUNC(alphasdana_state::scr_r),FUNC(alphasdana_state::scr_w));
     // Fixed VZ part ID from pinned M68VZ328Hwr/EmRegsVZ; mask revision is not guessed.
     m_boot_memory[1](0xfffff004,0xfffff004).lr8(NAME([]() { return u8(0x56); }));
+    m_boot_memory[1](0xfffff008,0xfffff009).rw(FUNC(alphasdana_state::iodcr_r),FUNC(alphasdana_state::iodcr_w));
     m_boot_memory[1](0xfffff100,0xfffff10d).rw(FUNC(alphasdana_state::cs_r),FUNC(alphasdana_state::cs_w));
     m_boot_memory[1](0xfffff110,0xfffff117).rw(FUNC(alphasdana_state::cs_select_r),FUNC(alphasdana_state::cs_select_w));
     m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));

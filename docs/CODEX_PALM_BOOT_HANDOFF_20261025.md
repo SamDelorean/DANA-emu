@@ -1,5 +1,56 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## IODCR code delivery — GPT native validation pending
+
+Implemented only the closed IODCR increment from
+`PALM_UK15_NATIVE_IODCR_20261025.md`. Canonical base:
+`d13b074455eb6006defd87b7d7bf5f9aeb8d5926`.
+Old driver SHA256:
+`1275509bbe091e23fd67d3a42d00cce0b332c662ef66224edcbbc024bce8e0e2`.
+New driver SHA256:
+`5a627f2e97564a3452f0a70ec99e6023b8d34a14c6a8afabe289b1321644fab7`.
+
+Eight additive production lines implement m_iodcr (u16), reset 1FFF, save-state
+registration, masked read and lane-selected write, plus exactly one physical
+word decoder at FFFFF008–FFFFF009. Defined mask is 1FFF; bits15..13 read zero
+and cannot be stored. Each defined bit describes 2 mA (0) versus 4 mA (1)
+pad-drive configuration. No electrical current/voltage simulation is claimed.
+No GPIO DATA/DIR/SEL, PFSEL, RAM, Flash, CS or clock behavior is changed.
+The high/even and low/odd bytes use the existing 16-bit MAME bus masks.
+The observed full-word 0000 write should read back 0000 after this change.
+
+Local verification executed:
+- `python3 tests/iodcr_register_test.py`: PASS. Compile-time evaluation of actual
+  production handlers/state/reset verifies 1FFF reset and reset re-entry,
+  original UK word write, high/low byte preservation, reserved-bit rejection,
+  zero-mask access and bit-select writes. This is not a guest/native test.
+- Full driver g++14 C++20 `-fsyntax-only -Werror` with existing MAME headers:
+  PASS; no object/executable or new candidate SHA generated.
+- Every preexisting out-of-class handler unchanged, excluding additive
+  save/reset/map integration: PASS. SCR, WATCHDOG, PLLCR, ICE and the existing
+  physical coverage/peripheral handlers are preserved.
+- `git diff --check`: PASS. ICE tests and unrelated closed suites were NOT rerun.
+
+Codex did no T calls, native compilation, candidate execution or installation.
+The supplied ea3644... native candidate and IODCR fault are GPT's historical
+measurements before this correction, not measurements of the new code.
+
+### GPT continuation
+
+Match old source SHA above in the sole existing T DIAG, apply only this IODCR
+increment, then compile the same staged `source/danadiagd` incrementally with
+the established Clang21 cache. Keep installed `bin/dana-diag` intact (last
+qualified SHA `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`).
+Reuse the unchanged original UK1.5 stream, physical `-rom` and bounded observer,
+within GPT's own current authorization. Do not reapply prior ICE/PLL patches.
+Expected but NOT YET natively observed: full-word 0000 to FFFFF008 at
+CURPC=1000517C is accepted and leaves IODCR readback 0000.
+Return the actual next CPU transaction/blocker with CURPC/PC/IR/SP/SR,
+address/data/mask, full CLI, build result, candidate SHA and operative hash.
+No next peripheral is predicted or implemented by this increment. Do not
+claim Palm UI boot from instruction progress or observer exit code 0.
+
+
 ## CODEX CLOSED IODCR IMPLEMENTATION — LATEST T NATIVE RESULT (2026-10-25)
 
 **Authoritative new research / real native failure:** `docs/PALM_UK15_NATIVE_IODCR_20261025.md` commit `ae61602`, prepared HERE, not delegated to Codex. Canonical ICE implementation `main@4ab1bd07` source SHA256 `1275509bbe091e23fd67d3a42d00cce0b332c662ef66224edcbbc024bce8e0e2` verified and built Clang21 in sole T DIAG; native staged candidate SHA256 `ea3644db575bbf0d41fc53cadf5b9df25e7f9174c07446bfb635f0a6281329e2`; installed operating binary SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a` unchanged. Real UK1.5 M68000 reset SSP `00000316`, PC `100002A2`, native SCR, WATCHDOG, PLLCR, ICEMCR=0008, ICEMSR write0007=>0000, IVR and IMR both words PASS. **First new native block `CURPC=1000517C`** is 16-bit write `0000`, mask `FFFF`, to `FFFFF008` (`IODCR`), `MMIO_WRITE_UNIMPLEMENTED`; prefetch PC `10005182`, SR `2704`. Manufacturer **MC68VZ328UM §5.2.4 Table5-4**: IODCR 16-bit I/O drive-strength register at `FFFFF008-9`, reset `1FFF`, writable mask `1FFF`, 0 selects 2mA pads, 1 selects 4mA. This operation changes electrical drive strength only, NOT GPIO logical latches/selection, CS, RAM or clocking.
