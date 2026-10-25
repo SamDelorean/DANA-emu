@@ -89,7 +89,7 @@ private:
     void physical_reset();
     void boot_postload();
     void physical_block(const char *reason, u32 address, u16 data=0);
-    u16 physical_r(offs_t offset);
+    u16 physical_r(offs_t offset, u16 mem_mask=0xffff);
     u16 physical_mmio_r(offs_t offset, u16 mem_mask);
     void physical_mmio_w(offs_t offset, u16 data, u16 mem_mask);
     void physical_w(offs_t offset, u16 data, u16 mem_mask);
@@ -116,7 +116,7 @@ private:
         u32 const pc=(u32(rom[4])<<24) | (u32(rom[5])<<16) | (u32(rom[6])<<8) | rom[7];
         return pc && !(pc & 1) && pc<0xfffff000;
     }
-    static bool firmware_size_valid(u32 size) { return size>=0x20000 && size<=0x1000000 && !(size & (size-1)); }
+    static bool firmware_size_valid(u32 size) { return size>=0x20000 && size<=0x1000000 && !(size & 1); }
     void program_map(address_map &map) ATTR_COLD;
     void cpu_space_map(address_map &map) ATTR_COLD;
     void update_irq_lines();
@@ -444,7 +444,7 @@ DEVICE_IMAGE_LOAD_MEMBER(alphasdana_state::firmware_load)
         return std::make_pair(image_error::INVALIDLENGTH,std::string("Firmware exceeds VZ CSA maximum decode"));
     u32 const size=m_firmware->common_get_size("rom");
     if (!firmware_size_valid(size))
-        return std::make_pair(image_error::INVALIDLENGTH,std::string("Supply a complete power-of-two raw Flash array (128 KiB to 16 MiB), not an updater/PRC"));
+        return std::make_pair(image_error::INVALIDLENGTH,std::string("Supply even-length raw bus-order bytes (128 KiB to 16 MiB), not a PRC"));
     // Byte storage prevents implicit host-endian swapping. No padding, header
     // removal, updater reconstruction, relocation or vector substitution.
     m_firmware->rom_alloc(size,GENERIC_ROM8_WIDTH,ENDIANNESS_LITTLE);
@@ -460,6 +460,8 @@ DEVICE_IMAGE_LOAD_MEMBER(alphasdana_state::firmware_load)
     auto const hash=util::sha1_creator::simple(rom,size);
     std::copy(std::begin(hash.m_raw),std::end(hash.m_raw),std::begin(m_flash_sha1));
     logerror("DANA_PHYSICAL_IMAGE bytes=%u sha1=%s read_only=1 topology=linear_array_unqualified\n",size,hash.as_string());
+    if (size & (size-1))
+        logerror("DANA_PHYSICAL_COVERAGE classification=UPDATER_DERIVED_RESET_EXPERIMENT supplied=00000000-%08x unknown_tail=BLOCKED reset_decode_window=01000000 geometry=UNQUALIFIED\n",size-1);
     return std::make_pair(std::error_condition(),std::string());
 }
 
@@ -536,7 +538,7 @@ void alphasdana_state::physical_block(const char *reason, u32 address, u16 data)
     m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
 }
 
-u16 alphasdana_state::physical_r(offs_t offset)
+u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
 {
     u32 const address=u32(offset)<<1;
     // CSA's reset boot selection precedes programmed group decoding. A full
@@ -553,9 +555,24 @@ u16 alphasdana_state::physical_r(offs_t offset)
             physical_block("FLASH_BANK_WINDOW_UNVERIFIED",address);
             return 0xffff;
         }
-        u32 const index=(boot ? address : address-cs_base(0)) & (size-1);
+        // Non-power-of-two streams describe coverage, not chip capacity.
+        // Retain the existing full-array aliases; partial streams instead use
+        // the VZ maximum 16 MiB reset window and never wrap at supplied length.
+        bool const partial=bool(size & (size-1));
+        u32 const index=partial ? (boot ? address & 0x00ffffff : address-cs_base(0))
+                               : (boot ? address : address-cs_base(0)) & (size-1);
+        if (index>=size || size-index<2)
+        {
+            if (!machine().side_effects_disabled())
+                logerror("DANA_PHYSICAL_MISSING_BYTES address=%08x array_offset=%08x mask=%04x supplied_bytes=%u\n",address,index,mem_mask,size);
+            physical_block("FLASH_BYTES_NOT_SUPPLIED",address);
+            return 0xffff;
+        }
         u8 const *rom=m_firmware->get_rom_base();
-        return (u16(rom[index])<<8) | rom[index+1];
+        u16 const value=(u16(rom[index])<<8) | rom[index+1];
+        if (address<8 && !machine().side_effects_disabled())
+            logerror("DANA_PHYSICAL_VECTOR_READ address=%08x data=%04x mask=%04x\n",address,value,mem_mask);
+        return value;
     }
     if (ram && !flash && !(m_cs_select[3] & 0x6000))
     {

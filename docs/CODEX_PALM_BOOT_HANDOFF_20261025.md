@@ -3,6 +3,172 @@
 **This file is the complete executable work brief for Codex. Start implementation, not a proposal or additional handoff.** User-facing conversation: Spanish. Git commits, code and repository technical records: English.
 
 
+## Handoff para GPT — ejecutar UK1.5 y analizar el primer bloqueo real
+
+**Solicitud actual: realizar la ejecución y su análisis en GPT. No reabrir la investigación de firmware ya entregada ni delegar otro plan a Codex.**
+
+### Estado concreto que se entrega
+
+El código de cobertura está implementado en `main`. Procedencia local:
+`23830f56bd14cfa49ddc5a9436fb72a570b7e93b`; al publicarlo por la conexión GitHub
+el SHA del commit cambia. Verificar el contenido del controlador mediante SHA256
+`9b0e03909c21717758f9f75a31540b28f5943b377b2a0f000f7788b18885783e`.
+Base canónica anterior: `0a159bd2d208c32eab6c987e2880cd78fe00a3a5`.
+No ramas, clones ni worktrees nuevos.
+
+Cambios funcionales exclusivamente en `src/mame/skeleton/alphasdana.cpp`:
+acepta tamaños pares originales, conserva la asignación exacta, registra cobertura
+para streams no potencia de dos, bloquea lecturas no suministradas con
+`FLASH_BYTES_NOT_SUPPLIED`, y registra palabras/máscaras de los vectores reales.
+Para el stream parcial usa una ventana experimental de reset de 16 MiB, con
+bits bajos de dirección; **esto no acredita capacidad, cableado o espejos del chip**.
+No convierte el tamaño del stream en un módulo, no agrega bytes y no altera
+el reset ni los registros CPU. CSA/CSD/DRAM y protecciones siguen como estaban.
+
+`tests/d8_5_physical_boot_test.py` actualiza únicamente la evaluación de tamaños
+y prueba último word disponible, primer word ausente, ausencia de wrap y CSA
+programada. Las pruebas enfocadas y compilación de cabeceras pasan; no hubo
+compilación/enlace Clang21 ni ejecución UK. La suite histórica completa no se
+ha declarado PASS: sus fallos de preservación anteriores siguen documentados.
+
+### Fuente privada ya resuelta: usar UK1.5 coherente
+
+Leer `docs/PALM_UK_SMALLROM_RESEARCH_20261025.md` y el registro JSON existente.
+Archivo Drive `1LY_Ykm3RysWe4vutxWeFRnwSTCxlIcFg`,
+`AlphaSmart_Dana1_5_Flash.zip`, SHA256
+`1a0256e35c11c7455a58738f05218e1e290b8d381a5742467f1a512ac25c14fc`.
+Ruta esperada en T: `/home/spc/Projects/Dana-OS3K/firmware/research-only/`.
+Contenedor anidado: `Dana UK 1.5 update/ROMUpdater_enUK150R1.ZIP`;
+PRC `ROMUpdater_enUK150R1.prc`. Reutilizar `resources` y `payload` de
+`tools/palm_updater_audit.py`: 120 recursos Flas, quitar solamente el checksum
+final validado por suma de bytes de cada recurso y concatenar por ID.
+Resultado exacto: **6,094,848 bytes / 0x5D0000**, SHA256
+`2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`.
+Cobertura suministrada: `[0x00000000,0x005CFFFF]`.
+
+Small ROM auténtico UK en offset 0, Big ROM UK en 0x8000. Valores de entrada
+**esperados del archivo, todavía no medidos en una ejecución UK**:
+SSP/campo initStack=0x00000316, PC=0x100002A2; JMP PC-relativo a
+0x10000316. La entrada declarada del Big ROM es 0x1000C80A.
+No mezclar UK/US, no agregar cola FF, no inyectar registros y no usar quickload.
+El prefijo Small ROM ya fue encontrado: no seguir afirmando que falta de todas
+las fuentes. La geometría física completa continúa sin acreditar.
+
+### Único entorno y protección del operativo
+
+T: `spc-HP-t640-Thin-Client`, ID conocido
+`dee0b4b6-578a-41a5-88de-73dbeb808983`; su disponibilidad actual debe comprobarse.
+DIAG: `/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag`.
+Fuente en `source/`, instalado `bin/dana-diag`; único artefacto intermedio de
+la misma compilación `source/danadiagd`. No ejecutar otro emulador.
+Último instalado verificado y restaurado:
+`0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`.
+Última fuente T conocida antes del incremento rechazado:
+`beb460df6e04013d1bc24c542b89276a088cf06fc0e96e52fedd566c57cc7eda`.
+Si algo difiere, reconciliar sin sobreescribir trabajo del usuario.
+
+**Autorización remota pendiente.** Las cinco llamadas anteriores se consumieron
+en el ensayo US; no autorizaron esta nueva campaña. La revisión automática
+rechazó expresamente el intento UK por falta de autorización renovada para
+compilar, sustituir temporalmente el ejecutable instalado y ejecutar firmware.
+La llamada rechazada no hizo nada en T. Este handoff no renueva el cupo y no
+permite eludir el rechazo con otros canales. Obtener consentimiento explícito
+para el número de llamadas y el procedimiento de calificación temporal antes
+de actuar remotamente. Conservar el original y restaurarlo si el candidato
+no queda calificado; no promover un candidato por el simple exit code 0.
+
+### Ejecución concreta pendiente, una vez autorizada
+
+1. Verificar hashes y ausencia de otra compilación; preservar el operativo.
+   Integrar el diff del controlador contra la fuente verificada del mismo árbol.
+   Preparar únicamente el stream privado UK exacto y el observador ya publicado.
+2. Inspeccionar `make -n` y compilar con la caché existente. La orden calificada
+   anterior es:
+   `make -j3 TARGET=mame SUBTARGET=danadiag SOURCES=src/mame/skeleton/alphasdana.cpp BUILDDIR=build/dana-diag DEBUG=1 PRECOMPILE=0 TOOLS=0 USE_QTDEBUG=0 OVERRIDE_CC=clang-21 OVERRIDE_CXX=clang++-21 OVERRIDE_LD=clang++-21`.
+   Exigir un alcance incremental: controlador, archivo y enlace necesarios;
+   no REGENIE ni reconstrucción general sin una causa concreta.
+3. Medir SHA del candidato. Ejecutar únicamente el DIAG con perfil
+   `asmdana -rom PRIVATE_UK15.raw`, sin `-quickload`, sin parches de firmware.
+   Utilizar un límite de tiempo externo que termine realmente el proceso.
+   El observador existente requiere `DANA_PALM_TRACE=PRIVATE_LOG`; para autoboot
+   usar `-autoboot_script PRIVATE_OBSERVER.lua -autoboot_delay 0`.
+   Ya usa SP y `emu.add_machine_stop_notifier`, con suscripción retenida;
+   **su corrección completa todavía requiere validación nativa**.
+4. Reutilizar debugger/trace nativo y logs del controlador para registrar los
+   cuatro accesos de reset, SSP/PC/SR, salto Small ROM, cambios MMIO y primera
+   dependencia no resuelta. CURPC es la dirección relevante; IR puede contener
+   la siguiente instrucción prefetched. No tomar lecturas del debugger como
+   accesos CPU ni ocultar el primer bloqueo. Guardar CLI, errores y códigos
+   reales. Si llega a LCD, guardar evidencia del framebuffer del invitado.
+5. GPT analiza la evidencia contra el contrato Motorola y la investigación
+   entregada. Un fallo local inequívoco puede corregirse dentro del alcance y
+   autorización restantes; una discrepancia de hardware no investigada se
+   devuelve con dirección, máscara/anchura, registros y última instrucción.
+   No inventar respuestas MMIO, sectores o una interfaz Palm anfitriona.
+
+### Entrega y aceptación
+
+Devolver commit/rama y archivos, salida de compilación, SHA candidato, CLI,
+SSP/PC/SR **medidos**, primer salto, última instrucción correcta, primer bloqueo
+concreto y estado/hash del operativo. Actualizar estos mismos documentos y
+`docs/PALM_UPDATER_DERIVED_COLD_BOOT_20261025.json`.
+Solo declarar arranque completo si Palm OS genera su UI mediante CPU y
+framebuffer emulados. Si no puede ejecutarse, clasificar como bloqueo de acceso;
+si se ejecuta y encuentra dependencia no soportada, reportar bloqueo técnico
+real. Nunca convertir un ensayo parcial en PASS de Palm OS.
+
+## UK1.5 coverage implementation — current coding result
+
+**IMPLEMENTED / STATIC_PASS / REMOTE_AUTO_REVIEW_BLOCKED / NOT_NATIVE_TESTED.**
+Based strictly on the delivered UK research, the existing physical loader now
+accepts even raw stream lengths in its original 128 KiB–16 MiB bounds. It
+allocates exactly the supplied byte count; the existing generic cartridge API
+retains this exact size. Non-power-of-two inputs log supplied coverage and
+`UPDATER_DERIVED_RESET_EXPERIMENT`; they do not declare a chip capacity.
+Partial-stream reads use the existing maximum 16 MiB reset decode window as
+an explicitly unqualified experimental address window, then enforce the exact
+supplied boundary. They never modulo by the stream length or read allocation
+padding. A missing word logs address, array offset, lane mask and supplied size,
+then suspends with `FLASH_BYTES_NOT_SUPPLIED`. The established power-of-two
+array aliases and configured chip-select/DRAM/protection rules remain intact.
+No physical mapping fidelity is claimed by admitting this experiment.
+
+Reset still fetches the original words through the CPU bus; those four reads
+now log values and masks. No SSP/PC injection, guest-byte modifications, RAM
+seed or synthetic prefix was added. Existing native snapshots and the fixed
+Lua observer provide the remaining compact CPU/MMIO trace on an authorized
+run. No peripheral implementation or reset/lifecycle method was changed.
+
+The exact original UK1.5 nested PRC was processed using the existing parser:
+120 Flas chunks, every byte-sum valid, 6,094,848 bytes, SHA256
+`2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`.
+Private original stream is `/workspace/work/palm-uk/UK15.raw`, outside Git.
+Its supplied array coverage is 0x00000000–0x005CFFFF. This is preparation of
+already researched bytes, not new firmware or hardware research.
+
+Checks executed: full driver g++14 C++20 `-fsyntax-only -Werror` with pinned
+MAME headers PASS; focused existing constant-evaluation test PASS, extended for
+partial final word, first missing word, no modulo wrap and programmed CSA;
+existing Lua mock PASS; comparison of all existing out-of-class peripheral and
+lifecycle methods PASS; whitespace check PASS. The old historical preservation
+suite was not rerun or relabelled as passing. No object or binary was built.
+
+**Remote action rejected, not executed.** Automatic approval review rejected
+exact-match staging, incremental Clang21 build and the same canonical DIAG's
+native candidate qualification because the prior Commander quota is exhausted
+and renewed remote authorization is absent. It also identified temporary
+replacement of the installed emulator for qualification as requiring explicit
+approval. No T source/image/binary was modified by the rejected call. No native
+SSP/PC/SR, instruction trace, LCD output, candidate binary SHA or new guest
+blocker exists for UK1.5 yet. The final delivery is therefore BLOCKED at remote
+execution, not a claim of a firmware or hardware failure.
+
+The same existing JSON receipt records this increment under
+`uk15_coverage_increment`. `main` was synchronized to exact checkpoint
+0a159bd2d208c32eab6c987e2880cd78fe00a3a5 through GitHub readback before editing;
+no branch, clone or worktree was created. The single operating executable
+remains unmodified; its SHA must be freshly checked on an authorized preflight.
+
 ## INSTRUCCIÓN RECTORAL ACTUAL — INVESTIGACIÓN AQUÍ; CODEX EXCLUSIVAMENTE DESARROLLO (2026-10-25)
 
 **Decisión expresa del usuario:** la investigación del firmware, ingeniería inversa y conclusiones de hardware se realizan en ESTA conversación de ChatGPT. **Ghidra está instalado en T y es una herramienta de NUESTRA investigación**, no un paquete de tareas de descubrimiento indefinido que Codex deba asumir. **Codex solo desarrolla, compila, prueba e integra cambios de código cerrados y especificados a partir de hallazgos entregados aquí.** Esta sección tiene autoridad sobre cualquier instrucción anterior del archivo que pida a Codex investigar con Ghidra o diseñar una vía de arranque asistido.

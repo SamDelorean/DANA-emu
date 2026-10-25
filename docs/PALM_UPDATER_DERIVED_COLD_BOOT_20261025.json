@@ -205,5 +205,39 @@
     "candidate_promoted": false,
     "remaining_dependency": "Authentic initial Flash prefix and reset contents preceding evidenced payload placement at 0x10008000; no fabricated prefix permitted",
     "full_boot": false
+  },
+  "uk15_coverage_increment": {
+    "checkpoint": "0a159bd2d208c32eab6c987e2880cd78fe00a3a5",
+    "status": "IMPLEMENTED_STATIC_PASS_REMOTE_AUTO_REVIEW_BLOCKED",
+    "classification": "UPDATER_DERIVED_RESET_EXPERIMENT",
+    "full_boot": false,
+    "image_bytes": 6094848,
+    "supplied_array_range": [
+      "0x00000000",
+      "0x005cffff"
+    ],
+    "image_sha256": "2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3",
+    "extraction": "Existing parser; exact UK1.5 updater only; 120 checksum-valid Flas resources; no padding or mixed regions",
+    "driver_sha256": "9b0e03909c21717758f9f75a31540b28f5943b377b2a0f000f7788b18885783e",
+    "local_checks": {
+      "complete_driver_cpp20_header_compilation": "PASS g++14 -fsyntax-only -Werror",
+      "constant_evaluation": "PASS including partial final word, first missing word, no length wrap, programmed CSA, full-array legacy cases",
+      "lua_mock": "PASS",
+      "peripheral_lifecycle_method_preservation": "PASS",
+      "git_diff_check": "PASS"
+    },
+    "remote_review": {
+      "action": "T exact-match source staging, extraction, incremental Clang21 build and candidate qualification with automatic original-binary restoration",
+      "executed": false,
+      "rejected": true,
+      "reason": "Prior Commander calls exhausted; remote build, temporary installed emulator replacement and firmware experiment require renewed explicit authorization"
+    },
+    "candidate_binary_sha256": null,
+    "native_ssp": null,
+    "native_pc": null,
+    "native_sr": null,
+    "last_executed_instruction": null,
+    "first_guest_blocker": null,
+    "installed_executable": "Not accessed or modified during this increment; old SHA is historical until fresh preflight"
   }
 }

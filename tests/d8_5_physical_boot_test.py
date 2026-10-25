@@ -131,7 +131,7 @@ template<typename... T> constexpr void discard(T&&...) {}
 #define SUSPEND_REASON_DISABLE 1
 enum {STATE_GENPCBASE, M68K_IR, M68K_SP, M68K_USP, M68K_SR, M68K_A4};
 // Constant register/data controls only. No guest program or emulator instance.
-struct Slot {std::array<u8,0x20000> bytes{};u32 size=0x20000;
+struct Slot {std::array<u8,0x20002> bytes{};u32 size=0x20000;
  constexpr u32 get_rom_size()const{return size;}constexpr const u8*get_rom_base()const{return bytes.data();}};
 struct Ram {u16 low[32]={},last=0;constexpr u16 &operator[](unsigned i){if(i<32)return low[i];if(i==0x1fffff)return last;throw "UNEXPECTED_RAM_INDEX";}};
 struct CPU {u32 clock=0;constexpr void set_unscaled_clock(u32 c){clock=c;}bool resumed=false,suspended=false;constexpr void resume(int){resumed=true;}constexpr void suspend(int,bool){suspended=true;}constexpr u32 pc()const{return 0x1234;}constexpr u32 state_int(int)const{return 0;}};
@@ -144,13 +144,13 @@ struct alphasdana_state {
  u16 m_cs_base[4]={},m_cs_select[4]={},m_cs_upper=0,m_cs_control[3]={},m_emucs=0,m_dram[4]={};
  constexpr void physical_block(const char*,u32,u16=0);
  constexpr u16 physical_mmio_r(offs_t,u16);constexpr void physical_mmio_w(offs_t,u16,u16);
- constexpr u16 physical_r(offs_t);constexpr void physical_w(offs_t,u16,u16);
+ constexpr u16 physical_r(offs_t,u16=0xffff);constexpr void physical_w(offs_t,u16,u16);
  constexpr void physical_reset();constexpr u16 cs_r(offs_t);constexpr void cs_w(offs_t,u16,u16);
  constexpr void cs_control3_w(offs_t,u16,u16);constexpr void scr_w(u8);
 '''+ '\n'.join(methods)+'\n};\n'+'\n'.join(definitions)+r'''
 constexpr bool size_checks(){
  return !alphasdana_state::firmware_size_valid(0) && !alphasdana_state::firmware_size_valid(65536)
-  && !alphasdana_state::firmware_size_valid(131073) && !alphasdana_state::firmware_size_valid(0x5d0000)
+  && !alphasdana_state::firmware_size_valid(131073) && alphasdana_state::firmware_size_valid(0x5d0000)
   && alphasdana_state::firmware_size_valid(131072) && alphasdana_state::firmware_size_valid(0x1000000)
   && !alphasdana_state::firmware_size_valid(0x2000000);
 }
@@ -209,6 +209,18 @@ constexpr bool debugger_peeks_are_not_cpu_evidence(){
  s.physical_mmio_w(0x100,0,0xff);if(s.m_physical_blocked||s.cpu.suspended)return false;
  s.peek=false;s.physical_mmio_r(0x100,0xff);return s.m_physical_blocked&&s.cpu.suspended;
 }
+constexpr bool coverage_boundaries(){
+ alphasdana_state s;s.physical_reset();s.storage.size=0x20002;
+ s.storage.bytes[0]=0x12;s.storage.bytes[1]=0x34;
+ s.storage.bytes[0x20000]=0xab;s.storage.bytes[0x20001]=0xcd;
+ if(s.physical_r(0x10000000/2)!=0x1234 || s.physical_r(0x10020000/2)!=0xabcd || s.m_physical_blocked)return false;
+ s.physical_r(0x10020002/2);if(!s.m_physical_blocked)return false;
+ s.physical_reset();s.physical_r(0x10040000/2);if(!s.m_physical_blocked)return false;
+ s.physical_reset();s.m_cs_select[0]=0x00b3;s.m_cs_base[0]=0x8000;
+ if(s.physical_r(0x10020000/2)!=0xabcd || s.m_physical_blocked)return false;
+ s.physical_r(0x10020002/2);return s.m_physical_blocked;
+}
+static_assert(coverage_boundaries());
 static_assert(debugger_peeks_are_not_cpu_evidence());
 static_assert(size_checks());
 static_assert(vector_structure_checks());
