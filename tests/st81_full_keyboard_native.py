@@ -87,31 +87,66 @@ local tap=bus:install_read_tap(0xfffff800,0xfffff801,
         if expected==0 then releases=releases+1 end
     end
 end)
-local start=180
-local interval=70
-local hold=44
-local combo_start=start+#entries*interval+70
-local combo_interval=90
-local ending=combo_start+#combos*combo_interval+180
+local start=240
+local interval=96
+local hold=64
+local gap=96
+local combo_start=start+#entries*interval+gap
+local combo_interval=136
+local combo_hold=90
+local ending=combo_start+#combos*combo_interval+gap
+local last_key=0
+local active_combo=0
+local combo_indexes={}
+for i,pair in ipairs(combos) do
+    combo_indexes[i]={}
+    for n,e in ipairs(entries) do
+        if e.scan==pair[1] or e.scan==pair[2] then
+            combo_indexes[i][#combo_indexes[i]+1]=n
+        end
+    end
+    assert(#combo_indexes[i]==2,"Both chord keys must be mapped")
+end
 emu.register_frame_done(function()
     frames=frames+1
-    if frames>=start and frames<combo_start then
+    if frames>=start and frames<combo_start-gap then
         local idx=math.floor((frames-start)/interval)+1
+        local t=(frames-start)%%interval
+        if idx~=last_key and last_key>0 then
+            inputs[last_key]:set_value(0)
+        end
+        last_key=idx
         if idx<=#entries then
-            local t=(frames-start)%%interval
             inputs[idx]:set_value(t<hold and 1 or 0)
         end
-    elseif frames>=combo_start and frames<ending-180 then
+    elseif frames>=combo_start and frames<ending-gap then
+        if last_key>0 then
+            inputs[last_key]:set_value(0)
+            last_key=0
+        end
         local idx=math.floor((frames-combo_start)/combo_interval)+1
         local t=(frames-combo_start)%%combo_interval
-        if idx<=#combos then
-            for _,x in ipairs(combos[idx]) do
-                for n,e in ipairs(entries) do
-                    if e.scan==x then
-                        inputs[n]:set_value(t<56 and 1 or 0)
-                    end
-                end
+        if idx~=active_combo and active_combo>0 then
+            for _,n in ipairs(combo_indexes[active_combo]) do
+                inputs[n]:set_value(0)
             end
+        end
+        active_combo=idx
+        if idx<=#combos then
+            for _,n in ipairs(combo_indexes[idx]) do
+                inputs[n]:set_value(t<combo_hold and 1 or 0)
+            end
+        end
+    else
+        if last_key>0 then
+            inputs[last_key]:set_value(0)
+            last_key=0
+        end
+        if active_combo>0 then
+            for _,n in ipairs(combo_indexes[active_combo]) do
+                inputs[n]:set_value(0)
+            end
+            active_combo=0
         end
     end
     if frames>=ending then
@@ -139,7 +174,7 @@ emu.register_frame_done(function()
         machine:exit()
     end
 end)
-""" % (encoded, '%', '%', json.dumps(str(result_path)))
+""" % (encoded, json.dumps(str(result_path)))
 
 
 def main():
@@ -161,7 +196,7 @@ def main():
            '-autoboot_script', str(script), '-autoboot_delay', '0',
            '-video', 'none', '-sound', 'none', '-nothrottle',
            '-skip_gameinfo', '-nowriteconfig']
-    finished = subprocess.run(cmd, capture_output=True, text=True, timeout=240)
+    finished = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     (a.output/'mame.stdout').write_text(finished.stdout[-200000:])
     (a.output/'mame.stderr').write_text(finished.stderr[-200000:])
     if finished.returncode or not report.exists():
