@@ -840,8 +840,16 @@ u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
     u32 const address=0x1f000000U+u32(offset)*2;
     if (mem_mask!=0xffff || offset!=0)
     { physical_block("ISP1161_READ_ACCESS_UNSUPPORTED",address); return 0xffff; }
-    // This boot sequence only writes the HC. No fabricated chip ID or
-    // USB interrupt/packet status is provided before a real read is observed.
+    // Real M68000 CLR.W at UK1.5 10003186/100031EC reads the selected
+    // write-port before clearing it. The old data bus value is DISCARDED by
+    // CLR; no HC read command is issued. Return inactive 16-bit bus value
+    // without consuming a data phase or pretending to report USB status.
+    if (m_isp_cmd & 0x80)
+    {
+        logerror("DANA_ISP1161 discarded_write_port_read cmd=%02x phase=%u\n",
+            m_isp_cmd,unsigned(m_isp_phase));
+        return 0xffff;
+    }
     physical_block("ISP1161_READ_UNIMPLEMENTED",address);
     return 0xffff;
 }
