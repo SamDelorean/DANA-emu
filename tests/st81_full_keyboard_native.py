@@ -10,6 +10,7 @@ import argparse
 import json
 import re
 import subprocess
+import time
 from pathlib import Path
 
 PORT = re.compile(r'PORT_START\("(KEYS|EXKEY[0-3])"\)')
@@ -234,16 +235,38 @@ def main():
            '-autoboot_script', str(script), '-autoboot_delay', '0',
            '-video', 'none', '-sound', 'none', '-nothrottle',
            '-skip_gameinfo', '-nowriteconfig', '-log', '-oslog']
+    started_at = time.time_ns()
     finished = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd='/tmp')
     (a.output/'mame.stdout').write_text(finished.stdout[-200000:])
     (a.output/'mame.stderr').write_text(finished.stderr[-200000:])
+    machine_log = Path('/tmp/error.log')
+    extra = ''
+    if machine_log.is_file() and machine_log.stat().st_mtime_ns >= started_at:
+        extra = machine_log.read_text(errors='replace')[-250000:]
+        (a.output/'machine.log').write_text(extra)
+    boot_confirmed = (
+        'DANA_GUEST_LOAD entry=00002140' in
+        (finished.stdout + finished.stderr + extra)
+    )
     if finished.returncode or not report.exists():
         raise SystemExit('BLOCKED: native guest CPU campaign did not finish')
     obs = json.loads(report.read_text())
     obs['expected_physical_keys'] = len(keys)
-    obs['status'] = ('PASS' if not obs['missing'] and
-                     len(obs['chords_seen']) == 5 and
-                     obs['releases'] >= len(keys) else 'FAIL')
+    obs['guest_boot_trace_confirmed'] = boot_confirmed
+    obs['candidate_exit_code'] = finished.returncode
+    # All evidence belongs to this ONE native whole-keyboard guest session.
+    if not boot_confirmed:
+        obs['status'] = 'BLOCKED_GUEST_BOOT'
+    elif obs.get('host_inputs_seen', 0) != 81:
+        obs['status'] = 'FAIL_HOST_81_INPUTS'
+    elif obs.get('guest_data_reads', 0) == 0:
+        obs['status'] = 'FAIL_GUEST_SPI2_POLL'
+    elif obs.get('guest_control_reads', 0) == 0:
+        obs['status'] = 'FAIL_GUEST_SPI2_CONTROL'
+    elif obs['missing'] or len(obs['chords_seen']) != 5 or obs['releases'] < len(keys):
+        obs['status'] = 'FAIL_GUEST_SCAN_PACKETS'
+    else:
+        obs['status'] = 'PASS'
     report.write_text(json.dumps(obs, indent=2)+'\n')
     print(json.dumps(obs, indent=2))
     if obs['status'] != 'PASS':
