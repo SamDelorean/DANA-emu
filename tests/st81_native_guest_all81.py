@@ -20,6 +20,7 @@ c=d7.Code()
 c.move_b(0x40,0xfffff409)
 c.move_b(0,0xfffff409)
 c.move_b(0,0xfffff421)
+c.move_w(0,d7.MARKER+6)  # initialise real guest poll counter
 c.label('poll')
 c.move_w(0,0xfffff800)
 c.move_w(0x2200,0xfffff802)
@@ -29,7 +30,7 @@ c.w(0x3039);c.l(0xfffff800)
 # from the passive Lua observer.
 c.record(d7.MARKER+4)
 c.w(0x5279);c.l(d7.MARKER+6)  # ADDQ.W #1,absolute long
-c.w(0x3e3c,4095)
+c.w(0x3e3c,127)  # bounded short delay; avoid starving subsequent host frame events
 c.label('delay')
 c.w(0x51cf,(c.labels['delay']-(d7.ENTRY+len(c.data)+2))&65535)
 c.jump('poll')
@@ -49,6 +50,8 @@ for i,k in ipairs(keys) do
  fields[i]=assert(machine.ioport.ports[k.tag].fields[k.name],"Missing "..k.name)
 end
 local seen,chords={},{}
+local frames=0
+local last_guest_spi2_frame=0
 local host_seen={}
 local host_sample_frames=0
 local ui_menu_frames=0
@@ -72,6 +75,7 @@ end
 local tap=bus:install_read_tap(0xfffff800,0xfffff801,"st81_cpu_spi2",function(offset,data,mask)
  local v=data & 255
  read_count=read_count+1
+ last_guest_spi2_frame=frames
  if remaining>0 then
   seen[v]=true
   buffer[#buffer+1]=v
@@ -93,7 +97,6 @@ local tap=bus:install_read_tap(0xfffff800,0xfffff801,"st81_cpu_spi2",function(of
   if remaining==0 then release_count=release_count+1 end
  end
 end)
-local frames=0
 local first,interval,hold=60,32,19
 local first_combo=first+#keys*interval+45
 local combo_interval,combo_hold=55,34
@@ -159,6 +162,7 @@ emu.register_frame_done(function()
    table.concat(missing,',')..'],"chords":['..table.concat(matched,',')..
    '],"releases":'..release_count..',"headers":'..header_count..
    ',"cpu_spi2_reads":'..read_count..
+   ',"last_guest_spi2_frame":'..last_guest_spi2_frame..
    ',"cpu_guest_poll_count_mod65536":'..guest_poll_count..
    ',"cpu_guest_last_spi2_reply":'..guest_last_reply..
    ',"host_seen_count":'..host_count..
@@ -193,6 +197,8 @@ if j.get('ui_menu_frames', 0)>0:
  j['status']='FAIL_MAME_UI_MENU'
 elif j.get('host_seen_count', -1)!=81 or j.get('host_missing'):
  j['status']='FAIL_HOST_KEY_INPUT'
+elif j.get('last_guest_spi2_frame',0)<j.get('frames',0)-100:
+ j['status']='FAIL_GUEST_POLL_STALL'
 elif j.get('cpu_guest_poll_count_mod65536',0)==0:
  j['status']='FAIL_GUEST_CPU_SPI2'
 elif len(j['seen'])!=81 or j['missing'] or len(j['chords'])!=5 or j['releases']<81:
