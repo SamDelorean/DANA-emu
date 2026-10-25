@@ -1,5 +1,65 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## WATCHDOG guarded register delivery — GPT native validation pending
+
+**CODEX: LOCAL IMPLEMENTATION/STATIC CHECKS ONLY. GPT: T BUILD, NATIVE RUN,
+AND ANALYSIS.** Base is canonical main
+`06ef23b0c536aca77daef9c4980a7325065123ce`. The previous SCR native PASS and
+WATCHDOG transaction in `PALM_UK15_NATIVE_WATCHDOG_20261025.md` are delivered
+research, not measurements made by Codex in this increment.
+
+Implemented physical-only 16-bit decoder FFFFFB0A–FFFFFB0B, reset value 0001,
+EN/ISEL control-lane updates, INTF W1C, reserved-bit masking, and CNTR clear on
+any selected-lane write. A zero lane mask is not a write. Physical save state
+includes the register. R-direct has no added MMIO decoder or running guard.
+No interrupt routing, peripheral or firmware patch was added.
+
+**Explicitly guarded subset allowed by the closed contract:** RTC-derived
+count advancement and watchdog IRQ/reset expiry are NOT implemented or qualified.
+An explicit write retaining EN=1 suspends with
+`WATCHDOG_ENABLED_CLOCK_UNIMPLEMENTED`. At physical reset, a one-second
+observation deadline also stops a watchdog left enabled without service. This
+is a diagnostic deadline, NOT an emulated expiry, RTC phase, IRQ or reset. Any
+actual write cancels that deadline; a disabling write proceeds normally.
+Readback reports the stored register fields (CNTR starts/clears to zero);
+no enabled-timer progress is claimed. The delivered register is not a complete
+RTC/watchdog timing model. GPT must not label enabled timing/IRQ/reset PASS.
+If enabled operation is required, return a closed timing/IRQ specification
+rather than suppressing the guard or claiming a generic write success.
+
+Expected native continuation (NOT YET OBSERVED): UK1.5 MOVE.W #0 at
+CURPC=10005152 should disable WATCHDOG, cancel the guard and leave readback 0000.
+PLLCR at FFFFF200 and ICE accesses remain predictions only. Do not implement
+them until GPT delivers their next observed fault and closed hardware contract.
+
+Local checks executed:
+- Complete driver g++14 C++20 -fsyntax-only -Werror with existing MAME headers:
+  PASS, no object or executable produced.
+- `python3 tests/watchdog_register_test.py`: PASS, constant evaluation of actual
+  production read/write/guard methods: native disable value, high/low/zero lane,
+  status W1C, ISEL, reserved bits, CNTR clear, disabled callback and explicit
+  enabled-mode guard. No guest CPU execution or timer-expiry PASS.
+- `python3 tests/d8_5_physical_boot_test.py ConstantEvaluation`: PASS.
+- `git diff --check`: PASS. No unrelated closed suites rerun.
+
+Driver SHA256:
+`3bd7383160278ea67b00f2f827670d2dcca82704a2bdbe6aa32d844ea3643730`.
+No new binary SHA, native PC/SR or next blocker exists for this increment.
+No Codex T calls, compilation on T, binary installation or firmware changes.
+The delivered GPT operative hash remains historical until its next readback.
+
+### GPT continuation
+
+Apply only this watchdog increment to source matched against old SHA
+`ac32db33a52abe8c81479fef2605ecc52ee9e62ec1477a2131a63cc55e3b72ec`.
+Build the same DIAG incrementally with the existing Clang21 cache, run the
+candidate without replacing the installed operative, and reuse the exact
+original UK1.5 stream and observer. Respect GPT's own current remote-call
+approval; this handoff grants none. Verify the FFFFFB0A=0000 word write passes,
+record actual next address/value/mask and CURPC/PC/IR/SP/SR, preserve original
+firmware and operative, and report the next closed correction to Codex.
+
+
 ## CURRENT VERIFIED UK1.5 DMAP NATIVE RESULT — WATCHDOG NEXT (2026-10-25)
 
 **IMPORTANT: actual native test now performed by this ChatGPT chat, not CodeX**. Owner authorized a new set of five remote calls. Four were used; we did not need another. `main` Codex SCR patch `a6badeb` source SHA256 `ac32db33a52abe8c81479fef2605ecc52ee9e62ec1477a2131a63cc55e3b72ec` verified as ONLY scr_w edit, installed in SAME existing T DIAG source and compiled with Clang21 (actual compiler/link PASS), CANDIDATE `source/danadiagd` SHA256 `cdd98381dba484396ba709468cffa137b97bd8a0e955e9006ed9931b2b1ed499`, **NOT DEPLOYED** (previous only operating `bin/dana-diag` intact SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`). 0x5D0000 original unpadded UK1.5 Flas stream SHA256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3` verified and loaded via actual `-rom`; CPU reset from Small ROM SSP=0x00000316 and PC=0x100002A2. SCR write to FFFFF000 now PASS in CPU execution. NEW TRUE FIRST FAIL is **WATCHDOG** `0xFFFFFB0A`, guest `MOVE.W #0,($0B0A,A0)` at `CURPC=10005152`, 16-bit write `0000`, mask `FFFF`, CPU `SR=2704`; `DANA_PHYSICAL_BLOCKED reason=MMIO_WRITE_UNIMPLEMENTED ... pc=10005158` reports the prefetched NEXT PC, not failed opcode. MAME process exit 0 is observer stop, **NOT PALM BOOT**. No guest UI.

@@ -99,6 +99,9 @@ private:
     { return (m_cs_select[group] & 1) && !(cs_base(group) & (cs_size(group)-1)) && address>=cs_base(group) && u64(address)<u64(cs_base(group))+cs_size(group); }
     bool physical_ram_ready() const
     { return !(m_cs_select[3] & 0x0200) || ((m_dram[1] | m_dram[2]) & 0x8000); }
+    u16 watchdog_r() { return m_watchdog; }
+    void watchdog_w(offs_t, u16 data, u16 mem_mask);
+    TIMER_CALLBACK_MEMBER(watchdog_guard);
     u8 scr_r() { return m_scr; }
     void scr_w(u8 data);
     u16 cs_r(offs_t offset);
@@ -280,6 +283,8 @@ private:
     u16 m_cs_base[4]={}, m_cs_select[4]={};
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
     u16 m_dram[4]={};
+    u16 m_watchdog=0x0001;
+    emu_timer *m_watchdog_guard=nullptr;
     emu_timer *m_clk32_timer = nullptr;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
@@ -319,6 +324,8 @@ private:
 
 void alphasdana_state::machine_start()
 {
+    m_watchdog_guard = timer_alloc(FUNC(alphasdana_state::watchdog_guard), this);
+    save_item(NAME(m_watchdog));
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
     m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
     save_item(NAME(m_pllfsr));
@@ -389,6 +396,8 @@ void alphasdana_state::machine_start()
 
 void alphasdana_state::machine_reset()
 {
+    m_watchdog=0x0001;
+    m_watchdog_guard->adjust(attotime::never);
     // Existing peripheral implementation is shared by both boot profiles.
     // Motorola MC68VZ328UM 4.4.2: actual VZ reset, not MAME EZ/POSE 0x0123.
     m_pllfsr = 0x0347;
@@ -424,6 +433,10 @@ void alphasdana_state::machine_reset()
     if (m_physical_boot)
     {
         physical_reset();
+        // Register-only guarded subset: stop before returning an unmodelled
+        // enabled counter after a one-second observation interval. This is a
+        // diagnostic deadline, NOT an emulated watchdog expiry or RTC phase.
+        m_watchdog_guard->adjust(attotime::from_seconds(1));
         sd_lines();
         return; // CPU device reset fetches the firmware vectors through AS_PROGRAM.
     }
@@ -625,6 +638,25 @@ void alphasdana_state::physical_mmio_w(offs_t offset, u16 data, u16 mem_mask)
     if (machine().side_effects_disabled()) return;
     logerror("DANA_PHYSICAL_UNIMPLEMENTED_MMIO write address=%08x mask=%04x\n",0xfffff000+(u32(offset)<<1),mem_mask);
     physical_block("MMIO_WRITE_UNIMPLEMENTED",0xfffff000+(u32(offset)<<1),data);
+}
+
+// VZ UM 11.2.5: any actual lane write clears CNTR[9:8]; INTF[7]
+// is W1C, ISEL[1]/EN[0] are writable and all other bits read zero.
+// Enabled counting/IRQ/reset timing is deliberately guarded, not fabricated.
+void alphasdana_state::watchdog_w(offs_t, u16 data, u16 mem_mask)
+{
+    if (!mem_mask) return;
+    u16 const controls=((m_watchdog & ~mem_mask) | (data & mem_mask)) & 0x0003;
+    m_watchdog=(m_watchdog & 0x0080 & ~(data & mem_mask)) | controls;
+    m_watchdog_guard->adjust(attotime::never);
+    if (m_watchdog & 1)
+        physical_block("WATCHDOG_ENABLED_CLOCK_UNIMPLEMENTED",0xfffffb0a,m_watchdog);
+}
+
+TIMER_CALLBACK_MEMBER(alphasdana_state::watchdog_guard)
+{
+    if (m_physical_boot && (m_watchdog & 1))
+        physical_block("WATCHDOG_ENABLED_CLOCK_UNIMPLEMENTED",0xfffffb0a,m_watchdog);
 }
 
 void alphasdana_state::scr_w(u8 data)
@@ -1385,6 +1417,7 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff110,0xfffff117).rw(FUNC(alphasdana_state::cs_select_r),FUNC(alphasdana_state::cs_select_w));
     m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
+    m_boot_memory[1](0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
     m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
 
     // Individually decoded VZ registers only, never a blanket MMIO RAM page.
