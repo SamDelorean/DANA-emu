@@ -1,0 +1,25 @@
+{
+  "scope": "post-deployment EmuTOS installed single DIAG boot and three input-field smoke",
+  "mame_rc": 0,
+  "single_operating_sha256": "0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a",
+  "interactive_guest_text_rendering": "NOT_QUALIFIED",
+  "evidence": {
+    "frames": 610,
+    "pc_samples_changed": 20,
+    "last_pc": 87908,
+    "host_a": true,
+    "host_b": true,
+    "host_return": true
+  },
+  "smoke_pass": true,
+  "stderr_tail": [
+    "[:] DANA_VZ_UART1_TX data=3a char=:",
+    "[:] DANA_VZ_UART1_TX data=20 char= ",
+    "[:] DANA_VZ_UART1_TX data=44 char=D",
+    "[:] DANA_VZ_UART1_TX data=69 char=i",
+    "[:] DANA_VZ_UART1_TX data=73 char=s",
+    "[:] DANA_VZ_UART1_TX data=6b char=k",
+    "[:] DANA_VZ_UART1_TX data=0d char=.",
+    "[:] DANA_VZ_UART1_TX data=0a char=."
+  ]
+}
