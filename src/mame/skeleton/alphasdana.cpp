@@ -629,10 +629,10 @@ void alphasdana_state::physical_mmio_w(offs_t offset, u16 data, u16 mem_mask)
 
 void alphasdana_state::scr_w(u8 data)
 {
-    // DMAP=1 is the existing high internal-register decoder. Do not invent a
-    // second low-register page when a firmware requests an unsupported mode.
+    // DMAP=0 retains the high internal-register page (VZ UM 5.2.1).
+    // DMAP=1 also permits 24-bit aliases; neither value disables this page.
+    // Preserve write-one-to-clear status bits and writable control bits.
     m_scr=(m_scr & 0xe0 & ~data) | (data & 0x1f);
-    if (!(m_scr & 4)) physical_block("SCR_DMAP_MODE",0xfffff000,data);
 }
 
 u16 alphasdana_state::cs_r(offs_t offset)

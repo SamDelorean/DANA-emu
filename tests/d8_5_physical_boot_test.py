@@ -188,7 +188,7 @@ constexpr bool unsupported_accesses_are_terminal(){
  s.physical_reset();s.cs_w(4,1,0xffff);if(!s.m_physical_blocked)return false;
  s.physical_reset();s.cs_w(5,1,0xffff);if(!s.m_physical_blocked)return false;
  s.physical_reset();s.cs_control3_w(0,0,0xffff);if(!s.m_physical_blocked)return false;
- s.physical_reset();s.scr_w(0);if(!s.m_physical_blocked)return false;
+ // Legal SCR.DMAP=0 writes are covered separately from unsupported accesses.
  s.physical_reset();s.m_cs_select[0]=0xb1;s.m_cs_select[3]=0x20f;
  s.physical_r(0);if(!s.m_physical_blocked)return false; // Overlapping groups.
  s.physical_reset();s.m_cs_select[0]=0xb1;s.m_cs_base[0]=0x8000;
@@ -220,6 +220,19 @@ constexpr bool coverage_boundaries(){
  if(s.physical_r(0x10020000/2)!=0xabcd || s.m_physical_blocked)return false;
  s.physical_r(0x10020002/2);return s.m_physical_blocked;
 }
+constexpr bool scr_high_page_and_w1c(){
+ alphasdana_state s;s.physical_reset();
+ if(s.m_scr!=0x1c)return false;
+ s.scr_w(0xf0); // Authentic UK1.5 SCR write: DMAP=0, BETEN=1.
+ if(s.m_scr!=0x10 || s.m_physical_blocked || s.cpu.suspended)return false;
+ s.m_scr=0xfc;s.scr_w(0xa0); // Clear BETO/PRV; preserve WPV.
+ if(s.m_scr!=0x40 || s.m_physical_blocked)return false;
+ s.m_scr=0xfc;s.scr_w(0x04); // DMAP=1; status bits survive zero writes.
+ if(s.m_scr!=0xe4 || s.m_physical_blocked)return false;
+ s.scr_w(0x60); // Clear WPV/PRV, preserve BETO; DMAP=0 remains legal.
+ return s.m_scr==0x80 && !s.m_physical_blocked && !s.cpu.suspended;
+}
+static_assert(scr_high_page_and_w1c());
 static_assert(coverage_boundaries());
 static_assert(debugger_peeks_are_not_cpu_evidence());
 static_assert(size_checks());

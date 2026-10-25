@@ -1,5 +1,51 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## Current code delivery — SCR.DMAP fix, GPT native validation pending
+
+Implemented the closed finding in `PALM_UK15_NATIVE_SCR_DMAP_20261025.md`.
+Only production method changed: `alphasdana_state::scr_w(u8)`. Removed the
+incorrect DMAP=0 terminal block and replaced its misleading comment. The exact
+status W1C/control assignment is unchanged; reset SCR=0x1C, save state, canonical
+high MMIO map, coverage, CPU and every other driver byte are preserved.
+DMAP=1 alias completeness is not claimed or implemented by this change.
+
+Base: canonical `main@206364acf8d6065d0264ef43cc9bcccffe3d6118`, synchronized
+before edits. Old driver SHA256:
+`9b0e03909c21717758f9f75a31540b28f5943b377b2a0f000f7788b18885783e`.
+New driver SHA256:
+`ac32db33a52abe8c81479fef2605ecc52ee9e62ec1477a2131a63cc55e3b72ec`.
+
+Local checks executed:
+- `python3 tests/d8_5_physical_boot_test.py ConstantEvaluation`: PASS, including
+  reset SCR, native UK F0->10 case with no CPU suspension, both DMAP values,
+  selective W1C clearing/preservation, and prior coverage/decode controls.
+- Complete driver C++20 `-fsyntax-only -Werror` against existing MAME headers,
+  g++14: PASS; no object or executable generated.
+- Entire production driver comparison excluding scr_w: byte-identical, PASS.
+- `git diff --check`: PASS. No unrelated suites rerun.
+
+**Workflow explicitly set by user: Codex develops code and performs local
+verification; GPT compiles on T, runs native tests and analyzes results.**
+This supersedes earlier instructions in this document assigning T compilation
+or native execution to Codex. No T tool calls or installed-file modifications
+were performed for this correction. No new executable SHA or next bus blocker
+is claimed. The native receipt remains unchanged historical evidence.
+
+### Ready-to-copy instruction for GPT
+
+Use the SCR correction identified by new driver SHA above, applying only the
+scr_w diff to the verified existing source on T. Do not reapply the earlier
+coverage patch. Compile incrementally in the same DIAG/cache using the existing
+qualified Clang21 command, measure the candidate SHA and run the exact same
+UK1.5 original 0x5D0000 stream through physical `-rom`, without installation or
+changes to the operating binary. Follow the user's current T authorization;
+this handoff grants none. Record PC/CURPC/IR/SP/SR, address/data/mask and the
+first actual next blocker. Absence of SCR_DMAP_MODE is expected but not yet
+natively measured. WATCHDOG at FFFFFB0A and PLLCR at FFFFF200 remain static
+predictions: do not implement or report them as encountered without evidence.
+Return the trace and a closed correction specification to Codex. Palm UI is
+still unproven; preserve the original operative hash and original firmware.
+
 ## ÚLTIMO RESULTADO REAL, AUTORITATIVO PARA CODEX — UK1.5 NATIVO EN T, SCR.DMAP (2026-10-25)
 
 **Este párrafo sustituye cualquier instrucción histórica que ordene a Codex investigar firmware o implementar arranque Big ROM asistido.** La investigación de hardware se hace en este chat; **Codex solo codifica un cambio concreto**.
