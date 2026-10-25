@@ -73,9 +73,14 @@ constexpr bool checks() {
  if(d.m_isp_control!=0x80)return false;
  cmd(0x81);data(0xc0);data(0);
  if(d.stopped||d.m_isp_control!=0xc0)return false;
- // Unsupported read or command is not fabricated as successful hardware.
+ // 68000 CLR.W reads the current selected write port but discards data.
  d.isp1161_r(0,0xffff);
- if(!d.stopped||d.blocked_addr!=0x1f000000)return false;
+ if(d.stopped||d.m_isp_control!=0xc0)return false;
+ // A read without a selected write command must still fail closed.
+ Controller read_without_command;
+ read_without_command.isp1161_r(0,0xffff);
+ if(!read_without_command.stopped||
+    read_without_command.blocked_addr!=0x1f000000)return false;
  Controller bad;
  bad.isp1161_w(1,0xff,0xffff);
  if(!bad.stopped||bad.blocked_addr!=0x1f000002)return false;
