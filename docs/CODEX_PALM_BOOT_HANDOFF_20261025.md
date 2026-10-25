@@ -1,5 +1,16 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## ÚLTIMO RESULTADO REAL, AUTORITATIVO PARA CODEX — UK1.5 NATIVO EN T, SCR.DMAP (2026-10-25)
+
+**Este párrafo sustituye cualquier instrucción histórica que ordene a Codex investigar firmware o implementar arranque Big ROM asistido.** La investigación de hardware se hace en este chat; **Codex solo codifica un cambio concreto**.
+
+**EVIDENCIA:** `docs/PALM_UK15_NATIVE_20261025.json` (ejecución nativa real) y `docs/PALM_UK15_NATIVE_SCR_DMAP_20261025.md` (**causa documental y contrato de codificación completo; léelo primero**). Se compiló en T el parche de cobertura `main@07443b2` con Clang21, sin errores; candidato SHA256 `a335583ebb7cc1f29fd7b8d6f5f22f1ddfb72a2e964b668db40ebbd4e09b5984`, binario operativo intacto `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`. Se extrajo privadamente UK1.5 120/120 Flas, `0x5D0000` bytes, SHA256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`, sin relleno ni publicación ROM. CPU hizo vectores reales SSP=`00000316`, reset PC=`100002A2`, Small ROM ejecutó a `CURPC=1000514C` y se bloqueó erróneamente cuando escribió `SCR=F0` en `FFFFF000` (motivo `SCR_DMAP_MODE`). **Manual Motorola cap.5:** DMAP=0 elimina alias duplicados `XXFFF000`, pero mantiene los registros en `FFFFF000`. El código actual `scr_w` bloquea esta operación válida.
+
+**SIGUIENTE INCREMENTO CODEX CERRADO:** Cambiar SOLO `alphasdana_state::scr_w(u8)`: preservar W1C y reset SCR, retirar bloqueo por `DMAP=0` y comentario falso; conservar decodificación interna superior. Compilar incrementalmente con Clang21 en único DIAG y repetir UK1.5 `-rom` en binario candidato sin instalar, devolviendo el primer próximo bloqueo real con CURPC/máscara. No hacer Ghidra, investigación abierta, refactor ni nuevas ramas; no preimplementar Watchdog/PLLCR basándose en predicción estática. El último código intacto de Small ROM predice escritura al WATCHDOG `FFFFFB0A`, luego PLLCR `FFFFF200`, pero **AÚN NO EXISTE PRUEBA NATIVA** para esos registros. El firmware no ha arrancado Palm OS hasta su UI. La autorización previa para Commander ya agotó 5/5 llamadas y no se renueva mediante estos documentos.
+
+---
+
+
 **This file is the complete executable work brief for Codex. Start implementation, not a proposal or additional handoff.** User-facing conversation: Spanish. Git commits, code and repository technical records: English.
 
 
