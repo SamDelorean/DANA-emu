@@ -2,6 +2,46 @@
 
 **This file is the complete executable work brief for Codex. Start implementation, not a proposal or additional handoff.** User-facing conversation: Spanish. Git commits, code and repository technical records: English.
 
+## RESEARCH UPDATE — 2026-10-25 — actionable route to Big ROM startup (source-backed; no fresh native run)
+
+**This section adds NEW research and supersedes any inference that the contents at byte 0 of `Dana_US15_Flas.raw` are original physical address zero. Preserve the 5/5 exhausted T Commander budget and the currently qualified installed executable. This source-based analysis is NOT a Palm boot or a native test.**
+
+### A. The PalmCard at payload offset zero is a ROM CARD HEADER — not evidence of physical reset location
+
+Two independent source implementations identify the initial fields of a PalmCard (`CardHeaderType`) as `initStack`, `resetVector`, `signature`, `hdrVersion`, `flags`, and a **separate `bigROMOffset`**. The Debian `romeo` ROM inspector prints those exact fields and its Big ROM and HAL offsets (read-only code):
+- https://sources.debian.org/src/romeo/0.5.0-9/output.c/#L45 (see `Output_CardHeader`; the website's rendered source line is around `818-873`).
+- `cloudpilot-emu/pose-original@97b10711fe4ca50c1bd47072378eaab26ba8e81d`, `SrcShared/EmROMReader.cpp`, `AcquireCardHeader`, and `SrcShared/Hardware/EmBankROM.cpp`, `Card::CheckCardHeader` / `LoadROM`.
+
+Our **existing verified private header bytes** (NOT included in Git): US1.5 offset 0 = `000048fe 1000c80a feedbeef 00050040`, US1.2 = `0000486a 1000c776 feedbeef 00050040`. Thus `hdrVersion=5`, `flags=0x0040`. POSE `EmROMReader::AcquireCardHeader` explicitly identifies `flags & 0x0040` as **68VZ328**, consistent with Dana's MCU. `0x48FE`/`0x486A` are the card-header init-stack fields, not proof that this header was located at physical Flash offset zero.
+
+**Prior Codex analysis (already recorded elsewhere in this same handoff)** independently confirmed candidate base **`0x10008000`** from literal use in each updater `code/1` and each header at byte `0x68`. It checked coherent entry instruction paths when using that base: US1.5 `0x1000C80A - 0x10008000 = 0x480A`, US1.2 `0x1000C776 - 0x10008000 = 0x4776`. Under WRONG zero-origin placement the offsets became `0xC80A` / `0xC776`, and US1.5 entered `PrvConvertIToA`, where a real `CLR.B (A4)` targeted zero. This **explains the old observed 0-address write** without allowing any Flash writes or changing address zero to RAM. The absolute physical boot region `0x10000000..0x10007fff` is still **unverified/missing**; check actual ROM header structure for the precise meaning of `0x68` and do not infer physical geometry exclusively from this literal.
+
+### B. A ready-made REFERENCE IMPLEMENTATION of the missing-SmallROM case exists: POSE
+
+Pinned official-origin emulator code: **`cloudpilot-emu/pose-original@97b10711fe4ca50c1bd47072378eaab26ba8e81d`, `SrcShared/Hardware/EmBankROM.cpp`, function `EmBankROM::LoadROM`**:
+https://github.com/cloudpilot-emu/pose-original/blob/97b10711fe4ca50c1bd47072378eaab26ba8e81d/SrcShared/Hardware/EmBankROM.cpp
+
+It explicitly handles ROM files containing BOTH **Small ROM + Big ROM** and files containing **only Big ROM**. Its algorithm: validate PalmCard header; derive `bigROMOffset` from header for modern versions (or `0x3000` for v1), determine whether a second valid card header exists at the advertised offset; if only Big ROM, reserve the missing prefix in an emulator buffer, relocate the supplied Big ROM accordingly, fill unknown prefix with `0xff` and COPY ONLY the Big ROM header into Small ROM's header position for emulation. It then detects VZ compatibility and derives a *temporary* ROM base from `cardHeader.resetVector & 0xFFF00000` until chip selects are configured. **This is a POSE emulation convenience, NOT proof of authentic Small ROM bytes or physical power-on reset code.** Do not copy GPL implementation into BSD-licensed MAME: reimplement the behavioral contract independently if necessary.
+
+Corroboration: older xcopilot-derived emulators also document that many POSE `.rom` files omit Small ROM; old Palm debugger documentation distinguishes its SmallROM bootstrap from BigROM. These corroborate architecture **across Palm devices**, not Dana's exact protected sector size. Source references:
+- https://www.cypherpunks.ca/zaurus/ (section `QCopilot`; generic Palm, not VZ-specific);
+- https://www.cs.trinity.edu/~jhowland/class.files.cs3194.html/palm-docs/Development%20Tools%20Guide.pdf (SmallROM vs BigROM; consult only necessary excerpt).
+- Historical Dana-source verification in `SamDelorean/Dana-OS3K`, `docs/05-ROM-DANA-ACTUALIZADORES.md`; the original update `Flas` resource data and checksums are already validated.
+
+### C. Exact next engineering task for Codex (DO THE WORK, not another plan)
+
+**C1 — one read-only source/firmware inspection** (no hardware/emulator run needed): reuse `tools/palm_updater_audit.py` (already exists, supports `--candidate-base 0x10008000`) and the actual private US1.5/US1.2 PRCs. Independently parse `CardHeaderType` field offsets using POSE `EmROMReader.cpp` / Palm header definitions, including `bigROMOffset`, `checksumBytes`, and `halCodeOffset`. Determine whether the source stream is solely Big ROM and the actual missing-prefix extent. Check for a second valid PalmCard at advertised offset; compare US1.2 vs US1.5; validate entry branch and disassembly from offsets `0x480A` / `0x4776`. Produce **only hashes/field values/disassembly observations**, not private ROM bytes. Investigate original update programming destination offsets if the header alone does not settle exact physical position.
+
+**C2 — deliver a working emulator mode using the available Big ROM, not a false physical dump.** If the image is Big-ROM-only, implement a **distinct, explicitly labeled `Palm BigROM-assisted` diagnostic boot profile in the SAME DANA DIAG**, without modifying or replacing original physical `-rom` reset semantics. POSE's source is the behavioral research donor, not source code to paste. Map the supplied authentic image at the evidenced base `0x10008000` in the 68k address space, with correct unmapped/unknown prefixes (do not reinterpret `ff` as recovered code). Initialize a **clearly marked synthetic boot context** only as required to enter the authentic card-header reset vector `0x1000c80a` with its defined stack `0x48fe` and compare with 1.2; all following OS instructions, MMIO, LCD, keyboard and SD must execute genuinely in M68000. This mode does NOT count as original hardware cold-boot PASS. Preserve R-direct EmuTOS and stock physical-mode boot. Any unknown required BigROM external bytes must cause a specific reproducible BLOCKED result, never a fake OS interface. If the user prefers strict original cold boot, the next requirement is **independently authenticated original Small ROM boot bytes** from an owned physical ROM dump or separately demonstrable vendor recovery data; inspect existing archive before assuming it cannot contain them.
+
+**C3 — preserve authentic physical boot as a separate pending fidelity target.** Once genuine complete SmallROM contents become available, map full Flash, execute actual CPU reset fetch at original physical vectors and prove transitions from SmallROM to BigROM and then Palm UI. Never quietly use BigROM-assisted injected PC as physical reset, or treat a padded Flash array as a recovered dump. Protect canonical installed DIAG SHA `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`; stage/atomically install only a verified successor.
+
+**C4 — acceptance:** (a) read-only exact header/layout report; (b) visible native MAME 68k PC/SP/SR and guest-produced Palm framebuffer via hardware accesses in the one DIAG; (c) interactive Palm keyboard events using the qualified ST/SPI2, then Palm startup/launcher; (d) no regression to current keyboard/SD/LCD/EmuTOS. For physical fidelity additionally demand byte-authenticated SmallROM and actual reset fetch. On any blocked step, deliver *one* decisive actual guest CPU+bus blocker and the minimum further evidence—not a new program of gates.
+
+**Key distinction**: The *main emulator is required to make authentic Palm OS software run*. POSE-compatible assisted BigROM startup is a valuable intermediate usable result when original reset bootloader was omitted from updater data. It must be labeled as software-assisted, never simulated stock cold boot or host-painted Palm UI. No additional T calls are authorized from this handoff; actual Codex machine access and permissions must come from the user.
+
+---
+
 ## Current native result — 2026-10-25, authorized five-call T intervention
 
 **INCREMENTAL_BUILD_PASS / US15_NATIVE_ROOT_CAUSE_CONFIRMED /
