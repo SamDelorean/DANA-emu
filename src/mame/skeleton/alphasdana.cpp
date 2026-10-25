@@ -55,6 +55,7 @@ public:
         , m_sd(*this, "sd%u", 0U)
         , m_sd_irq(*this, "SDIRQ")
         , m_pd7_pin(*this, "PDPIN7")
+        , m_sdram_profile(*this, "PHYSRAM")
     {
     }
 
@@ -95,6 +96,8 @@ private:
     void physical_mmio_w(offs_t offset, u16 data, u16 mem_mask);
     void physical_w(offs_t offset, u16 data, u16 mem_mask);
     u32 cs_base(unsigned group) const { return u32(m_cs_base[group] & 0xfffe) << 13; }
+    u32 physical_sdram_bytes() const { return (m_sdram_profile->read() & 1) ? 0x1000000U : 0x800000U; }
+    u32 physical_sdram_index(u32 index) const { return index & (physical_sdram_bytes()-1); }
     u32 cs_size(unsigned group) const
     {
         unsigned const siz=(m_cs_select[group] >> 1) & 7;
@@ -349,6 +352,7 @@ private:
     required_device_array<dana_sd_image_device,2> m_sd;
     required_ioport m_sd_irq;
     required_ioport m_pd7_pin;
+    required_ioport m_sdram_profile;
     dana_sd::controller m_spi1;
     emu_timer *m_spi1_timer=nullptr;
     u16 m_spi1_word=0,m_spi1_control=0,m_spi1_received=0,m_ilcr=0x6533;
@@ -361,6 +365,8 @@ private:
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
     u16 m_dram[4]={};
     u8 m_sdram_init_phase=0;
+    // Upper physical SDRAM is separate from the qualified 4 MiB R-direct RAM.
+    std::unique_ptr<u16[]> m_physical_ram_extra;
     u16 m_watchdog=0x0001;
     emu_timer *m_watchdog_guard=nullptr;
     emu_timer *m_clk32_timer = nullptr;
@@ -408,6 +414,9 @@ private:
 
 void alphasdana_state::machine_start()
 {
+    // Allocate only physical-mode upper RAM; R-direct map remains 4 MiB.
+    m_physical_ram_extra=std::make_unique<u16[]>(0x600000);
+    save_pointer(NAME(m_physical_ram_extra),0x600000);
     m_watchdog_guard = timer_alloc(FUNC(alphasdana_state::watchdog_guard), this);
     save_item(NAME(m_watchdog));
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
@@ -688,8 +697,9 @@ u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
             physical_block("DRAM_DISABLED_OR_INIT_READ",address);
             return 0xffff;
         }
-        u32 const index=address-cs_base(3);
+        u32 const index=physical_sdram_index(address-cs_base(3));
         if (index<0x400000) return m_ram[index>>1];
+        if (index<0x1000000) return m_physical_ram_extra[(index-0x400000)>>1];
     }
     physical_block(flash && ram ? "OVERLAPPING_CS" : "EXTERNAL_DECODE_OR_PROTECTION",address);
     return 0xffff; // Terminal unsupported access, never counted as a valid device response.
@@ -706,10 +716,15 @@ void alphasdana_state::physical_w(offs_t offset, u16 data, u16 mem_mask)
         // stores become legal only after IP -> RE -> MR has completed.
         if ((m_dram[2] & 0x8000) && m_sdram_init_phase!=3)
         { physical_block("SDRAM_NOT_INITIALIZED_WRITE",address,data); return; }
-        u32 const index=address-cs_base(3);
+        u32 const index=physical_sdram_index(address-cs_base(3));
         if (index<0x400000)
         {
             COMBINE_DATA(&m_ram[index>>1]);
+            return;
+        }
+        if (index<0x1000000)
+        {
+            COMBINE_DATA(&m_physical_ram_extra[(index-0x400000)>>1]);
             return;
         }
     }
@@ -1713,6 +1728,12 @@ static INPUT_PORTS_START(alphasdana)
     // User-selectable external PD7/IRQ6 level. The Dana board voltage is
     // not established from CPU documentation; default high models a released
     // active-low interrupt line, while low tests the original sleep path.
+    // Original Dana 8 MiB; later Dana 2 and Wireless 16 MiB. The authentic
+    // 68k memory probe decides what exists. Unpopulated addresses mirror RAM.
+    PORT_START("PHYSRAM")
+    PORT_CONFNAME(0x01,0x01,"Dana physical SDRAM (boot profile)")
+    PORT_CONFSETTING(0x00,"8 MiB (original Dana)")
+    PORT_CONFSETTING(0x01,"16 MiB (Dana 2 / Wireless)")
     PORT_START("PDPIN7")
     PORT_CONFNAME(0x80,0x80,"PD7/IRQ6 external level (startup board assumption)")
     PORT_CONFSETTING(0x80,"High / released (boot path)")
