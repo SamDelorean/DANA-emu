@@ -741,9 +741,17 @@ void alphasdana_state::cs_w(offs_t offset, u16 data, u16 mem_mask)
     }
     else
     {
-        COMBINE_DATA(&m_cs_control[offset-5]);
-        u16 const reset=offset==5 ? 0 : 0x1000;
-        if (m_cs_control[offset-5]!=reset) physical_block("CS_CONTROL_MODE",0xfffff100+offset*2,data);
+        // VZ UM 6.3.5/6.3.6: CSCTRL1/2 define memory sizing and bus timing.
+        // Native UK1.5 first writes CSCTRL2=D000, then CSCTRL1=0100.
+        // Store valid fields; electrical wait-state cycles are not synthesized.
+        u16 const defined=offset==5 ? 0x7f55 : 0xf300;
+        u16 const merged=(m_cs_control[offset-5] & ~mem_mask) | (data & mem_mask);
+        if (merged & ~defined)
+        {
+            physical_block("CS_CONTROL_RESERVED_BITS",0xfffff100+offset*2,data);
+            return;
+        }
+        m_cs_control[offset-5]=merged;
     }
 }
 
