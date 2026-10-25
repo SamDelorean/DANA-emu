@@ -267,7 +267,7 @@ j['expected']=len(keys)
 j['module_range']=[start,end]
 if j.get('ui_menu_frames', 0)>0:
  j['status']='FAIL_MAME_UI_MENU'
-elif j.get('host_seen_count', -1)!=81 or j.get('host_missing'):
+elif j.get('host_seen_count', -1)!=len(keys) or j.get('host_missing'):
  j['status']='FAIL_HOST_KEY_INPUT'
 elif j.get('cpu_guest_poll_count_mod65536',0)==0:
  j['status']='FAIL_GUEST_CPU_SPI2'
