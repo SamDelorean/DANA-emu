@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-24",
+  "product": "DANA-emu ST full 81 physical keys",
+  "one_full_guest_CPU_campaign": true,
+  "guest_firmware": "temporary MC68000 DANARAM1 native test fixture over real SPI2; EmuTOS boot separately proven, interactive typing NOT proven",
+  "result": "FULL_CPU_GUEST_NOT_QUALIFIED",
+  "deployed": "NO",
+  "installed_sha256": "254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6",
+  "candidate_sha256": "0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a",
+  "command_rc": "30",
+  "log_tail": [
+    "ST81_CPU_GUEST_EXIT 3",
+    "No CPU guest keyboard result"
+  ]
+}
