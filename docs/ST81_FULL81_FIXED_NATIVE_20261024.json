@@ -177,5 +177,18 @@
     "Warning: -video none doesn't make much sense without -seconds_to_run",
     "Soft reset",
     "[:] DANA_GUEST_LOAD entry=00002140 stack=00001000 bytes=232 sha1=b2d71592b33bcb89cae73caa180dc609a2ff89b9 profile=R-direct phystop=00400000"
-  ]
+  ],
+  "reordered_integral_run": {
+    "result": "FAIL",
+    "physical_keys_tested": 81,
+    "scans_seen": 15,
+    "releases": 15,
+    "chords_seen": 0,
+    "guest_cpu_poll_count_mod65536": 41046,
+    "guest_spi2_reads": 7115,
+    "compiled_candidate_installed": false,
+    "evidence_path_on_T": "/tmp/DANA_ST81_COMPLETE_REORDER_20261024/keyboard.json"
+  },
+  "comparison": "Both 81-key sweeps stopped after 15 guest scan codes. Fifteenth original host key was F3 (MAME soft reset); fifteenth reordered was F4 (MAME graphics viewer/rewind). Strong UI-hotkey collision suspicion, not proven.",
+  "last_status": "NOT_QUALIFIED; sole operating DIAG remains D7.5"
 }
