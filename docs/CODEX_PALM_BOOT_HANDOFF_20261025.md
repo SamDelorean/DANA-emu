@@ -1,5 +1,14 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## CODEX CLOSED IODCR IMPLEMENTATION — LATEST T NATIVE RESULT (2026-10-25)
+
+**Authoritative new research / real native failure:** `docs/PALM_UK15_NATIVE_IODCR_20261025.md` commit `ae61602`, prepared HERE, not delegated to Codex. Canonical ICE implementation `main@4ab1bd07` source SHA256 `1275509bbe091e23fd67d3a42d00cce0b332c662ef66224edcbbc024bce8e0e2` verified and built Clang21 in sole T DIAG; native staged candidate SHA256 `ea3644db575bbf0d41fc53cadf5b9df25e7f9174c07446bfb635f0a6281329e2`; installed operating binary SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a` unchanged. Real UK1.5 M68000 reset SSP `00000316`, PC `100002A2`, native SCR, WATCHDOG, PLLCR, ICEMCR=0008, ICEMSR write0007=>0000, IVR and IMR both words PASS. **First new native block `CURPC=1000517C`** is 16-bit write `0000`, mask `FFFF`, to `FFFFF008` (`IODCR`), `MMIO_WRITE_UNIMPLEMENTED`; prefetch PC `10005182`, SR `2704`. Manufacturer **MC68VZ328UM §5.2.4 Table5-4**: IODCR 16-bit I/O drive-strength register at `FFFFF008-9`, reset `1FFF`, writable mask `1FFF`, 0 selects 2mA pads, 1 selects 4mA. This operation changes electrical drive strength only, NOT GPIO logical latches/selection, CS, RAM or clocking.
+
+**CODEX CODE ONLY, ONE CLOSED INCREMENT**: add m_iodcr default/reset `0x1FFF`, state saving, physical high-MMIO decoder at `FFFFF008`, correct word/high/low byte-lane read/write and defined bits masked `0x1FFF`; no invented analog pad currents or generic MMIO RAM. Preserve every previously closed path/byte coverage. Focused local tests & publish main; GPT handles T compile and native UK1.5 -rom and investigates next actual CPU bus failure. Do NOT research with Ghidra or implement speculative registers. Real Palm UI is not reached. This note adds no remote authorization.
+
+---
+
+
 ## ICE pair code delivery — GPT native validation pending
 
 Closed implementation of the ICEMCR/ICEMSR contract in
