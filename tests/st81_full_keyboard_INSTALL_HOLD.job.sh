@@ -11,13 +11,11 @@ ROOT=/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag
 SRC="$ROOT/source"
 OPER="$ROOT/bin/dana-diag"
 CANDIDATE="$SRC/danadiagd"
-GUEST=/home/spc/DANA_EMU_ISOLATED/DIAG_EVIDENCE_ARCHIVE/DANA_GUI024C_20261023/emutos_calibrated_gem.dana
 DRIVER_BLOB=35a6a786932adb993e3e37f9df8d4a50176eed83
-RUNNER_REV=b0d6e8aa19f45e9505d63fc1d509e8de4f913621
-RUNNER_BLOB=eb504bb248b66d09224b001a78828923d07c4c6a
+RUNNER_REV=df32f081bc30a1057c6cbc642a91e28b147a0930
+RUNNER_BLOB=1e5aac6fc9ba15d833602c3ab77c90fafd3551c7
 INSTALLED_SHA=254c834e1a1137bc52044171685971d190b69e2b7b78c6ba992d2c582ed6eda6
 CANDIDATE_SHA=0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a
-GUEST_SHA=eaf3d25cd32a21a9bcfa5cb71756dba749d611c73ed88259444a8ca7aabf67cd
 STAGE=''
 cleanup() { if [[ -n "$STAGE" ]]; then rm -f "$STAGE"; fi; }
 trap cleanup EXIT
@@ -25,26 +23,22 @@ trap cleanup EXIT
 # Fail closed: the old working writable-SD emulator remains installed.
 test "$(sha256sum "$OPER" | cut -d' ' -f1)" = "$INSTALLED_SHA"
 test "$(sha256sum "$CANDIDATE" | cut -d' ' -f1)" = "$CANDIDATE_SHA"
-test "$(sha256sum "$GUEST" | cut -d' ' -f1)" = "$GUEST_SHA"
 test "$(git hash-object "$SRC/src/mame/skeleton/alphasdana.cpp")" = "$DRIVER_BLOB"
 
 # One unique evidence directory, but no alternate emulator tree.
 EVIDENCE=$(mktemp -d /tmp/DANA_ST81_ALL81_PRODUCT_XXXXXXXX)
 echo "ST81_EVIDENCE=$EVIDENCE"
 curl -fsSL --max-time 40 \
-  "https://raw.githubusercontent.com/SamDelorean/DANA-emu/$RUNNER_REV/tests/st81_full_keyboard_native.py" \
+  "https://raw.githubusercontent.com/SamDelorean/DANA-emu/$RUNNER_REV/tests/st81_native_guest_all81.py" \
   -o "$EVIDENCE/runner.py"
 test "$(git hash-object "$EVIDENCE/runner.py")" = "$RUNNER_BLOB"
 python3 -m py_compile "$EVIDENCE/runner.py"
-install -m 664 "$EVIDENCE/runner.py" "$SRC/tests/st81_full_keyboard_native.py"
 
-# Exactly one full interactive guest-CPU campaign, not 81 independent tests.
+# ONE complete 81-key real M68000 guest CPU/SPI2 campaign, no rebuilds.
+# Guest quickload and complete scan/chord testing are inside runner.py.
 set +e
-SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 330s \
-  python3 "$SRC/tests/st81_full_keyboard_native.py" \
-  --diag "$CANDIDATE" --guest "$GUEST" \
-  --source "$SRC/src/mame/skeleton/alphasdana.cpp" \
-  --output "$EVIDENCE/session" >"$EVIDENCE/native.stdout" 2>"$EVIDENCE/native.stderr"
+ST81_NATIVE_OUTPUT="$EVIDENCE/session" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 330s \
+  python3 "$EVIDENCE/runner.py" >"$EVIDENCE/native.stdout" 2>"$EVIDENCE/native.stderr"
 RC=$?
 set -e
 echo "ST81_NATIVE_RC=$RC"
@@ -60,16 +54,18 @@ python3 - "$EVIDENCE/session/keyboard.json" <<'PY'
 import json,sys
 a=json.load(open(sys.argv[1]))
 assert a['status']=='PASS',a.get('status')
-assert a['guest_boot_trace_confirmed'] is True
-assert a['expected_physical_keys']==81
-assert a['host_inputs_seen']==81
-assert len(a['scans_seen'])==81 and not a['missing']
-assert len(a['chords_seen'])==5 and a['releases']>=81
-assert a['guest_data_reads']>0 and a['guest_control_reads']>0
-print('ST81_FULL_PHYSICAL_81_PRESS_RELEASE_MODIFIERS_CPU_SPI2_PASS')
+assert a['expected']==81
+assert a['host_seen_count']==81 and not a['host_missing']
+assert a['ui_menu_frames']==0 and a['ui_active_frames']==0
+assert a['paused_frames']==0
+assert len(a['seen'])==81 and not a['missing']
+assert len(a['chords'])==5 and a['releases']>=81
+assert a['cpu_spi2_reads']>0 and a['cpu_guest_poll_count_mod65536']>0
+print('ST81_FULL_81_PHYSICAL_KEYS_PRESS_RELEASE_CHORDS_GUEST_CPU_PASS')
 PY
 
-# Only on complete PASS atomically replace the one operational emulator.
+# ONLY a complete 81-key guest CPU PASS may replace the single operational DIAG.
+# Native EmuTOS typing is a separate unqualified usability claim, not fabricated here.
 test "$(sha256sum "$OPER" | cut -d' ' -f1)" = "$INSTALLED_SHA"
 STAGE="$ROOT/bin/.dana-diag-ST81-$$"
 install -m 700 "$CANDIDATE" "$STAGE"
