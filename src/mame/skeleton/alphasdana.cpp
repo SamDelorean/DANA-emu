@@ -178,6 +178,9 @@ private:
     // VZ Port C direction: each bit 0=input, 1=output; PCSEL may override the pin.
     u8 pcdir_r() { return m_pcdir; }
     void pcdir_w(u8 data) { m_pcdir = data; }
+    // Fail closed on unimplemented adjacent PCDATA (odd/low byte).
+    u8 pcdata_unknown_r() { physical_block("PCDATA_READ_UNIMPLEMENTED",0xfffff411); return 0xff; }
+    void pcdata_unknown_w(u8 data) { physical_block("PCDATA_WRITE_UNIMPLEMENTED",0xfffff411,data); }
     u8 pcpden_r() { return m_pcpden; }
     void pcpden_w(u8 data) { m_pcpden = data; }
     u8 pcsel_r() { return m_pcsel; }
@@ -1488,7 +1491,8 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
     m_boot_memory[1](0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
-    m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w));
+    m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
+    m_boot_memory[1](0xfffff411,0xfffff411).rw(FUNC(alphasdana_state::pcdata_unknown_r),FUNC(alphasdana_state::pcdata_unknown_w)).umask16(0x00ff);
     m_boot_memory[1](0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
     m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
     m_boot_memory[1](0xfffffd0c,0xfffffd0d).rw(FUNC(alphasdana_state::icemcr_r),FUNC(alphasdana_state::icemcr_w));
