@@ -1,5 +1,11 @@
 # Codex takeover — DANA-emu authentic Palm OS boot (2026-10-25)
 
+## IODCR NATIVE PASS — NEXT REAL BLOCKER PCDIR (2026-10-25)
+
+**LATEST AUTHORITATIVE GPT T EXECUTION:** `docs/PALM_UK15_NATIVE_PCDIR_20261025.md` (commit `03063ab8`), with manufacturer-verified closed Codex task. Codex IODCR `main@613fc465` controller SHA256 `5a627f2e97564a3452f0a70ec99e6023b8d34a14c6a8afabe289b1321644fab7` is present in the sole T DIAG. **The previously built `source/danadiagd` candidate SHA256 `01a9d6eb817221537f03dc6041b5efae061c5af512d519f3a19427a77ccc2872` was reused WITHOUT recompilation.** Private UK1.5 SHA256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3` and existing read-only CPU observer reused, with verified hashes. Installed `bin/dana-diag` SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a` unchanged. Real M68000 bus writes `0x0000`, mask `0xFFFF`, to IODCR `0xFFFFF008` at `CURPC=0x1000517C` and continues: **IODCR NATIVE PASS** (no independent subsequent readback claimed). **New first real blocker** guest `CURPC=0x100051A0`, prefetched `PC=0x100051A6`, `IR=0x117C`, `SR=0x2704`, byte high/even write `0x00`, MAME mask `0xFF00`, at `0xFFFFF410`: `MMIO_WRITE_UNIMPLEMENTED`. Manufacturer MC68VZ328UM §10.4.3.1, Table 10-12 confirms **PCDIR (Port C Direction Register)**, 8-bit R/W reset `0x00`; 0=input, 1=output; dedicated LCD pins use `PCSEL` and ignore DIR pin behavior. **NEXT CODEX CODE ONLY:** implement real PCDIR in physical MMIO, reset/save and true 8-bit semantics; preserve preexisting nearby PCPDEN/PCSEL, R-direct, LCD/SD/ST etc. No speculative PCDATA or generic MMIO RAM. Codex local tests + publish `main`; GPT handles next T compilation and native first-blocker analysis. Original UK1.5 Palm OS UI has **NOT BOOTED**. This note grants no remote authorization.
+
+---
+
 ## IODCR code delivery — GPT native validation pending
 
 Implemented only the closed IODCR increment from
