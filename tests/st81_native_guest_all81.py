@@ -14,13 +14,19 @@ def load(path,name):
  return mod
 d7=load(SRC/'tests/d7_5_native.py','d7_keyboard_fixture')
 runner=load(SRC/'tests/st81_full_keyboard_native.py','st81_inventory')
-keys=runner.inventory((SRC/'src/mame/skeleton/alphasdana.cpp').read_text())
-assert len(keys)==81 and len(set(row[2] for row in keys))==81
+allkeys=runner.inventory((SRC/'src/mame/skeleton/alphasdana.cpp').read_text())
+assert len(allkeys)==81 and len(set(row[2] for row in allkeys))==81
+start=int(os.environ.get('ST81_KEY_START','1'))
+end=int(os.environ.get('ST81_KEY_END','81'))
+assert 1<=start<=end<=81
+keys=allkeys[start-1:end]
 c=d7.Code()
 c.move_b(0x40,0xfffff409)
 c.move_b(0,0xfffff409)
 c.move_b(0,0xfffff421)
-c.move_w(0,d7.MARKER+6)  # initialise real guest poll counter
+c.move_w(0,d7.MARKER+6)  # guest-owned CPU poll count
+c.move_w(0,d7.MARKER+10)  # guest-owned raw nonzero ST reply count
+c.w(0x41f9);c.l(0x22000)  # LEA reply ledger,A0
 c.label('poll')
 c.move_w(0,0xfffff800)
 c.move_w(0x2200,0xfffff802)
@@ -29,6 +35,12 @@ c.w(0x3039);c.l(0xfffff800)
 # The real M68000 guest records each SPI2 response to RAM independently
 # from the passive Lua observer.
 c.record(d7.MARKER+4)
+# Persist nonzero SPI2 byte in guest RAM; Lua memory taps are not reliable
+# across long-running sessions and do not establish that the CPU stopped.
+c.w(0x4a40)  # TST.W D0
+c.w(0x6708)  # BEQ.S after the 2+6 byte ledger update
+c.w(0x30c0)  # MOVE.W D0,(A0)+
+c.w(0x5279);c.l(d7.MARKER+10)  # ADDQ.W #1,reply count
 c.w(0x5279);c.l(d7.MARKER+6)  # ADDQ.W #1,absolute long
 c.w(0x3e3c,127)  # bounded short delay; avoid starving subsequent host frame events
 c.label('delay')
@@ -70,7 +82,23 @@ for i,pair in ipairs(combos) do
    pairfields[i][#pairfields[i]+1]=j
   end
  end
- assert(#pairfields[i]==2)
+ if #pairfields[i]~=2 then pairfields[i]={} end
+end
+local active_combos={}
+for i,pair in ipairs(combos) do
+ if #pairfields[i]==2 then
+  active_combos[#active_combos+1]=pair
+ end
+end
+combos=active_combos
+pairfields={}
+for i,pair in ipairs(combos) do
+ pairfields[i]={}
+ for j,k in ipairs(keys) do
+  if k.scan==pair[1] or k.scan==pair[2] then
+   pairfields[i][#pairfields[i]+1]=j
+  end
+ end
 end
 local tap=bus:install_read_tap(0xfffff800,0xfffff801,"st81_cpu_spi2",function(offset,data,mask)
  local v=data & 255
@@ -102,8 +130,12 @@ local first_combo=first+#keys*interval+45
 local combo_interval,combo_hold=55,34
 local stop=first_combo+#combos*combo_interval+80
 local previous,active_combo=0,0
+local guest_polls_mid=0
+local guest_polls_late=0
 emu.register_frame_done(function()
  frames=frames+1
+ if frames==math.floor(stop/2) then guest_polls_mid=bus:read_u16(0x20006) end
+ if frames==stop-50 then guest_polls_late=bus:read_u16(0x20006) end
  if ui.menu_active then
   ui_menu_frames=ui_menu_frames+1
   if first_menu_frame==0 then first_menu_frame=frames end
@@ -146,6 +178,41 @@ emu.register_frame_done(function()
  if frames>=stop then
   guest_last_reply=bus:read_u16(131076)
   guest_poll_count=bus:read_u16(131078)
+  -- The CPU writes the authoritative ST response stream into RAM.
+  -- The read tap remains supplementary and cannot veto native CPU evidence.
+  local guest_recorded=math.min(bus:read_u16(0x2000a),4096)
+  local ledger={}
+  for i=0,guest_recorded-1 do
+   ledger[#ledger+1]=bus:read_u16(0x22000+i*2) & 0xff
+  end
+  seen={}
+  chords={}
+  header_count=0
+  release_count=0
+  local remaining_ledger=0
+  local packet={}
+  for _,v in ipairs(ledger) do
+   if remaining_ledger>0 then
+    seen[v]=true
+    packet[#packet+1]=v
+    remaining_ledger=remaining_ledger-1
+    if remaining_ledger==0 then
+     for j,pair in ipairs(combos) do
+      local a,b=false,false
+      for _,scan in ipairs(packet) do
+       if scan==pair[1] then a=true end
+       if scan==pair[2] then b=true end
+      end
+      if a and b then chords[j]=true end
+     end
+    end
+   elseif v>=0x40 and v<=0x48 then
+    header_count=header_count+1
+    remaining_ledger=v-0x40
+    packet={}
+    if remaining_ledger==0 then release_count=release_count+1 end
+   end
+  end
   local found,missing,matched={},{},{}
   for _,k in ipairs(keys) do
    if seen[k.scan] then found[#found+1]=k.scan else missing[#missing+1]=k.scan end
@@ -162,6 +229,10 @@ emu.register_frame_done(function()
    table.concat(missing,',')..'],"chords":['..table.concat(matched,',')..
    '],"releases":'..release_count..',"headers":'..header_count..
    ',"cpu_spi2_reads":'..read_count..
+   ',"cpu_reply_ledger_count":'..guest_recorded..
+   ',"expected_chord_count":'..#combos..
+   ',"guest_polls_mid":'..guest_polls_mid..
+   ',"guest_polls_late":'..guest_polls_late..
    ',"last_guest_spi2_frame":'..last_guest_spi2_frame..
    ',"cpu_guest_poll_count_mod65536":'..guest_poll_count..
    ',"cpu_guest_last_spi2_reply":'..guest_last_reply..
@@ -192,16 +263,17 @@ if p.returncode or not (OUT/'keyboard.json').is_file():
  raise SystemExit('No valid native CPU guest keyboard result')
 
 j=json.loads((OUT/'keyboard.json').read_text())
-j['expected']=81
+j['expected']=len(keys)
+j['module_range']=[start,end]
 if j.get('ui_menu_frames', 0)>0:
  j['status']='FAIL_MAME_UI_MENU'
 elif j.get('host_seen_count', -1)!=81 or j.get('host_missing'):
  j['status']='FAIL_HOST_KEY_INPUT'
-elif j.get('last_guest_spi2_frame',0)<j.get('frames',0)-100:
- j['status']='FAIL_GUEST_POLL_STALL'
 elif j.get('cpu_guest_poll_count_mod65536',0)==0:
  j['status']='FAIL_GUEST_CPU_SPI2'
-elif len(j['seen'])!=81 or j['missing'] or len(j['chords'])!=5 or j['releases']<81:
+elif j.get('cpu_reply_ledger_count',0)==0 or j.get('guest_polls_mid')==j.get('guest_polls_late'):
+ j['status']='FAIL_CPU_GUEST_LEDGER'
+elif len(j['seen'])!=len(keys) or j['missing'] or len(j['chords'])!=j['expected_chord_count'] or j['releases']<len(keys):
  j['status']='FAIL_ST_KEY_PACKETS'
 else:
  j['status']='PASS'
