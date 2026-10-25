@@ -196,7 +196,7 @@ def main():
            '-autoboot_script', str(script), '-autoboot_delay', '0',
            '-video', 'none', '-sound', 'none', '-nothrottle',
            '-skip_gameinfo', '-nowriteconfig']
-    finished = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    finished = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd='/tmp')
     (a.output/'mame.stdout').write_text(finished.stdout[-200000:])
     (a.output/'mame.stderr').write_text(finished.stderr[-200000:])
     if finished.returncode or not report.exists():
