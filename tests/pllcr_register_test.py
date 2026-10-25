@@ -70,7 +70,8 @@ constexpr bool checks(){
     || wake.pllcr_r()!=0x24b3)return false;
  alphasdana_state physical;
  physical.m_physical_boot=true;
- if(physical.physical_system_clock_hz()!=16580608)return false; // VZ reset clock
+ if(physical.physical_system_clock_hz()!=16580608)return false;
+ physical.cpu.hz=physical.physical_system_clock_hz(); // physical_reset already sets CPU clock. // VZ reset clock
  physical.pllcr_w(0,0x24a3,0xffff);
  if(physical.blocked || physical.cpu.hz!=16580608)return false;
  physical.pllcr_w(0,0x22a3,0xffff); // UK1.5 @ CURPC 100053e4
