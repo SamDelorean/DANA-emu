@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """One real M68000 SPI2 full 81-key fixture, no shortcut MAME reads."""
-import importlib.util, json, subprocess, hashlib
+import importlib.util, json, subprocess, hashlib, os
 from pathlib import Path
 SRC=Path('/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag/source')
 BIN=SRC/'danadiagd'
-OUT=Path('/tmp/DANA_ST81_M68K_ALL81_20261024')
+OUT=Path(os.environ.get('ST81_NATIVE_OUTPUT', '/tmp/DANA_ST81_M68K_ALL81_20261024'))
 assert not OUT.exists(), 'Existing evidence, refuse overwrite'
 assert hashlib.sha256(BIN.read_bytes()).hexdigest()=='0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a'
 def load(path,name):
@@ -41,7 +41,7 @@ template=r'''
 local machine=manager.machine
 local cpu=assert(machine.devices[":maincpu"])
 local bus=assert(cpu.spaces["program"])
-local keys=__ENTRIES__
+local keys={__ENTRIES__}
 local fields={}
 for i,k in ipairs(keys) do
  fields[i]=assert(machine.ioport.ports[k.tag].fields[k.name],"Missing "..k.name)
