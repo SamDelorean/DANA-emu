@@ -1,7 +1,7 @@
 -- SPDX-License-Identifier: BSD-3-Clause
 -- Read-only observer for the existing dana-diag -rom profile. No CPU writes.
 -- DANA_PALM_TRACE must name a private output file outside the repository.
-local trace, cpu, taps
+local trace, cpu, taps, stop_notifier
 local count = 0
 local limit = 512
 
@@ -20,7 +20,7 @@ local function record(kind, address, data, mask)
     trace:flush()
 end
 
-emu.register_start(function()
+local function start()
     local path = assert(os.getenv('DANA_PALM_TRACE'), 'DANA_PALM_TRACE is required')
     cpu = assert(manager.machine.devices[':maincpu'], 'Dana CPU missing')
     assert(cpu.state['SP'], 'Native M68000 SP binding missing')
@@ -40,17 +40,21 @@ emu.register_start(function()
             record('WRITE', a, d, m)
         end)
     }
-end)
+end
 
-emu.register_frame_done(function()
-    if trace then record('FRAME_SAMPLE', 0, 0, 0) end
-end)
+-- This is an autoboot script: machine_start has already happened.
+start()
 
-emu.register_stop(function()
+stop_notifier = emu.add_machine_stop_notifier(function()
     if trace then
         trace:write('observer_stopped events=' .. count .. ' full_boot=UNPROVEN\n')
         trace:close()
         trace = nil
     end
     taps = nil
+end)
+
+emu.register_frame_done(function()
+    -- Retain the notifier subscription as well as the memory-tap handles.
+    if stop_notifier and trace then record('FRAME_SAMPLE', 0, 0, 0) end
 end)

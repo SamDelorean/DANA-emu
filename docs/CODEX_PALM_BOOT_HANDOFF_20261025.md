@@ -2,7 +2,82 @@
 
 **This file is the complete executable work brief for Codex. Start implementation, not a proposal or additional handoff.** User-facing conversation: Spanish. Git commits, code and repository technical records: English.
 
-## Continuation result — 2026-10-25 (Cloud source work, no native run)
+## Current native result — 2026-10-25, authorized five-call T intervention
+
+**INCREMENTAL_BUILD_PASS / US15_NATIVE_ROOT_CAUSE_CONFIRMED /
+ORIGINAL_BINARY_RESTORED / PALM_UI_NOT_BOOTED.**
+
+The user explicitly renewed authorization for **up to five Desktop Commander
+calls** after the source-only stage below. Exactly **5/5** were used:
+preflight, exact-match staging plus make dry-run, incremental build/qualification,
+process output, and error readback plus native retry. No sixth call or remote
+operation remains running from this intervention.
+
+Preflight independently verified installed SHA
+`0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`,
+original driver SHA
+`bcd61b82ae7259613a853b329b3b0586e13b68387e3192c24fde3c1e72afbe4b`,
+and original US15/US12/US15 PRC sizes and hashes. Only the two exact-matching
+physical diagnostic methods were replaced in the existing T source. Modified
+driver SHA is
+`beb460df6e04013d1bc24c542b89276a088cf06fc0e96e52fedd566c57cc7eda`.
+The old private US15 attempt was still running after **09:41:20**; only its
+verified wrapper/timeout/emulator PIDs 25124/25198/25199 were terminated, avoiding
+its wrapper automatically launching the next obsolete trial.
+
+The make dry-run selected one driver compilation. Actual **Clang 21.1.8 build
+exit 0** compiled `alphasdana.cpp`, archived `libmame_danadiag.a` and linked the
+same `danadiagd` intermediate, using the existing cache and command recorded in
+[the existing receipt](PALM_UPDATER_DERIVED_COLD_BOOT_20261025.json).
+Candidate executable SHA:
+`7d5f9bbe05311e093ea1e4f512927977daba1b459a3a00d41ad9417b147c763e`.
+No donor tree, emulator variant or new branch was created.
+
+Candidate tests used only the canonical `bin/dana-diag` path, with an exact
+non-executable backup and unconditional restoration. The first US15 and US12
+attempts exited **3** because this MAME exposes **no `emu.register_stop`**.
+They did enumerate the actual CPU states, including SP and excluding A7, but
+failed before guest tracing. This was an observer defect, not a new guest
+hardware failure. A second defect was fixed locally: autoboot scripts run after
+machine start, so registration of a later start callback cannot attach to the
+current session. The final source observer starts immediately and uses
+`emu.add_machine_stop_notifier`, retaining its subscription. Its updated mocked
+API test rejects unsupported API names. **That final observer fix has not been
+redeployed or retested natively; the five calls are exhausted.**
+
+The fifth call repeated **US15 without Lua or debugger**, using the same
+preexisting padded zero-origin experimental array; no new or repaired image was
+created. One virtual second, **process exit 0**, produced:
+```
+DANA_PHYSICAL_WRITE address=00000000 data=0000 mask=ff00
+DANA_PHYSICAL_BLOCKED reason=FLASH_COMMAND_SET_UNVERIFIED address=00000000 data=0000 pc=1000c812
+DANA_PHYSICAL_CPU curpc=1000c80e ir=244c sp=000048fe usp=00000000 sr=2704 a4=00000000
+DANA_PHYSICAL_DECODE csa=00b0 csd=0200 csgba=0000 csgbd=0000 csugba=0000 csctrl=0000/1000/9c00 dram=0000/0000/003c/0000
+```
+This **natively confirms CLR.B (A4) at 0x1000C80E**, writing the upper byte lane
+at address zero with A4=0. It is the static PrvConvertIToA instruction found
+below. `IR=244C` is the *next prefetched instruction*, not CLR.B's opcode:
+pinned MAME `m68000-sdf.cpp::clr_b_ais_df` advances m_ir/m_pc before issuing
+the data write. CURPC, lane mask, register and disassembly must be considered
+together. No RAM/Flash bypass is justified by this failure. US12 has matching
+static placement evidence but **no successful native trace** in this campaign.
+
+**Remaining authenticated-input dependency:** the updater payload's evidenced
+placement at 0x10008000 leaves the original initial Flash prefix and separate
+reset/header contents unidentified, preceding offset 0x8000. No part geometry,
+protected-sector values, physical reset vectors or bytes were invented. Correct
+payload placement alone does not establish a complete physical Flash image.
+The root cause of the old first write is now observed, but authentic Palm UI
+boot remains **false**, not a PASS inferred from exit code 0.
+
+Final readback independently measured restored canonical binary SHA
+`0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`.
+The candidate was **not promoted**. Its intermediate and private build/receipt
+files remain inside the same DIAG root at `work/palm-boot-5080ce9`.
+No unrelated ST81, SD or GUI campaign was rerun. Existing peripheral code is
+unchanged; diagnostic success does not requalify all peripherals.
+
+## Historical source-only result — 2026-10-25 (before renewed T authorization)
 
 **STATIC_ROOT_CAUSE_EVIDENCE / DIAGNOSTICS_IMPLEMENTED / PALM_NOT_BOOTED.**
 

@@ -15,11 +15,10 @@ function bus:install_write_tap(_, _, _, callback)
 end
 cpu.spaces.program = bus
 manager = {machine = {devices = {[':maincpu'] = cpu}}}
-emu = {
-    register_start = function(f) callbacks.start = f end,
+emu = setmetatable({
     register_frame_done = function(f) callbacks.frame = f end,
-    register_stop = function(f) callbacks.stop = f end
-}
+    add_machine_stop_notifier = function(f) callbacks.stop = f; return {} end
+}, {__index = function(_, key) error('Unsupported MAME API: ' .. key) end})
 os.getenv = function(name) assert(name == 'DANA_PALM_TRACE'); return 'mock-private-trace' end
 io.open = function(path, mode)
     assert(path == 'mock-private-trace' and mode == 'w')
@@ -30,7 +29,7 @@ io.open = function(path, mode)
     }
 end
 dofile('tools/palm_boot_observer.lua')
-callbacks.start()
+assert(callbacks.start == nil) -- autoboot must attach to the running machine
 assert(tap_callbacks.read(0, 0x48fe, 0xffff) == nil)
 assert(tap_callbacks.write(0, 0, 0xff00) == nil)
 callbacks.frame()

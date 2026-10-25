@@ -82,5 +82,128 @@
       "stdout_missing": true
     }
   },
-  "installed_diag_sha256": "0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a"
+  "installed_diag_sha256": "0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a",
+  "continuation_20261025": {
+    "source_commit": "5080ce9935464810de88fd4e183cde5f6791b878",
+    "remote_calls_authorized": 5,
+    "remote_calls_used": 5,
+    "device": "spc-HP-t640-Thin-Client",
+    "work_directory": "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag/work/palm-boot-5080ce9",
+    "source_sha256": "beb460df6e04013d1bc24c542b89276a088cf06fc0e96e52fedd566c57cc7eda",
+    "build": {
+      "rc": 0,
+      "compiler": "Clang 21.1.8",
+      "compiled_files": [
+        "src/mame/skeleton/alphasdana.cpp"
+      ],
+      "other_steps": [
+        "Archiving libmame_danadiag.a",
+        "Linking danadiagd"
+      ],
+      "command": [
+        "make",
+        "-j3",
+        "TARGET=mame",
+        "SUBTARGET=danadiag",
+        "SOURCES=src/mame/skeleton/alphasdana.cpp",
+        "BUILDDIR=build/dana-diag",
+        "DEBUG=1",
+        "PRECOMPILE=0",
+        "TOOLS=0",
+        "USE_QTDEBUG=0",
+        "OVERRIDE_CC=clang-21",
+        "OVERRIDE_CXX=clang++-21",
+        "OVERRIDE_LD=clang++-21"
+      ],
+      "candidate_sha256": "7d5f9bbe05311e093ea1e4f512927977daba1b459a3a00d41ad9417b147c763e"
+    },
+    "stale_prior_experiment": {
+      "pids_stopped": [
+        25124,
+        25198,
+        25199
+      ],
+      "observed_guest_elapsed": "09:41:20",
+      "scope": "Prior private updater-only Palm experiment, identities checked before stop"
+    },
+    "observer_attempts": {
+      "tags": [
+        "US15",
+        "US12"
+      ],
+      "rc": 3,
+      "native_trace_captured": false,
+      "error": "observer.lua:57: attempt to call a nil value (field 'register_stop')",
+      "available_state_names": [
+        "A0",
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6",
+        "CURFLAGS",
+        "CURPC",
+        "D0",
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7",
+        "IR",
+        "PC",
+        "SP",
+        "SR",
+        "USP"
+      ],
+      "local_fix": "Use actual add_machine_stop_notifier subscription and attach immediately for autoboot; mock test now rejects unsupported APIs",
+      "fixed_observer_native_retest": false,
+      "fixed_observer_deployed_to_T": false
+    },
+    "native_retry": {
+      "tag": "US15",
+      "rc": 0,
+      "cli": [
+        "/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag/bin/dana-diag",
+        "asmdana",
+        "-rom",
+        "/tmp/DANA_PALMOS_NATIVE_BOOT.3YyuVIg0/US15.emu_only_padded.bin",
+        "-noreadconfig",
+        "-nowriteconfig",
+        "-video",
+        "none",
+        "-sound",
+        "none",
+        "-nothrottle",
+        "-skip_gameinfo",
+        "-seconds_to_run",
+        "1",
+        "-log",
+        "-oslog"
+      ],
+      "observer": false,
+      "debugger": false,
+      "seconds_to_run": 1,
+      "image_qualification": "PREEXISTING_PADDED_UPDATER_EXPERIMENT_NOT_PHYSICAL_DUMP",
+      "original_sha256": "fbba62000334bdb2faf352bdb899591c999528b3d631a4645c2dfce581e11059",
+      "events": [
+        "DANA_PHYSICAL_IMAGE bytes=8388608 sha1=c9c0ce6a1653ac761e5188a1454b99bad1ac06d8 read_only=1 topology=linear_array_unqualified",
+        "DANA_PHYSICAL_RESET vectors=firmware CSA=00b0 CSCTRL2=1000 CSCTRL3=9c00",
+        "DANA_PHYSICAL_WRITE address=00000000 data=0000 mask=ff00",
+        "DANA_PHYSICAL_BLOCKED reason=FLASH_COMMAND_SET_UNVERIFIED address=00000000 data=0000 pc=1000c812",
+        "DANA_PHYSICAL_CPU curpc=1000c80e ir=244c sp=000048fe usp=00000000 sr=2704 a4=00000000",
+        "DANA_PHYSICAL_DECODE csa=00b0 csd=0200 csgba=0000 csgbd=0000 csugba=0000 csctrl=0000/1000/9c00 dram=0000/0000/003c/0000"
+      ],
+      "ir_caveat": "IR=244c is the next prefetched instruction, not the opcode of CLR.B at CURPC; confirmed from MAME clr_b_ais implementation",
+      "diagnostic_verdict": "PASS_SNAPSHOT_CAPTURE",
+      "palm_boot": false
+    },
+    "final_installed_sha256": "0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a",
+    "original_installed_binary_restored": true,
+    "candidate_promoted": false,
+    "remaining_dependency": "Authentic initial Flash prefix and reset contents preceding evidenced payload placement at 0x10008000; no fabricated prefix permitted",
+    "full_boot": false
+  }
 }
