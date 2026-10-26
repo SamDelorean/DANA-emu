@@ -102,7 +102,7 @@ int main() {
  Model d;
  // Original 68000 TST.L FB00 must see a 32-bit clock value, high then low.
  if(d.rtc_time_r(0)!=0 || d.rtc_time_r(1)!=0) return 1;
- d.rtc_time_w(0,0x1234,0xffff); // invalid hour or reserved high bits
+ d.rtc_time_w(0,0x1834,0xffff); // invalid hour 24
  if(!d.blocked || d.m_rtc_time) return 2;
  d.blocked=false;
  d.rtc_time_w(0,0x1230,0xffff); // 18h 48min
