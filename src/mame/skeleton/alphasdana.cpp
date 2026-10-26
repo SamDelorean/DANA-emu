@@ -83,7 +83,13 @@ private:
     u8 pd_r(offs_t reg);
     void pd_w(offs_t reg,u8 value);
     u8 pd_extra_r(offs_t reg) { return m_pd_extra[reg]; }
-    void pd_extra_w(offs_t reg,u8 value) { m_pd_extra[reg]=value; sd_gpio_irq(); }
+    void pd_extra_w(offs_t reg,u8 value)
+    {
+        // PDPOL, PDIRQEN and PDIRQEG have only four defined bits.
+        // PDKBEN (reg 2) alone is an eight-bit register.
+        m_pd_extra[reg] = reg==2 ? value : (value & 0x0f);
+        sd_gpio_irq();
+    }
     u16 ilcr_r() { return m_ilcr; }
     void ilcr_w(offs_t,u16 data,u16 mem_mask)
     { COMBINE_DATA(&m_ilcr); m_ilcr&=0x7777; spi1_irq(); }
@@ -715,9 +721,10 @@ void alphasdana_state::machine_reset()
     m_pctlr = 0x1f;
     m_pwm1_control=0x0020;
     m_clk32_high = false;
-    // As in the pinned MAME DragonBall reference, advance CLK32 via
-    // scheduler time rather than toggling it on register reads.
-    m_clk32_timer->adjust(attotime::from_hz(32768), 0, attotime::from_hz(32768));
+    // VZ UM 4.3.1/4.4.2: CLK32 is a 32768 Hz square wave, and
+    // PLLFSR[15] reports HIGH/LOW phase. Both clock edges count:
+    // a phase change is required every half period (65536 per second).
+    m_clk32_timer->adjust(attotime::from_hz(65536), 0, attotime::from_hz(65536));
     // The host-seeded RTC persists across a soft hardware reset.
     m_rtc_control=0x0080; m_rtc_ien=0; m_rtc_isr=0;
     rtc_sync_from_host();
@@ -839,7 +846,7 @@ void alphasdana_state::physical_reset()
     m_pcpden=0xff; m_pcsel=0xff; m_pfsel=0x87;
     // Open VZ reference pin-latch reset, not a measured Dana electrical state.
     static constexpr u8 reset_gpio[32]={
-        0,0,0xff,0xff, 0,0,0xff,0xff, 0,0,0xff,0xff, 0,0,0xff,0x87,
+        0,0,0xff,0xff, 0,0,0xff,0xf0, 0,0,0xff,0xff, 0,0,0xff,0x87,
         0,0,0x3d,0x08, 0,0,0xff,0xef, 0,0,0xff,0xff, 0,0,0x3f,0x3f
     };
     std::copy(std::begin(reset_gpio),std::end(reset_gpio),std::begin(m_gpio));
@@ -1832,7 +1839,8 @@ void alphasdana_state::spi1_schedule()
     }
     m_spi1_word=m_spi1.pop_tx(); m_spi1_control=m_spi1.control;
     m_spi1_bits_left=m_spi1.bits(); m_spi1_received=0; m_spi1_busy=true;
-    m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),guest_system_clock_hz()));
+    m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),
+        m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz()));
     spi1_irq();
 }
 
@@ -1851,7 +1859,8 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::spi1_complete)
     bool const a=m_sd[0]->bit(outgoing), b=m_sd[1]->bit(outgoing);
     m_spi1_received=(m_spi1_received<<1)|(a && b);
     if (--m_spi1_bits_left)
-    { m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),guest_system_clock_hz())); return; }
+    { m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),
+        m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz())); return; }
     if (!m_spi1.push_rx(m_spi1_received))
     { logerror("DANA_SPI1_BLOCKED RX_FIFO_OVERFLOW\n"); m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); return; }
     spi1_irq();
@@ -1864,6 +1873,8 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::spi1_complete)
 u8 alphasdana_state::pd_r(offs_t reg)
 {
     u8 result=m_gpio[4+reg];
+    // VZ UM 10.4.5.5: PDSEL[3:0] are reserved, always read zero.
+    if (reg==3) return result & 0xf0;
     if (reg==1)
     {
         u8 const inputs=~m_gpio[4] & 0x0c;
@@ -1878,7 +1889,8 @@ u8 alphasdana_state::pd_r(offs_t reg)
 }
 void alphasdana_state::pd_w(offs_t reg,u8 value)
 {
-    m_gpio[4+reg]=value;
+    // PDSEL has only four defined upper bits; ignore reserved writes.
+    m_gpio[4+reg] = reg==3 ? (value & 0xf0) : value;
     if (reg==1) m_sd_edges&=~(value & m_pd_extra[3]);
     sd_gpio_irq();
 }
@@ -2242,13 +2254,25 @@ void alphasdana_state::imr_w(offs_t offset, u16 data, u16 mem_mask)
 
 void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
 {
-    // Edge-selected external IRQ1/2/3/6 acknowledge (the only writable ISR
-    // bits). With no asserted external source, writes cannot invent an IRQ.
+    // Edge-selected external IRQ1/2/3/6 acknowledge. Level requests
+    // must remain asserted until their physical input deasserts.
     if (!offset)
     {
         u16 const edges = ((m_icr >> 11) & 1) | ((m_icr >> 9) & 2)
             | ((m_icr >> 7) & 4) | ((m_icr >> 5) & 8);
         m_pending &= ~(u32(data & mem_mask & edges) << 16);
+    }
+    else
+    {
+        // INT2/3 are sourced by actual independent SD socket pins.
+        // A write-one to the LOW ISR word acknowledges only enabled
+        // edge-triggered INT[3:2], never level-triggered requests.
+        u8 const ack = u8((data & mem_mask & 0x0c00) >> 8) & m_pd_extra[3];
+        if (ack)
+        {
+            m_sd_edges &= ~ack;
+            sd_gpio_irq();
+        }
     }
     update_irq_lines();
 }
