@@ -102,6 +102,10 @@ private:
     u32 cs_base(unsigned group) const { return u32(m_cs_base[group] & 0xfffe) << 13; }
     u32 physical_sdram_bytes() const { return (m_sdram_profile->read() & 1) ? 0x1000000U : 0x800000U; }
     u32 physical_sdram_index(u32 index) const { return index & (physical_sdram_bytes()-1); }
+    // VZ UM Table 6-10: ROP (bit13) and RO (bit15) forbid WRITES,
+    // not reads. SOP (bit14) forbids user-mode protected accesses.
+    static bool cs_ram_read_allowed(u16 csd, bool supervisor)
+    { return !(csd & 0x4000) || supervisor; }
     u32 cs_size(unsigned group) const
     {
         unsigned const siz=(m_cs_select[group] >> 1) & 7;
@@ -735,7 +739,8 @@ u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
             logerror("DANA_PHYSICAL_VECTOR_READ address=%08x data=%04x mask=%04x\n",address,value,mem_mask);
         return value;
     }
-    if (ram && !flash && !(m_cs_select[3] & 0x6000))
+    if (ram && !flash && cs_ram_read_allowed(m_cs_select[3],
+        bool(m_maincpu->state_int(M68K_SR) & 0x2000)))
     {
         if (!physical_ram_ready() || ((m_dram[2] & 0x8000) && m_sdram_init_phase!=3))
         {
