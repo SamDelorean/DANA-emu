@@ -37,6 +37,9 @@ class DCNativeInitTest(unittest.TestCase):
             self.assertIn(required, code)
         self.assertIn("save_item(NAME(m_isp_dc_mode));", code)
         self.assertIn("save_item(NAME(m_isp_dc_suspend_requested));", code)
+        for state in ("m_isp_dc_interrupt", "m_isp_dc_read_snapshot", "m_isp_dc_read_phase"):
+            self.assertIn(f"save_item(NAME({state}));", code)
+        self.assertIn("m_isp_dc_interrupt=0; m_isp_dc_read_snapshot=0; m_isp_dc_read_phase=0;",code)
         self.assertIn(
             "m_boot_memory[1](0x1f000000,0x1f000007)"
             ".rw(FUNC(alphasdana_state::isp1161_r),"
@@ -64,6 +67,8 @@ struct Mock {
  u8 m_isp_dc_cmd=0;
  bool m_isp_dc_pending=false,m_isp_dc_unlocked=false,m_isp_dc_suspend_requested=false;
  u16 m_isp_dc_hw=0,m_isp_dc_mode=0;
+ u32 m_isp_dc_interrupt=0,m_isp_dc_read_snapshot=0;
+ u8 m_isp_dc_read_phase=0;
  void physical_block(const char* s,u32,u16=0){ blocked=true;reason=s; }
  void logerror(const char*,...){}
  void isp1161_w(offs_t,u16,u16);
@@ -92,6 +97,37 @@ int main() {
  Mock bad;
  bad.isp1161_w(3,0xb0,0xffff);bad.isp1161_w(2,0x1234,0xffff);
  if(!bad.blocked||bad.m_isp_dc_unlocked) return 8;
+ // Philips Rev03 §13.3.6: C0 issues one 32-bit snapshot;
+ // the CPU reads LOW then HIGH 16-bit word, no fabricated USB events.
+ Mock irq;
+ irq.isp1161_w(3,0x00c0,0xffff);
+ if(irq.blocked||irq.m_isp_dc_read_phase!=1) return 9;
+ if(irq.isp1161_r(2,0xffff)!=0x0000 || irq.m_isp_dc_read_phase!=2) return 10;
+ if(irq.isp1161_r(2,0xffff)!=0x0000 || irq.m_isp_dc_read_phase!=0) return 11;
+ if(irq.blocked || irq.m_isp_dc_interrupt!=0) return 12;
+ irq.isp1161_r(2,0xffff);
+ if(!irq.blocked || irq.reason!="ISP1161_DC_READ_UNIMPLEMENTED") return 13;
+ // Validate low/high ordering and status-clear mask using synthetic
+ // register state injected only in this directed test (never in UK1.5).
+ Mock status;
+ status.m_isp_dc_interrupt=0x00015b80U;
+ status.isp1161_w(3,0x00c0,0xffff);
+ if(status.isp1161_r(2,0xffff)!=0x5b80U) return 14;
+ if(status.isp1161_r(2,0xffff)!=0x0001U) return 15;
+ if(status.m_isp_dc_interrupt!=0x00015b80U) return 16;
+ // RESET/RESUME/EOT/SOF/SP_EOT flags are read-to-clear.
+ status.m_isp_dc_interrupt=0x0000015bU;
+ status.isp1161_w(3,0xc0,0xffff);
+ status.isp1161_r(2,0xffff);status.isp1161_r(2,0xffff);
+ if(status.m_isp_dc_interrupt!=0x00000100U) return 17;
+ // Cannot replace an incomplete C0 two-word read with new command.
+ Mock incomplete;
+ incomplete.isp1161_w(3,0xc0,0xffff);
+ incomplete.isp1161_r(2,0xffff);
+ incomplete.isp1161_w(3,0xb8,0xffff);
+ if(!incomplete.blocked||incomplete.reason!="ISP1161_DC_INCOMPLETE_READ") return 18;
+ // C0 does not interfere with host or previously programmed DC settings.
+ if(irq.m_isp_cmd || irq.m_isp_control || irq.m_isp_dc_mode) return 19;
  return 0;
 }
 """
