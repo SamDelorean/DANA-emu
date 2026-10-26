@@ -438,7 +438,45 @@ private:
     u16 m_cs_base[4]={}, m_cs_select[4]={};
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
     u16 m_dram[4]={};
-    u8 m_isp_cmd=0, m_isp_phase=0;
+    // Philips ISP1161A1 Rev03 Tables 7 and 75. HC and DC each have an
+    // independent 16-bit command/data bus and independently reset registers.
+    u8 m_isp_cmd=0, m_isp_phase=0, m_isp_hc_read_phase=0;
+    u32 m_isp_hc_regs32[0x17]={};
+    u16 m_isp_hc_regs16[0x42]={};
+    // A real 4-KiB host packet buffer, independent from Device FIFO.
+    u8 m_isp_hc_ram[0x1000]={};
+    u16 m_isp_hc_fifo_index=0, m_isp_hc_fifo_remaining=0;
+    u16 m_isp_hc_fifo_cursor=0;
+    u8 m_isp_hc_fifo_bank=0;
+    emu_timer *m_isp_hc_sof_timer=nullptr;
+    TIMER_CALLBACK_MEMBER(isp1161_hc_sof);
+    static constexpr bool isp1161_hc_32bit(u8 code)
+    {
+        return code<=5 || code==0x0d || code==0x0e || code==0x0f
+            || code==0x11 || (code>=0x12 && code<=0x16);
+    }
+    static constexpr bool isp1161_hc_16bit(u8 code)
+    {
+        return (code>=0x20 && code<=0x22) || code==0x24 || code==0x25
+            || code==0x27 || code==0x28 || code==0x2a || code==0x2b
+            || code==0x2c || code==0x2d || code==0x2e
+            || code==0x40 || code==0x41;
+    }
+    static constexpr bool isp1161_hc_can_write(u8 code)
+    {
+        return code==1 || code==2 || code==3 || code==4 || code==5
+            || code==0x0d || code==0x11 || (code>=0x12 && code<=0x16)
+            || (code>=0x20 && code<=0x22)
+            || code==0x24 || code==0x25 || code==0x28
+            || code==0x29 || code==0x2a || code==0x2b
+            || code==0x40 || code==0x41;
+    }
+    u32 isp1161_hc_read32(u8 code);
+    u16 isp1161_hc_read16(u8 code);
+    void isp1161_hc_write32(u8 code,u32 value);
+    void isp1161_hc_write16(u8 code,u16 value);
+    void isp1161_hc_reset();
+
     // Philips ISP1161 A1=1 device-controller command/data channel (separate from HC).
     u8 m_isp_dc_cmd=0;
     bool m_isp_dc_pending=false, m_isp_dc_unlocked=false, m_isp_dc_suspend_requested=false;
@@ -517,6 +555,7 @@ void alphasdana_state::machine_start()
     m_watchdog_guard = timer_alloc(FUNC(alphasdana_state::watchdog_guard), this);
     save_item(NAME(m_watchdog));
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
+    m_isp_hc_sof_timer=timer_alloc(FUNC(alphasdana_state::isp1161_hc_sof),this);
     m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);
     save_item(NAME(m_rtc_time));
     save_item(NAME(m_rtc_offset_seconds));
@@ -589,6 +628,11 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_emucs)); save_item(NAME(m_dram));
     save_item(NAME(m_sdram_init_phase));
     save_item(NAME(m_isp_cmd)); save_item(NAME(m_isp_phase));
+    save_item(NAME(m_isp_hc_read_phase));
+    save_item(NAME(m_isp_hc_regs32)); save_item(NAME(m_isp_hc_regs16));
+    save_item(NAME(m_isp_hc_ram));
+    save_item(NAME(m_isp_hc_fifo_index)); save_item(NAME(m_isp_hc_fifo_remaining));
+    save_item(NAME(m_isp_hc_fifo_cursor)); save_item(NAME(m_isp_hc_fifo_bank));
     save_item(NAME(m_isp_dc_cmd)); save_item(NAME(m_isp_dc_pending));
     save_item(NAME(m_isp_dc_unlocked)); save_item(NAME(m_isp_dc_suspend_requested));
     save_item(NAME(m_isp_dc_hw)); save_item(NAME(m_isp_dc_mode));
@@ -730,6 +774,9 @@ void alphasdana_state::physical_reset()
     m_emucs=0x0060;
     m_dram[0]=0; m_dram[1]=0; m_dram[2]=0x003c; m_dram[3]=0;
     m_sdram_init_phase=0;
+    isp1161_hc_reset();
+    std::fill(std::begin(m_isp_hc_ram),std::end(m_isp_hc_ram),0);
+    m_isp_hc_sof_timer->adjust(attotime::never);
     m_isp_cmd=0; m_isp_phase=0; m_isp_low=0;
     m_isp_dc_cmd=0; m_isp_dc_pending=false; m_isp_dc_unlocked=false;
     m_isp_dc_hw=0; m_isp_dc_mode=0; m_isp_dc_suspend_requested=false;
@@ -886,17 +933,229 @@ u16 alphasdana_state::physical_mmio_r(offs_t offset, u16 mem_mask)
     return 0xffff;
 }
 
-// Philips ISP1161A HC §§8.3,10: 16-bit command (A0=1) and data (A0=0).
-// 32-bit HC registers transfer LOW word before HIGH word. Command bit7=write.
-// Every supported command here is sourced to the authentic UK1.5 reset trace.
-void alphasdana_state::isp1161_w(offs_t offset, u16 data, u16 mem_mask)
+
+void alphasdana_state::isp1161_hc_reset()
+{
+    // HC internal reset does not reset the DC or erase HC packet RAM.
+    std::fill(std::begin(m_isp_hc_regs32),std::end(m_isp_hc_regs32),0);
+    std::fill(std::begin(m_isp_hc_regs16),std::end(m_isp_hc_regs16),0);
+    m_isp_cmd=0; m_isp_phase=0; m_isp_hc_read_phase=0; m_isp_low=0;
+    m_isp_control=0; m_isp_interrupt_status=0; m_isp_interrupt_enable=0;
+    m_isp_frame_interval=0x27782edf;
+    m_isp_hardware=0x0028; m_isp_up_irq=0; m_isp_itl_len=0; m_isp_atl_len=0;
+    m_isp_hc_regs32[0]=0x10; // OHCI specification release 1.0
+    m_isp_hc_regs32[0x0d]=m_isp_frame_interval;
+    m_isp_hc_regs16[0x20]=m_isp_hardware;
+    m_isp_hc_regs16[0x27]=0x6123; // ISP1161A1 Rev03 Table 46
+    m_isp_hc_fifo_bank=0; m_isp_hc_fifo_cursor=0;
+    m_isp_hc_fifo_index=0; m_isp_hc_fifo_remaining=0;
+}
+
+TIMER_CALLBACK_MEMBER(alphasdana_state::isp1161_hc_sof)
+{
+    if ((m_isp_control & 0xc0)!=0x80)
+        return;
+    m_isp_hc_regs32[0x0f]=(m_isp_hc_regs32[0x0f]+1)&0xffff;
+    m_isp_interrupt_status|=0x00000004; // OHCI StartOfFrame
+    // A real HC with no connected downstream devices generates SOF but
+    // does not complete invented PTDs, enumerate or connect phantom USB.
+    if (m_isp_hc_regs16[0x25]&1)
+        m_isp_up_irq |=1;
+}
+
+u32 alphasdana_state::isp1161_hc_read32(u8 code)
+{
+    switch(code)
+    {
+    case 0: return 0x00000010;
+    case 1: return m_isp_control;
+    case 3: return m_isp_interrupt_status;
+    case 4: case 5: return m_isp_interrupt_enable;
+    case 0x0d: return m_isp_frame_interval;
+    case 0x0e: return 0; // HC HcFmRemaining is zero while no frame is underway
+    default: return m_isp_hc_regs32[code];
+    }
+}
+
+u16 alphasdana_state::isp1161_hc_read16(u8 code)
+{
+    switch(code)
+    {
+    case 0x20: return m_isp_hardware;
+    case 0x24: return m_isp_up_irq;
+    case 0x27: return 0x6123; // documented silicon ID; no synthetic ID
+    case 0x2a: return m_isp_itl_len;
+    case 0x2b: return m_isp_atl_len;
+    case 0x2c: return m_isp_hc_regs16[0x2c];
+    case 0x2d: case 0x2e: return 0; // no PTD USB response without a target
+    default: return m_isp_hc_regs16[code];
+    }
+}
+
+void alphasdana_state::isp1161_hc_write32(u8 code,u32 value)
+{
+    switch(code)
+    {
+    case 1:
+        m_isp_control=value;
+        // HCFS 10 = operational, clock emits SOFs independently of DC.
+        if ((value&0xc0)==0x80)
+            m_isp_hc_sof_timer->adjust(attotime::from_msec(1),0,attotime::from_msec(1));
+        else
+            m_isp_hc_sof_timer->adjust(attotime::never);
+        break;
+    case 2:
+        // OHCI HostControllerReset; no memory, DC or SRAM reset.
+        if (value&1) { isp1161_hc_reset(); return; }
+        m_isp_hc_regs32[2]=value;
+        break;
+    case 3: m_isp_interrupt_status &= ~value; break; // W1C
+    case 4: m_isp_interrupt_enable |=value; break;
+    case 5: m_isp_interrupt_enable &= ~value; break;
+    case 0x0d: m_isp_frame_interval=value; break;
+    case 0x14:
+        // No upstream host or attached devices. RH change W1C and
+        // local-power operations are handled without claiming a connection.
+        m_isp_hc_regs32[code] &= ~(value & 0x00030000);
+        break;
+    case 0x15: case 0x16:
+        // A disconnected downstream port can be powered; it cannot become
+        // connected or enabled without an actual USB backend.
+        if(value&0x00000100) m_isp_hc_regs32[code]|=0x00000100;
+        if(value&0x00000200) m_isp_hc_regs32[code]&=~u32(0x00000100);
+        m_isp_hc_regs32[code]&=~(value & 0x001f0000);
+        break;
+    default:
+        m_isp_hc_regs32[code]=value;
+        break;
+    }
+    if (code==1 || code==2 || code==3 || code==4 || code==5 || code==0x0d)
+        m_isp_hc_regs32[code]=isp1161_hc_read32(code);
+}
+
+void alphasdana_state::isp1161_hc_write16(u8 code,u16 value)
+{
+    switch(code)
+    {
+    case 0x20: m_isp_hardware=value; break;
+    case 0x24: m_isp_up_irq &=~(value & 0x0077); break; // W1C
+    case 0x25: m_isp_hc_regs16[code]=value & 0x0077; return;
+    case 0x2a: case 0x2b:
+    {
+        u32 const itl=code==0x2a ? value : m_isp_itl_len;
+        u32 const atl=code==0x2b ? value : m_isp_atl_len;
+        if(atl+2*itl>4096)
+        {
+            physical_block("ISP1161_HC_FIFO_ALLOCATION",0x1f000000,value);
+            return;
+        }
+        if(code==0x2a) m_isp_itl_len=value;
+        else m_isp_atl_len=value;
+        break;
+    }
+    case 0x22:
+        m_isp_hc_fifo_remaining=value;
+        m_isp_hc_fifo_cursor=0;
+        break;
+    case 0x29:
+        // Reset byte F6 keeps internal HC packet RAM.
+        if (value!=0xf6)
+        {
+            physical_block("ISP1161_HC_INVALID_RESET",0x1f000000,value);
+            return;
+        }
+        isp1161_hc_reset();
+        return;
+    default: break;
+    }
+    if(code<0x42) m_isp_hc_regs16[code]=value;
+}
+
+u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
 {
     u32 const address=0x1f000000U+u32(offset)*2;
-    if (mem_mask!=0xffff)
-    { physical_block("ISP1161_REQUIRES_WORD_ACCESS",address,data); return; }
-    // Philips ISP1161 DC: A1=1 selects DC, A0=1 command, A0=0 data.
-    // Authentic UK1.5 ROM at 10003064..1000309C writes B0/AA37,
-    // BA/0F04, B8/0020, B8/0000 (last is CLR.W read-before-write).
+    if(mem_mask!=0xffff)
+    { physical_block("ISP1161_BUS_REQUIRES_WORD",address); return 0xffff; }
+    if(offset==2)
+    {
+    if (offset==2)
+    {
+        if (m_isp_dc_cmd==0xc0 && m_isp_dc_read_phase)
+        {
+            if (m_isp_dc_read_phase==1)
+            {
+                m_isp_dc_read_phase=2;
+                u16 const low=u16(m_isp_dc_read_snapshot);
+                logerror("DANA_ISP1161_DC_INTERRUPT phase=low value=%04x\n",low);
+                return low;
+            }
+            u16 const high=u16(m_isp_dc_read_snapshot >> 16);
+            m_isp_dc_read_phase=0;
+            // Rev03 §8.6.3: RESET, RESUME, SP_EOT, EOT, SOF are
+            // cleared on a complete DcInterrupt register read. Endpoint
+            // flags are cleared by their own DcEndpointStatus reads.
+            m_isp_dc_interrupt &= ~u32(0x005b);
+            logerror("DANA_ISP1161_DC_INTERRUPT phase=high value=%04x\n",high);
+            return high;
+        }
+        // The 68000 performs a read-before-write on CLR.W. With a DC write
+        // command selected this value is discarded by the instruction.
+        if (m_isp_dc_pending && (m_isp_dc_cmd==0xb8 || m_isp_dc_cmd==0xb0 || m_isp_dc_cmd==0xba))
+        {
+            logerror("DANA_ISP1161_DC discarded_write_port_read cmd=%02x\n",m_isp_dc_cmd);
+            return 0xffff;
+        }
+        physical_block("ISP1161_DC_READ_UNIMPLEMENTED",address);
+        return 0xffff;
+    }
+    }
+    if(offset!=0)
+    { physical_block("ISP1161_BAD_READ_ADDRESS",address); return 0xffff; }
+    if(m_isp_cmd&0x80)
+    {
+        // The 68000 reads before writing CLR.W; this inactive read does not
+        // move any command or FIFO cursor.
+        return 0xffff;
+    }
+    u8 const code=m_isp_cmd;
+    if(code==0x40 || code==0x41)
+    {
+        // Buffer RAM is inaccessible unless a transfer count was programmed.
+        if(!m_isp_hc_fifo_remaining) return 0;
+        u16 const base=code==0x40 ? 0 : u16(2U*m_isp_itl_len);
+        u16 const cursor=base+m_isp_hc_fifo_cursor;
+        if(cursor+1>=4096)
+        { physical_block("ISP1161_HC_FIFO_OOB",address); return 0xffff; }
+        u16 const value=u16(m_isp_hc_ram[cursor])|(u16(m_isp_hc_ram[cursor+1])<<8);
+        m_isp_hc_fifo_cursor+=2;
+        m_isp_hc_fifo_remaining=m_isp_hc_fifo_remaining>2 ?
+            m_isp_hc_fifo_remaining-2 : 0;
+        if (!m_isp_hc_fifo_remaining) m_isp_up_irq|=0x04; // EOT
+        return value;
+    }
+    if (isp1161_hc_32bit(code))
+    {
+        u32 const value=isp1161_hc_read32(code);
+        if(!m_isp_hc_read_phase)
+        {
+            m_isp_hc_read_phase=1;
+            return u16(value);
+        }
+        m_isp_hc_read_phase=0;
+        return u16(value>>16);
+    }
+    if(isp1161_hc_16bit(code))
+        return isp1161_hc_read16(code);
+    physical_block("ISP1161_HC_BAD_READ_COMMAND",address,code);
+    return 0xffff;
+}
+
+void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
+{
+    u32 const address=0x1f000000U+u32(offset)*2;
+    if(mem_mask!=0xffff)
+    { physical_block("ISP1161_BUS_REQUIRES_WORD",address,data); return; }
+    // Device and Host bus state are wholly independent.
     if (offset==3)
     {
         if (data & 0xff00)
@@ -951,119 +1210,65 @@ void alphasdana_state::isp1161_w(offs_t offset, u16 data, u16 mem_mask)
             m_isp_dc_cmd,data,m_isp_dc_hw,m_isp_dc_mode,unsigned(m_isp_dc_suspend_requested));
         return;
     }
-    if (offset==1)
+    if(offset==1)
     {
-        if (data & 0xff00)
-        { physical_block("ISP1161_COMMAND_UPPER_BYTE",address,data); return; }
-        if (m_isp_phase)
-        { physical_block("ISP1161_INCOMPLETE_REGISTER_WRITE",address,data); return; }
-        switch(data)
+        if(data & 0xff00)
+        { physical_block("ISP1161_HC_COMMAND_UPPER_BYTE",address,data); return; }
+        u8 const code=u8(data)&0x7f;
+        bool const write=bool(data&0x80);
+        if(m_isp_phase || m_isp_hc_read_phase)
+        { physical_block("ISP1161_HC_INCOMPLETE_REGISTER",address,data); return; }
+        if(write)
         {
-        case 0x85: case 0x83: case 0x8d: case 0x81:
-        case 0xa4: case 0xaa: case 0xab: case 0xa0:
-            m_isp_cmd=u8(data); m_isp_phase=0; return;
-        default:
-            physical_block("ISP1161_COMMAND_UNIMPLEMENTED",address,data);
-            return;
+            if(!isp1161_hc_can_write(code))
+            { physical_block("ISP1161_HC_READ_ONLY",address,data); return; }
         }
+        else if(!isp1161_hc_32bit(code) && !isp1161_hc_16bit(code))
+        { physical_block("ISP1161_HC_BAD_COMMAND",address,data); return; }
+        m_isp_cmd=u8(data);
+        m_isp_phase=0; m_isp_hc_read_phase=0;
+        if(code==0x40 || code==0x41)
+        {
+            m_isp_hc_fifo_cursor=0;
+            m_isp_hc_fifo_bank=code;
+        }
+        return;
     }
-    if (offset)
-    { physical_block("ISP1161_BAD_ADDRESS",address,data); return; }
-    u8 const cmd=m_isp_cmd;
-    if (cmd==0x85 || cmd==0x83 || cmd==0x8d || cmd==0x81)
+    if(offset)
+    { physical_block("ISP1161_HC_BAD_ADDRESS",address,data); return; }
+    if(!(m_isp_cmd&0x80))
+    { physical_block("ISP1161_HC_WRITE_WITH_READ_CMD",address,data); return; }
+    u8 const code=m_isp_cmd & 0x7f;
+    if(code==0x40 || code==0x41)
     {
-        if (!m_isp_phase)
+        if(m_isp_hc_fifo_remaining==0)
+        { physical_block("ISP1161_HC_FIFO_COUNT_REQUIRED",address,data); return; }
+        u16 const base=code==0x40 ? 0 : u16(2U*m_isp_itl_len);
+        u16 const cursor=base+m_isp_hc_fifo_cursor;
+        if(cursor+1>=4096)
+        { physical_block("ISP1161_HC_FIFO_OOB",address,data); return; }
+        m_isp_hc_ram[cursor]=u8(data);m_isp_hc_ram[cursor+1]=u8(data>>8);
+        m_isp_hc_fifo_cursor+=2;
+        m_isp_hc_fifo_remaining=m_isp_hc_fifo_remaining>2 ?
+            m_isp_hc_fifo_remaining-2 : 0;
+        if(!m_isp_hc_fifo_remaining)
+        {
+            m_isp_up_irq|=0x04; // End of host-buffer PIO transfer
+            m_isp_hc_regs16[0x2c] |= code==0x40 ? 1U : 4U;
+        }
+        return;
+    }
+    if(isp1161_hc_32bit(code))
+    {
+        if(!m_isp_phase)
         { m_isp_low=data; m_isp_phase=1; return; }
-        u32 const value=u32(m_isp_low)|(u32(data)<<16);
         m_isp_phase=0;
-        switch(cmd)
-        {
-        case 0x85: m_isp_interrupt_enable &= ~value; break;
-        case 0x83: m_isp_interrupt_status &= ~value; break;
-        case 0x8d: m_isp_frame_interval=value; break;
-        case 0x81:
-            // HCFS bits 7:6: 10 operational, 11 suspend.
-            // Record state; USB transfers/port traffic are not synthesized.
-            if ((value & ~0x000000c0U) != 0)
-            { physical_block("ISP1161_CONTROL_UNMODELLED",address,data); return; }
-            m_isp_control=value;
-            break;
-        }
+        isp1161_hc_write32(code,u32(m_isp_low)|(u32(data)<<16));
     }
-    else if (cmd==0xa4)
-        m_isp_up_irq &= ~(data & 0x0077U); // W1C microprocessor interrupt.
-    else if (cmd==0xaa || cmd==0xab)
-    {
-        u16 const itl=cmd==0xaa ? data : m_isp_itl_len;
-        u16 const atl=cmd==0xab ? data : m_isp_atl_len;
-        if (u32(atl)+2U*itl>0x1000U)
-        { physical_block("ISP1161_FIFO_ALLOCATION_INVALID",address,data); return; }
-        if (cmd==0xaa) m_isp_itl_len=itl;
-        else m_isp_atl_len=atl;
-    }
-    else if (cmd==0xa0)
-    {
-        // Datasheet HW config: lower data bus width bits4:3 must be 01.
-        if ((data & 0x0018)!=0x0008 || (data & 0xe200))
-        { physical_block("ISP1161_HARDWARE_MODE_UNMODELLED",address,data); return; }
-        m_isp_hardware=data;
-    }
+    else if(isp1161_hc_can_write(code))
+        isp1161_hc_write16(code,data);
     else
-    { physical_block("ISP1161_DATA_WITHOUT_COMMAND",address,data); return; }
-    if (!m_isp_phase)
-        logerror("DANA_ISP1161 cmd=%02x value=%04x control=%08x atl=%04x itl=%04x\n",
-            cmd,data,m_isp_control,m_isp_atl_len,m_isp_itl_len);
-}
-
-u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
-{
-    u32 const address=0x1f000000U+u32(offset)*2;
-    if (mem_mask!=0xffff)
-    { physical_block("ISP1161_READ_ACCESS_UNSUPPORTED",address); return 0xffff; }
-    if (offset==2)
-    {
-        if (m_isp_dc_cmd==0xc0 && m_isp_dc_read_phase)
-        {
-            if (m_isp_dc_read_phase==1)
-            {
-                m_isp_dc_read_phase=2;
-                u16 const low=u16(m_isp_dc_read_snapshot);
-                logerror("DANA_ISP1161_DC_INTERRUPT phase=low value=%04x\n",low);
-                return low;
-            }
-            u16 const high=u16(m_isp_dc_read_snapshot >> 16);
-            m_isp_dc_read_phase=0;
-            // Rev03 §8.6.3: RESET, RESUME, SP_EOT, EOT, SOF are
-            // cleared on a complete DcInterrupt register read. Endpoint
-            // flags are cleared by their own DcEndpointStatus reads.
-            m_isp_dc_interrupt &= ~u32(0x005b);
-            logerror("DANA_ISP1161_DC_INTERRUPT phase=high value=%04x\n",high);
-            return high;
-        }
-        // The 68000 performs a read-before-write on CLR.W. With a DC write
-        // command selected this value is discarded by the instruction.
-        if (m_isp_dc_pending && (m_isp_dc_cmd==0xb8 || m_isp_dc_cmd==0xb0 || m_isp_dc_cmd==0xba))
-        {
-            logerror("DANA_ISP1161_DC discarded_write_port_read cmd=%02x\n",m_isp_dc_cmd);
-            return 0xffff;
-        }
-        physical_block("ISP1161_DC_READ_UNIMPLEMENTED",address);
-        return 0xffff;
-    }
-    if (offset!=0)
-    { physical_block("ISP1161_READ_ACCESS_UNSUPPORTED",address); return 0xffff; }
-    // Real M68000 CLR.W at UK1.5 10003186/100031EC reads the selected
-    // write-port before clearing it. The old data bus value is DISCARDED by
-    // CLR; no HC read command is issued. Return inactive 16-bit bus value
-    // without consuming a data phase or pretending to report USB status.
-    if (m_isp_cmd & 0x80)
-    {
-        logerror("DANA_ISP1161 discarded_write_port_read cmd=%02x phase=%u\n",
-            m_isp_cmd,unsigned(m_isp_phase));
-        return 0xffff;
-    }
-    physical_block("ISP1161_READ_UNIMPLEMENTED",address);
-    return 0xffff;
+        physical_block("ISP1161_HC_BAD_WRITE_COMMAND",address,data);
 }
 
 void alphasdana_state::physical_mmio_w(offs_t offset, u16 data, u16 mem_mask)
