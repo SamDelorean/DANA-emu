@@ -257,10 +257,11 @@ private:
         return !(t & ~rtc_time_mask) && ((t>>24)&0x1f)<24
             && ((t>>16)&0x3f)<60 && (t & 0x3f)<60;
     }
-    // One coherent 32-bit timestamp per 68000 high/low longword read.
+    // Read the host-seeded clock on either 68000 word lane. A firmware
+    // read of only the seconds half must not return an old timestamp.
     u16 rtc_time_r(offs_t offset)
     {
-        if (!offset) rtc_sync_from_host();
+        rtc_sync_from_host();
         return u16(m_rtc_time >> (offset ? 0 : 16));
     }
     u32 rtc_host_seconds();
