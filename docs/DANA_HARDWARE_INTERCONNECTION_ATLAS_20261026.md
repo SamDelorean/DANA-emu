@@ -1,6 +1,23 @@
-# Dana hardware interconnection atlas — single reference Excel v01 (2026-10-26)
+# Dana hardware interconnection atlas — master workbook v02 (2026-10-26)
 
-**Primary electrical engineering master workbook, already created and verified in the project's actual Google Drive folder `ALPHASMART/Dana`:**
+**CURRENT MASTER — external SDRAM chip identified and full pinout integrated:** [DANA_Interconexiones_Hardware_Maestro_v02_20261026.xlsx](https://docs.google.com/spreadsheets/d/1jdLbavE8u-VQ3hVlcAYBCqBryHYAsOM5/edit). Google Drive `ALPHASMART/Dana`, 70,099 bytes, 12 worksheets. **Older v01 preserved as an archival baseline, not current master.**
+
+## New manufacturer-grounded external-memory mapping
+
+- **Samsung `K4S641632F-TL1L`** — exact RAM part identity provided by board owner. Datasheet: [Samsung F-revision pinout, 54-pin TSOP-II, top view, p. 4](https://www.alldatasheet.com/html-pdf/37101/SAMSUNG/K4S641632F-TL1L/1031/4/K4S641632F-TL1L.html), [organization, ordering code and refresh, p. 3](https://www.alldatasheet.com/html-pdf/37101/SAMSUNG/K4S641632F-TL1L/772/3/K4S641632F-TL1L.html).
+- Physical manufacturer package: **TSOP-II 54-pin, 0.8 mm pitch**; **64 Mbit = 8 MiB per IC = 4 banks × 1M words × 16 bits**. **3.3 V** JEDEC supply and LVTTL I/O. `TL1L` listed **100 MHz CL3**, with 4K refresh cycles per 64 ms. Quantity actually soldered to Dana's PCB remains to be physically checked; don't infer 16MiB or a second chip from emulator software profiles.
+- **Complete all 54 pin positions recorded** in new `10_SDRAM_K4S641632F` worksheet (DQ0–15, A0–11, BA0–1, CLK/CKE, CS/RAS/CAS/WE, LDQM/UDQM, every supply/ground and NC). Each pin includes type, function, candidate MC68VZ328 logical connection, any TQFP reference pin, evidence status and Samsung URL. **Candidate VZ-to-RAM connections are not PCB continuity measurements.** Key high-value exact RAM pins: CLK38, CKE37, /CS19, /RAS18, /CAS17, /WE16, LDQM15, UDQM39, BA0=20, BA1=21, A10/AP=22, DQ0=2 and DQ15=53.
+- `01_Inventario` now names U_SDRAM; `04_Interconexiones` contains 54 new pin-level candidate nets (from 90 to **144**), `06_Memoria_y_CS` contains 11 additional records (14 to **25**), `08_Continuidad` has 9 new specific physical checks (20 to **29**), `09_Fuentes` has 4 new records (10 to **14**), and `00_Portada` counts have been updated. A small manufacturer organization/capacity formula confirms **8,388,608 bytes per single IC**.
+- **ROM/Flash is still physically unidentified.** New `11_ROM_Flash_Pendiente` explicitly lists **13** groups of part-number/package/JEDEC, address/data/control, CS, voltage and bootstrap checks. The ROM image or memory address map does **not** prove the actual NOR chip model, number of ICs, pinout, or manufacturer. No invented Flash numbers have been entered. Obtain the actual **topmark/complete part number** and picture of pin1 before generating that full physical pinout.
+- Original MC68VZ328 datasheet [NXP](https://www.nxp.com/docs/en/user-guide/MC68VZ328UM.pdf) documents logical SDRAM signals PM0/SDCLK, PM1/SDCE, PM2/DQMH, PM3/DQML, PB1/SDWE, PB2/RAS0, PB4/CAS0, MA bus, while the logical bus remains multiplexed; original VZ package for Dana requires verification. The sheet marks every inferred pair **NO_MEDIDA**. Signals BA0/BA1 and CKE are explicitly not given an invented VZ physical pin.
+
+**Implementation rule:** the semiconductor identification makes the RAM organization and manufacturer pin functions demonstrable, **not** the PCB wiring; never treat a conjectural direct VZ DQn ↔ Samsung DQn path as measured copper. Work on the one main-branch DANA emulator, not duplicate DIAG instances.
+
+---
+
+# Historic v01 reference — superseded by v02
+
+**Historical first version (kept for traceability):**
 
 [**DANA_Interconexiones_Hardware_Maestro_v01_20261026.xlsx**](https://docs.google.com/spreadsheets/d/11NNx7sgBCp7KnJknjscA-lvQIRGcTNNZ/edit)
 
