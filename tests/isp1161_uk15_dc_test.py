@@ -48,7 +48,7 @@ class ISP1161NativeModelTest(unittest.TestCase):
         self.assertIn("if (value!=0xf6)", source)
         self.assertTrue(LUA.is_file())
 
-    def test_19_real_mame_bus_transactions_when_configured(self):
+    def test_33_real_mame_bus_transactions_when_configured(self):
         mame = os.environ.get("ISP1161_TEST_MAME")
         rom = os.environ.get("ISP1161_TEST_ROM")
         if not mame or not rom:
@@ -69,8 +69,8 @@ class ISP1161NativeModelTest(unittest.TestCase):
             self.assertEqual(executed.returncode, 0, executed.stderr[-1800:])
             self.assertTrue(logfile.exists(), executed.stderr[-1000:])
             evidence = logfile.read_text()
-            self.assertIn("USB_DIRECTED_TOTAL_PASS=19", evidence)
-            self.assertEqual(len(re.findall(r"^PASS ", evidence, re.MULTILINE)), 19)
+            self.assertIn("USB_DIRECTED_TOTAL_PASS=33", evidence)
+            self.assertEqual(len(re.findall(r"^PASS ", evidence, re.MULTILINE)), 33)
             self.assertNotIn("FAIL ", evidence)
             self.assertNotIn("DANA_PHYSICAL_BLOCKED", executed.stderr)
 
