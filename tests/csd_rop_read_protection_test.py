@@ -65,11 +65,11 @@ static_assert(P::cs_ram_write_allowed(CSD,true,SIZE-2,SIZE));
 static_assert(!P::cs_ram_write_allowed(CSD,true,SIZE,SIZE));
 static_assert(!P::cs_ram_write_allowed(CSD,true,BANK-2,SIZE));
 static_assert(P::cs_ram_read_allowed(CSD,true,BANK-2,SIZE));
-// Existing 2-bit UPSIZ is insufficient without BOTH EUPEN and DUPS2.
-static_assert(P::cs_ram_unprotected_bytes(BANK,CSD,0x0150)==0x20000);
+// Legacy UPSIZ uses 32..256 KiB; extended division requires EUPEN.
+static_assert(P::cs_ram_unprotected_bytes(BANK,CSD,0x0150)==0x8000);
 static_assert(P::cs_ram_unprotected_bytes(BANK,CSD,0x4140)==0x20000);
-static_assert(P::cs_ram_unprotected_bytes(BANK,CSD,0x0150 | 0x10)==0x20000);
-static_assert(!P::cs_ram_write_allowed(CSD,true,STACK,0x20000));
+static_assert(P::cs_ram_unprotected_bytes(BANK,CSD,0x0150 | 0x10)==0x8000);
+static_assert(!P::cs_ram_write_allowed(CSD,true,STACK,0x8000));
 // Check additional UPSIZ configurations and actual Motorola example 6-1.
 static_assert(P::cs_ram_unprotected_bytes(0x400000,0x1800,0)==0x40000);
 static_assert(P::cs_ram_unprotected_bytes(BANK,0x3983,0x4150)==BANK);
