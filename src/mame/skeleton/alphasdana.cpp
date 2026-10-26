@@ -746,8 +746,9 @@ void alphasdana_state::machine_reset()
     spi1_reset();
     m_bootstrap_mode=!(m_emubrk_pin->read()&1);
     m_physical_boot=m_firmware->exists() || m_bootstrap_mode;
-    if (m_firmware->exists() && m_guest->exists() && !m_bootstrap_mode)
-        fatalerror("Flash + guest incompatible except EMUBRK bootstrap");
+    // Flash can remain present while an external injector asserts EMUBRK
+    // and then RESET. The quickload callback rejects DANARAM1 in this
+    // profile and accepts only a properly formed Motorola B-record stream.
     m_boot_memory.select(m_physical_boot ? 1 : 0);
     if (m_physical_boot)
     {
@@ -777,8 +778,8 @@ void alphasdana_state::machine_reset()
 
 DEVICE_IMAGE_LOAD_MEMBER(alphasdana_state::firmware_load)
 {
-    if (m_guest->exists() && (m_emubrk_pin->read()&1))
-        return std::make_pair(image_error::INVALIDIMAGE,std::string("Firmware and DANARAM1 are mutually exclusive; EMUBRK low permits B-records"));
+    // Do not reject a stock Flash image because a *later* B-record load
+    // may assert EMUBRK and reset the VZ, just as the AS2K injector does.
     if (!image.loaded_through_softlist() && image.length()>0x1000000)
         return std::make_pair(image_error::INVALIDLENGTH,std::string("Firmware exceeds VZ CSA maximum decode"));
     u32 const size=m_firmware->common_get_size("rom");
@@ -853,7 +854,7 @@ void alphasdana_state::physical_reset()
 
 void alphasdana_state::boot_postload()
 {
-    if (m_physical_boot!=(m_firmware->exists()||m_bootstrap_mode) || (m_firmware->exists() && m_guest->exists() && !m_bootstrap_mode))
+    if (m_physical_boot!=(m_firmware->exists()||m_bootstrap_mode))
         fatalerror("Boot profile differs from saved state; restart with the original image selection");
     if (m_physical_boot)
     {
