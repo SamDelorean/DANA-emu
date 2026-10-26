@@ -249,6 +249,24 @@ private:
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
     TIMER_CALLBACK_MEMBER(clk32_tick);
+    // VZ 11.2: RTC time-of-day, alarm/IRQ control use a separate 1Hz
+    // oscillator domain, never host wall-clock reads or generic MMIO RAM.
+    static constexpr u32 rtc_time_mask=0x1f3f003fU;
+    static constexpr bool rtc_time_valid(u32 t)
+    {
+        return !(t & ~rtc_time_mask) && ((t>>24)&0x1f)<24
+            && ((t>>16)&0x3f)<60 && (t & 0x3f)<60;
+    }
+    u16 rtc_time_r(offs_t offset) { return u16(m_rtc_time >> (offset ? 0 : 16)); }
+    void rtc_time_w(offs_t offset, u16 data, u16 mem_mask);
+    u16 rtc_control_r() { return m_rtc_control; }
+    void rtc_control_w(offs_t, u16 data, u16 mem_mask);
+    u16 rtc_ien_r() { return m_rtc_ien; }
+    void rtc_ien_w(offs_t, u16 data, u16 mem_mask);
+    u16 rtc_isr_r() { return m_rtc_isr; }
+    void rtc_isr_w(offs_t, u16 data, u16 mem_mask);
+    void rtc_update_irq();
+    TIMER_CALLBACK_MEMBER(rtc_tick);
     u16 icr_r() { return m_icr; }
     void icr_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_icr); m_icr &= 0xff80; }
     u16 imr_r(offs_t offset) { return m_imr >> (offset ? 0 : 16); }
@@ -427,6 +445,11 @@ private:
     u16 m_watchdog=0x0001;
     emu_timer *m_watchdog_guard=nullptr;
     emu_timer *m_clk32_timer = nullptr;
+    emu_timer *m_rtc_timer = nullptr;
+    // RTC is battery-powered on physical hardware. Emulated cold start has
+    // deterministic 00:00:00; machine resets preserve time and day.
+    u32 m_rtc_time=0;
+    u16 m_rtc_day=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
     u16 m_tctl2=0;
@@ -480,6 +503,12 @@ void alphasdana_state::machine_start()
     m_watchdog_guard = timer_alloc(FUNC(alphasdana_state::watchdog_guard), this);
     save_item(NAME(m_watchdog));
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
+    m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);
+    save_item(NAME(m_rtc_time));
+    save_item(NAME(m_rtc_day));
+    save_item(NAME(m_rtc_control));
+    save_item(NAME(m_rtc_ien));
+    save_item(NAME(m_rtc_isr));
     m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
     save_item(NAME(m_iodcr));
     save_item(NAME(m_icemcr)); save_item(NAME(m_icemsr));
@@ -583,6 +612,9 @@ void alphasdana_state::machine_reset()
     // As in the pinned MAME DragonBall reference, advance CLK32 via
     // scheduler time rather than toggling it on register reads.
     m_clk32_timer->adjust(attotime::from_hz(32768), 0, attotime::from_hz(32768));
+    // RTC persists across a soft hardware reset; do not reset TOD/DAY.
+    m_rtc_control=0x0080; m_rtc_ien=0; m_rtc_isr=0;
+    m_rtc_timer->adjust(attotime::from_seconds(1), 0, attotime::from_seconds(1));
     m_ivr = 0x00;
     m_icr = 0;
     m_imr = 0x00ffffff;
@@ -1536,6 +1568,82 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::clk32_tick)
     m_clk32_high = !m_clk32_high;
 }
 
+void alphasdana_state::rtc_update_irq()
+{
+    // MC68VZ328 RTC is bit 4 in interrupt pending LOW, level 4.
+    if ((m_rtc_control & 0x0080) && (m_rtc_isr & m_rtc_ien))
+        m_pending |= 0x00000010;
+    else
+        m_pending &= ~u32(0x00000010);
+    update_irq_lines();
+}
+
+TIMER_CALLBACK_MEMBER(alphasdana_state::rtc_tick)
+{
+    if (!(m_rtc_control & 0x0080)) return;
+    u32 second=(m_rtc_time & 0x3f)+1;
+    u32 minute=(m_rtc_time>>16) & 0x3f;
+    u32 hour=(m_rtc_time>>24) & 0x1f;
+    m_rtc_isr |= 0x0010;  // 1Hz
+    if (second==60)
+    {
+        second=0; ++minute; m_rtc_isr |= 0x0002; // minute
+        if (minute==60)
+        {
+            minute=0; ++hour; m_rtc_isr |= 0x0020; // hour
+            if (hour==24)
+            {
+                hour=0; m_rtc_day=(m_rtc_day+1)&0x01ff;
+                m_rtc_isr |= 0x0008; // 24-hour event
+            }
+        }
+    }
+    m_rtc_time=(hour<<24)|(minute<<16)|second;
+    rtc_update_irq();
+}
+
+void alphasdana_state::rtc_time_w(offs_t offset, u16 data, u16 mem_mask)
+{
+    u32 const shift=offset ? 0 : 16;
+    u32 const mask=u32(mem_mask)<<shift;
+    u32 const value=(m_rtc_time & ~mask)|(u32(data & mem_mask)<<shift);
+    if (!rtc_time_valid(value))
+    { physical_block("RTC_TIME_INVALID",0xfffffb00+(offset*2),data); return; }
+    m_rtc_time=value;
+    logerror("DANA_RTC_TIME_WRITE time=%08x offset=%u mask=%04x\n",m_rtc_time,unsigned(offset),mem_mask);
+}
+
+void alphasdana_state::rtc_control_w(offs_t, u16 data, u16 mem_mask)
+{
+    u16 const next=(m_rtc_control & ~mem_mask)|(data & mem_mask);
+    // VZ UM 11.2.6: RTCEN bit7, REFREQ bit5; other bits reserved.
+    if (next & ~0x00a0)
+    { physical_block("RTC_CONTROL_RESERVED_BITS",0xfffffb0c,next); return; }
+    m_rtc_control=next;
+    rtc_update_irq();
+    logerror("DANA_RTC_CONTROL value=%04x rtcen=%u refreq=%u\n",
+        m_rtc_control,unsigned(bool(m_rtc_control&0x80)),
+        unsigned(bool(m_rtc_control&0x20)));
+}
+
+void alphasdana_state::rtc_ien_w(offs_t, u16 data, u16 mem_mask)
+{
+    u16 const next=(m_rtc_ien & ~mem_mask)|(data & mem_mask);
+    // 1Hz, minute, hour and 24h are generated by the 1Hz timer.
+    // Subsecond rates, alarm and stopwatch need dedicated mechanics.
+    if (next & ~0x003a)
+    { physical_block("RTC_INTERRUPT_RATE_UNIMPLEMENTED",0xfffffb10,next); return; }
+    m_rtc_ien=next; rtc_update_irq();
+    logerror("DANA_RTC_IEN value=%04x\n",m_rtc_ien);
+}
+
+void alphasdana_state::rtc_isr_w(offs_t, u16 data, u16 mem_mask)
+{
+    // Manufacturer VZ RTCISR is write-one-to-clear.
+    m_rtc_isr &= ~(data & mem_mask);
+    rtc_update_irq();
+}
+
 // VZ UM 16.2.3/16.2.4: normal-mode ICE setup only. HMDIS does not
 // remap ordinary memory. Other ICE controls require unimplemented machinery.
 void alphasdana_state::icemcr_w(offs_t, u16 data, u16 mem_mask)
@@ -1685,7 +1793,7 @@ void alphasdana_state::update_irq_lines()
         if (level!=4 && level!=6) m_maincpu->set_input_line(level,spi ? ASSERT_LINE : CLEAR_LINE);
     }
     m_maincpu->set_input_line(6,((active & 0x00000002) || (spi_level==6 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
-    m_maincpu->set_input_line(4,((active & 0x00000c04) || (spi_level==4 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(4,((active & 0x00000c14) || (spi_level==4 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 u8 alphasdana_state::irq_vector_r(offs_t offset)
@@ -1916,6 +2024,10 @@ void alphasdana_state::program_map(address_map &map)
     // Native UK1.5 cold-start also writes TCTL2=0000 after TCTL1=0000.
     m_boot_memory[1](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
     m_boot_memory[1](0xfffff411,0xfffff411).rw(FUNC(alphasdana_state::pcdata_r),FUNC(alphasdana_state::pcdata_w)).umask16(0x00ff);
+    m_boot_memory[1](0xfffffb00,0xfffffb03).rw(FUNC(alphasdana_state::rtc_time_r),FUNC(alphasdana_state::rtc_time_w));
+    m_boot_memory[1](0xfffffb0c,0xfffffb0d).rw(FUNC(alphasdana_state::rtc_control_r),FUNC(alphasdana_state::rtc_control_w));
+    m_boot_memory[1](0xfffffb0e,0xfffffb0f).rw(FUNC(alphasdana_state::rtc_isr_r),FUNC(alphasdana_state::rtc_isr_w));
+    m_boot_memory[1](0xfffffb10,0xfffffb11).rw(FUNC(alphasdana_state::rtc_ien_r),FUNC(alphasdana_state::rtc_ien_w));
     m_boot_memory[1](0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
     m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
     m_boot_memory[1](0xfffffd0c,0xfffffd0d).rw(FUNC(alphasdana_state::icemcr_r),FUNC(alphasdana_state::icemcr_w));
