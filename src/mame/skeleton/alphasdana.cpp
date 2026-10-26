@@ -369,6 +369,10 @@ private:
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
     u16 m_dram[4]={};
     u8 m_isp_cmd=0, m_isp_phase=0;
+    // Philips ISP1161 A1=1 device-controller command/data channel (separate from HC).
+    u8 m_isp_dc_cmd=0;
+    bool m_isp_dc_pending=false, m_isp_dc_unlocked=false, m_isp_dc_suspend_requested=false;
+    u16 m_isp_dc_hw=0, m_isp_dc_mode=0;
     u16 m_isp_low=0, m_isp_up_irq=0, m_isp_itl_len=0,
         m_isp_atl_len=0, m_isp_hardware=0x0028;
     u32 m_isp_control=0, m_isp_interrupt_status=0,
@@ -489,6 +493,9 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_emucs)); save_item(NAME(m_dram));
     save_item(NAME(m_sdram_init_phase));
     save_item(NAME(m_isp_cmd)); save_item(NAME(m_isp_phase));
+    save_item(NAME(m_isp_dc_cmd)); save_item(NAME(m_isp_dc_pending));
+    save_item(NAME(m_isp_dc_unlocked)); save_item(NAME(m_isp_dc_suspend_requested));
+    save_item(NAME(m_isp_dc_hw)); save_item(NAME(m_isp_dc_mode));
     save_item(NAME(m_isp_low)); save_item(NAME(m_isp_up_irq));
     save_item(NAME(m_isp_itl_len)); save_item(NAME(m_isp_atl_len));
     save_item(NAME(m_isp_hardware)); save_item(NAME(m_isp_control));
@@ -618,6 +625,8 @@ void alphasdana_state::physical_reset()
     m_dram[0]=0; m_dram[1]=0; m_dram[2]=0x003c; m_dram[3]=0;
     m_sdram_init_phase=0;
     m_isp_cmd=0; m_isp_phase=0; m_isp_low=0;
+    m_isp_dc_cmd=0; m_isp_dc_pending=false; m_isp_dc_unlocked=false;
+    m_isp_dc_hw=0; m_isp_dc_mode=0; m_isp_dc_suspend_requested=false;
     m_isp_up_irq=0; m_isp_itl_len=0; m_isp_atl_len=0;
     m_isp_hardware=0x0028; m_isp_control=0;
     m_isp_interrupt_status=0; m_isp_interrupt_enable=0;
@@ -771,6 +780,54 @@ void alphasdana_state::isp1161_w(offs_t offset, u16 data, u16 mem_mask)
     u32 const address=0x1f000000U+u32(offset)*2;
     if (mem_mask!=0xffff)
     { physical_block("ISP1161_REQUIRES_WORD_ACCESS",address,data); return; }
+    // Philips ISP1161 DC: A1=1 selects DC, A0=1 command, A0=0 data.
+    // Authentic UK1.5 ROM at 10003064..1000309C writes B0/AA37,
+    // BA/0F04, B8/0020, B8/0000 (last is CLR.W read-before-write).
+    if (offset==3)
+    {
+        if (data & 0xff00)
+        { physical_block("ISP1161_DC_COMMAND_UPPER_BYTE",address,data); return; }
+        if (m_isp_dc_pending)
+        { physical_block("ISP1161_DC_INCOMPLETE_WRITE",address,data); return; }
+        if (data!=0xb0 && data!=0xba && data!=0xb8)
+        { physical_block("ISP1161_DC_COMMAND_UNIMPLEMENTED",address,data); return; }
+        m_isp_dc_cmd=u8(data); m_isp_dc_pending=true;
+        return;
+    }
+    if (offset==2)
+    {
+        if (!m_isp_dc_pending)
+        { physical_block("ISP1161_DC_DATA_WITHOUT_COMMAND",address,data); return; }
+        switch (m_isp_dc_cmd)
+        {
+        case 0xb0:
+            if (data!=0xaa37)
+            { physical_block("ISP1161_DC_BAD_UNLOCK_CODE",address,data); return; }
+            m_isp_dc_unlocked=true;
+            break;
+        case 0xba:
+            if (!m_isp_dc_unlocked || data!=0x0f04)
+            { physical_block("ISP1161_DC_HARDWARE_UNMODELLED",address,data); return; }
+            m_isp_dc_hw=data;
+            break;
+        case 0xb8:
+            // GOSUSP bit5 is raised then cleared. Record the request, but
+            // do not fabricate USB signalling, endpoint state or a clock stop.
+            if (!m_isp_dc_unlocked || (data!=0x0020 && data!=0x0000))
+            { physical_block("ISP1161_DC_MODE_UNMODELLED",address,data); return; }
+            if ((m_isp_dc_mode & 0x0020) && !(data & 0x0020))
+                m_isp_dc_suspend_requested=true;
+            m_isp_dc_mode=data;
+            break;
+        default:
+            physical_block("ISP1161_DC_DATA_COMMAND_INVALID",address,data);
+            return;
+        }
+        m_isp_dc_pending=false;
+        logerror("DANA_ISP1161_DC cmd=%02x value=%04x hw=%04x mode=%04x suspend_requested=%u\n",
+            m_isp_dc_cmd,data,m_isp_dc_hw,m_isp_dc_mode,unsigned(m_isp_dc_suspend_requested));
+        return;
+    }
     if (offset==1)
     {
         if (data & 0xff00)
@@ -838,7 +895,21 @@ void alphasdana_state::isp1161_w(offs_t offset, u16 data, u16 mem_mask)
 u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
 {
     u32 const address=0x1f000000U+u32(offset)*2;
-    if (mem_mask!=0xffff || offset!=0)
+    if (mem_mask!=0xffff)
+    { physical_block("ISP1161_READ_ACCESS_UNSUPPORTED",address); return 0xffff; }
+    if (offset==2)
+    {
+        // The 68000 performs a read-before-write on CLR.W. With a DC write
+        // command selected this value is discarded by the instruction.
+        if (m_isp_dc_pending && (m_isp_dc_cmd==0xb8 || m_isp_dc_cmd==0xb0 || m_isp_dc_cmd==0xba))
+        {
+            logerror("DANA_ISP1161_DC discarded_write_port_read cmd=%02x\n",m_isp_dc_cmd);
+            return 0xffff;
+        }
+        physical_block("ISP1161_DC_READ_UNIMPLEMENTED",address);
+        return 0xffff;
+    }
+    if (offset!=0)
     { physical_block("ISP1161_READ_ACCESS_UNSUPPORTED",address); return 0xffff; }
     // Real M68000 CLR.W at UK1.5 10003186/100031EC reads the selected
     // write-port before clearing it. The old data bus value is DISCARDED by
@@ -1714,8 +1785,9 @@ void alphasdana_state::program_map(address_map &map)
     map(0x00000000,0xffffffff).view(m_boot_memory);
     m_boot_memory[0](0x00000000,0x003fffff).ram().share("ram");
     m_boot_memory[1](0x00000000,0xffffefff).rw(FUNC(alphasdana_state::physical_r),FUNC(alphasdana_state::physical_w));
-    // Dana's external ISP1161 USB HC: indexed 16-bit data then command word.
-    m_boot_memory[1](0x1f000000,0x1f000003).rw(FUNC(alphasdana_state::isp1161_r),FUNC(alphasdana_state::isp1161_w));
+    // Dana's external Philips ISP1161: HC (A1=0) and DC (A1=1),
+    // each a 16-bit data/command pair, with distinct command state.
+    m_boot_memory[1](0x1f000000,0x1f000007).rw(FUNC(alphasdana_state::isp1161_r),FUNC(alphasdana_state::isp1161_w));
     m_boot_memory[1](0xfffff000,0xffffffff).rw(FUNC(alphasdana_state::physical_mmio_r),FUNC(alphasdana_state::physical_mmio_w));
     // Additional system/chip-select/DRAM registers exist only in physical mode.
     m_boot_memory[1](0xfffff000,0xfffff000).rw(FUNC(alphasdana_state::scr_r),FUNC(alphasdana_state::scr_w));
