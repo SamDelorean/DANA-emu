@@ -2,6 +2,7 @@
 // copyright-holders:DANA-emu contributors
 
 #include "emu.h"
+#include "isp1161_ptd.h"
 #include "cpu/m68000/m68000.h"
 #include "imagedev/snapquik.h"
 #include "bus/generic/slot.h"
@@ -448,6 +449,9 @@ private:
     u16 m_isp_hc_fifo_index=0, m_isp_hc_fifo_remaining=0;
     u16 m_isp_hc_fifo_cursor=0;
     u8 m_isp_hc_fifo_bank=0;
+    u16 m_isp_hc_valid_bytes[3]={}; // ITL0, ITL1, ATL
+    u8 m_isp_hc_itl_cpu_bank=0;
+    void isp1161_hc_execute_buffers();
     emu_timer *m_isp_hc_sof_timer=nullptr;
     TIMER_CALLBACK_MEMBER(isp1161_hc_sof);
     static constexpr bool isp1161_hc_32bit(u8 code)
@@ -655,6 +659,8 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_isp_hc_ram));
     save_item(NAME(m_isp_hc_fifo_index)); save_item(NAME(m_isp_hc_fifo_remaining));
     save_item(NAME(m_isp_hc_fifo_cursor)); save_item(NAME(m_isp_hc_fifo_bank));
+    save_item(NAME(m_isp_hc_valid_bytes));
+    save_item(NAME(m_isp_hc_itl_cpu_bank));
     save_item(NAME(m_isp_dc_cmd)); save_item(NAME(m_isp_dc_pending));
     save_item(NAME(m_isp_dc_unlocked)); save_item(NAME(m_isp_dc_suspend_requested));
     save_item(NAME(m_isp_dc_hw)); save_item(NAME(m_isp_dc_mode));
@@ -977,6 +983,8 @@ void alphasdana_state::isp1161_hc_reset()
     m_isp_hc_regs16[0x27]=0x6123; // ISP1161A1 Rev03 Table 46
     m_isp_hc_fifo_bank=0; m_isp_hc_fifo_cursor=0;
     m_isp_hc_fifo_index=0; m_isp_hc_fifo_remaining=0;
+    std::fill(std::begin(m_isp_hc_valid_bytes),std::end(m_isp_hc_valid_bytes),0);
+    m_isp_hc_itl_cpu_bank=0;
 }
 
 void alphasdana_state::isp1161_dc_reset()
@@ -994,14 +1002,61 @@ void alphasdana_state::isp1161_dc_reset()
     std::fill(std::begin(m_isp_dc_ram),std::end(m_isp_dc_ram),0);
 }
 
+void alphasdana_state::isp1161_hc_execute_buffers()
+{
+    // Execute at SOF on chip SRAM, never from CPU main memory.
+    // The Philips 8-byte PTD layout is entirely different from OHCI TD/ED.
+    for(unsigned bank=0;bank<3;++bank)
+    {
+        u16 const full=u16(1U<<bank);
+        if(!(m_isp_hc_regs16[0x2c]&full))
+            continue;
+        u16 const base=bank==2 ? u16(2U*m_isp_itl_len)
+            : u16(bank*m_isp_itl_len);
+        u16 const limit=bank==2 ? m_isp_atl_len : m_isp_itl_len;
+        u16 const count=m_isp_hc_valid_bytes[bank];
+        if(count>limit || unsigned(base)+count>sizeof(m_isp_hc_ram))
+        {
+            physical_block("ISP1161_HC_PTD_FIFO_LAYOUT",0x1f000000,count);
+            return;
+        }
+        auto disconnected=[](isp1161a1::transaction const &,
+            u8 const *,u8 *,u16)->isp1161a1::reply
+        {
+            // No USB peripheral is configured/connected. A token receives
+            // no handshake; never fabricate an enumeration ACK or data.
+            return {isp1161a1::handshake::timeout,0};
+        };
+        isp1161a1::outcome const result=isp1161a1::execute(
+            m_isp_hc_ram+base,count,disconnected,true);
+        if(result.malformed)
+        {
+            physical_block("ISP1161_HC_PTD_MALFORMED",0x1f000000,count);
+            return;
+        }
+        // The HC consumed the uploaded PTDs and made their updated status
+        // readable to the MCU through the same 16-bit FIFO port.
+        m_isp_hc_regs16[0x2c]=u16(
+            (m_isp_hc_regs16[0x2c]&~full)|(1U<<(bank+3)));
+        if(bank==2) m_isp_up_irq|=0x02; // ATL interrupt status
+        else m_isp_up_irq|=0x01; // SOF/ITL interrupt
+        logerror("DANA_ISP1161_PTD bank=%u count=%u parsed=%u complete=%u pending=%u\n",
+            bank,count,unsigned(result.descriptors),
+            unsigned(result.completed),unsigned(result.pending));
+    }
+    if((m_isp_hc_regs16[0x2c]&0x03)!=0x03)
+        m_isp_hc_itl_cpu_bank^=1; // ITL ping-pong per millisecond
+}
+
 TIMER_CALLBACK_MEMBER(alphasdana_state::isp1161_hc_sof)
 {
     if ((m_isp_control & 0xc0)!=0x80)
         return;
     m_isp_hc_regs32[0x0f]=(m_isp_hc_regs32[0x0f]+1)&0xffff;
     m_isp_interrupt_status|=0x00000004; // OHCI StartOfFrame
-    // A real HC with no connected downstream devices generates SOF but
-    // does not complete invented PTDs, enumerate or connect phantom USB.
+    isp1161_hc_execute_buffers();
+    // Device attachment is explicit: no downstream USB device is present
+    // until a configured emulated peripheral is connected to a root port.
     if (m_isp_hc_regs16[0x25]&1)
         m_isp_up_irq |=1;
 }
@@ -1199,7 +1254,7 @@ u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
     {
         // Buffer RAM is inaccessible unless a transfer count was programmed.
         if(!m_isp_hc_fifo_remaining) return 0;
-        u16 const base=code==0x40 ? 0 : u16(2U*m_isp_itl_len);
+        u16 const base=code==0x40 ? u16(m_isp_hc_itl_cpu_bank*m_isp_itl_len) : u16(2U*m_isp_itl_len);
         u16 const cursor=base+m_isp_hc_fifo_cursor;
         if(cursor+1>=4096)
         { physical_block("ISP1161_HC_FIFO_OOB",address); return 0xffff; }
@@ -1346,7 +1401,7 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
     {
         if(m_isp_hc_fifo_remaining==0)
         { physical_block("ISP1161_HC_FIFO_COUNT_REQUIRED",address,data); return; }
-        u16 const base=code==0x40 ? 0 : u16(2U*m_isp_itl_len);
+        u16 const base=code==0x40 ? u16(m_isp_hc_itl_cpu_bank*m_isp_itl_len) : u16(2U*m_isp_itl_len);
         u16 const cursor=base+m_isp_hc_fifo_cursor;
         if(cursor+1>=4096)
         { physical_block("ISP1161_HC_FIFO_OOB",address,data); return; }
@@ -1357,7 +1412,9 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
         if(!m_isp_hc_fifo_remaining)
         {
             m_isp_up_irq|=0x04; // End of host-buffer PIO transfer
-            m_isp_hc_regs16[0x2c] |= code==0x40 ? 1U : 4U;
+            unsigned const bank=code==0x40 ? m_isp_hc_itl_cpu_bank : 2;
+            m_isp_hc_valid_bytes[bank]=m_isp_hc_fifo_cursor;
+            m_isp_hc_regs16[0x2c] |= u16(1U<<bank);
         }
         return;
     }
