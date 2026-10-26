@@ -485,6 +485,28 @@ private:
     // two successive low-then-high 16-bit reads after command C0.
     u32 m_isp_dc_interrupt=0, m_isp_dc_read_snapshot=0;
     u8 m_isp_dc_read_phase=0; // 0 idle, 1 low next, 2 high next
+    u8 m_isp_dc_write_phase=0;
+    u16 m_isp_dc_write_low=0;
+    u16 m_isp_dc_address=0, m_isp_dc_scratch=0;
+    u16 m_isp_dc_dma_cfg=0,m_isp_dc_dma_count=0;
+    u32 m_isp_dc_interrupt_enable=0;
+    u16 m_isp_dc_ep_config[16]={},m_isp_dc_ep_status[16]={};
+    u8 m_isp_dc_ram[2462]={};
+    void isp1161_dc_reset();
+    static constexpr bool isp1161_dc_read_command(u8 cmd)
+    {
+        return (cmd>=0x30 && cmd<=0x3f) || (cmd>=0x50 && cmd<=0x5f)
+            || (cmd>=0xa0 && cmd<=0xaf) || (cmd>=0xd0 && cmd<=0xdf)
+            || cmd==0xb3 || cmd==0xb4 || cmd==0xb5 || cmd==0xb7
+            || cmd==0xb9 || cmd==0xbb || cmd==0xc0 || cmd==0xc3
+            || cmd==0xf1 || cmd==0xf3;
+    }
+    static constexpr bool isp1161_dc_write_command(u8 cmd)
+    {
+        return (cmd>=0x20 && cmd<=0x2f) || cmd==0xb0
+            || cmd==0xb2 || cmd==0xb6 || cmd==0xb8 || cmd==0xba
+            || cmd==0xc2 || cmd==0xf0 || cmd==0xf2;
+    }
     u16 m_isp_low=0, m_isp_up_irq=0, m_isp_itl_len=0,
         m_isp_atl_len=0, m_isp_hardware=0x0028;
     u32 m_isp_control=0, m_isp_interrupt_status=0,
@@ -639,6 +661,12 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_isp_dc_interrupt));
     save_item(NAME(m_isp_dc_read_snapshot));
     save_item(NAME(m_isp_dc_read_phase));
+    save_item(NAME(m_isp_dc_write_phase));save_item(NAME(m_isp_dc_write_low));
+    save_item(NAME(m_isp_dc_address));save_item(NAME(m_isp_dc_scratch));
+    save_item(NAME(m_isp_dc_dma_cfg));save_item(NAME(m_isp_dc_dma_count));
+    save_item(NAME(m_isp_dc_interrupt_enable));
+    save_item(NAME(m_isp_dc_ep_config));save_item(NAME(m_isp_dc_ep_status));
+    save_item(NAME(m_isp_dc_ram));
     save_item(NAME(m_isp_low)); save_item(NAME(m_isp_up_irq));
     save_item(NAME(m_isp_itl_len)); save_item(NAME(m_isp_atl_len));
     save_item(NAME(m_isp_hardware)); save_item(NAME(m_isp_control));
@@ -778,9 +806,7 @@ void alphasdana_state::physical_reset()
     std::fill(std::begin(m_isp_hc_ram),std::end(m_isp_hc_ram),0);
     m_isp_hc_sof_timer->adjust(attotime::never);
     m_isp_cmd=0; m_isp_phase=0; m_isp_low=0;
-    m_isp_dc_cmd=0; m_isp_dc_pending=false; m_isp_dc_unlocked=false;
-    m_isp_dc_hw=0; m_isp_dc_mode=0; m_isp_dc_suspend_requested=false;
-    m_isp_dc_interrupt=0; m_isp_dc_read_snapshot=0; m_isp_dc_read_phase=0;
+    isp1161_dc_reset();
     m_isp_up_irq=0; m_isp_itl_len=0; m_isp_atl_len=0;
     m_isp_hardware=0x0028; m_isp_control=0;
     m_isp_interrupt_status=0; m_isp_interrupt_enable=0;
@@ -951,6 +977,21 @@ void alphasdana_state::isp1161_hc_reset()
     m_isp_hc_fifo_index=0; m_isp_hc_fifo_remaining=0;
 }
 
+void alphasdana_state::isp1161_dc_reset()
+{
+    // Reset DEVICE only: do not alter the HC command, IRQ or FIFO state.
+    m_isp_dc_cmd=0; m_isp_dc_pending=false; m_isp_dc_read_phase=0;
+    m_isp_dc_write_phase=0; m_isp_dc_write_low=0;
+    m_isp_dc_unlocked=false; m_isp_dc_suspend_requested=false;
+    m_isp_dc_interrupt=0;m_isp_dc_read_snapshot=0;
+    m_isp_dc_interrupt_enable=0;
+    m_isp_dc_address=0;m_isp_dc_scratch=0;m_isp_dc_mode=0;m_isp_dc_hw=0;
+    m_isp_dc_dma_cfg=0;m_isp_dc_dma_count=0;
+    std::fill(std::begin(m_isp_dc_ep_config),std::end(m_isp_dc_ep_config),0);
+    std::fill(std::begin(m_isp_dc_ep_status),std::end(m_isp_dc_ep_status),0);
+    std::fill(std::begin(m_isp_dc_ram),std::end(m_isp_dc_ram),0);
+}
+
 TIMER_CALLBACK_MEMBER(alphasdana_state::isp1161_hc_sof)
 {
     if ((m_isp_control & 0xc0)!=0x80)
@@ -1078,36 +1119,58 @@ u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
     { physical_block("ISP1161_BUS_REQUIRES_WORD",address); return 0xffff; }
     if(offset==2)
     {
-    if (offset==2)
-    {
-        if (m_isp_dc_cmd==0xc0 && m_isp_dc_read_phase)
+        if(m_isp_dc_read_phase)
         {
-            if (m_isp_dc_read_phase==1)
+            u8 const cmd=m_isp_dc_cmd;
+            if(cmd==0xc0 || cmd==0xc3)
             {
-                m_isp_dc_read_phase=2;
-                u16 const low=u16(m_isp_dc_read_snapshot);
-                logerror("DANA_ISP1161_DC_INTERRUPT phase=low value=%04x\n",low);
-                return low;
+                u16 const v=m_isp_dc_read_phase==1 ?
+                    u16(m_isp_dc_read_snapshot) : u16(m_isp_dc_read_snapshot>>16);
+                if(m_isp_dc_read_phase==1)
+                    m_isp_dc_read_phase=2;
+                else
+                {
+                    m_isp_dc_read_phase=0;
+                    if(cmd==0xc0) m_isp_dc_interrupt &= ~u32(0x005b);
+                }
+                logerror("DANA_ISP1161_DC_INTERRUPT cmd=%02x value=%04x phase=%u\n",
+                    cmd,v,unsigned(m_isp_dc_read_phase));
+                return v;
             }
-            u16 const high=u16(m_isp_dc_read_snapshot >> 16);
             m_isp_dc_read_phase=0;
-            // Rev03 §8.6.3: RESET, RESUME, SP_EOT, EOT, SOF are
-            // cleared on a complete DcInterrupt register read. Endpoint
-            // flags are cleared by their own DcEndpointStatus reads.
-            m_isp_dc_interrupt &= ~u32(0x005b);
-            logerror("DANA_ISP1161_DC_INTERRUPT phase=high value=%04x\n",high);
-            return high;
-        }
-        // The 68000 performs a read-before-write on CLR.W. With a DC write
-        // command selected this value is discarded by the instruction.
-        if (m_isp_dc_pending && (m_isp_dc_cmd==0xb8 || m_isp_dc_cmd==0xb0 || m_isp_dc_cmd==0xba))
-        {
-            logerror("DANA_ISP1161_DC discarded_write_port_read cmd=%02x\n",m_isp_dc_cmd);
+            if(cmd>=0x30 && cmd<=0x3f)
+                return m_isp_dc_ep_config[cmd-0x30];
+            if(cmd>=0x50 && cmd<=0x5f)
+            {
+                u16 const state=m_isp_dc_ep_status[cmd-0x50];
+                m_isp_dc_interrupt &=~(u32(1)<<(8+(cmd-0x50)));
+                return state;
+            }
+            if(cmd>=0xd0 && cmd<=0xdf)
+                return m_isp_dc_ep_status[cmd-0xd0]; // no side effects
+            if(cmd>=0xa0 && cmd<=0xaf) return 0; // no transfer errors
+            switch(cmd)
+            {
+            case 0xb3: return m_isp_dc_scratch;
+            case 0xb4: return 0; // no upstream SOF until a host is attached
+            case 0xb5: return 0x6123; // Rev03 Table 106
+            case 0xb7: return m_isp_dc_address;
+            case 0xb9: return m_isp_dc_mode;
+            case 0xbb: return m_isp_dc_hw;
+            case 0xf1: return m_isp_dc_dma_cfg;
+            case 0xf3: return m_isp_dc_dma_count;
+            }
+            physical_block("ISP1161_DC_READ_REGISTER_UNKNOWN",address,cmd);
             return 0xffff;
         }
-        physical_block("ISP1161_DC_READ_UNIMPLEMENTED",address);
+        if(m_isp_dc_pending)
+        {
+            // Real 68000 CLR.W read-before-write; a write command does not
+            // have a readable data result at this stage.
+            return 0xffff;
+        }
+        physical_block("ISP1161_DC_READ_WITHOUT_COMMAND",address);
         return 0xffff;
-    }
     }
     if(offset!=0)
     { physical_block("ISP1161_BAD_READ_ADDRESS",address); return 0xffff; }
@@ -1155,59 +1218,85 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
     u32 const address=0x1f000000U+u32(offset)*2;
     if(mem_mask!=0xffff)
     { physical_block("ISP1161_BUS_REQUIRES_WORD",address,data); return; }
-    // Device and Host bus state are wholly independent.
-    if (offset==3)
+    // ISP1161A1 Device Controller: Table 75 indexed command bank.
+    if(offset==3)
     {
-        if (data & 0xff00)
-        { physical_block("ISP1161_DC_COMMAND_UPPER_BYTE",address,data); return; }
-        if (m_isp_dc_pending)
-        { physical_block("ISP1161_DC_INCOMPLETE_WRITE",address,data); return; }
-        if (m_isp_dc_read_phase)
-        { physical_block("ISP1161_DC_INCOMPLETE_READ",address,data); return; }
-        if (data==0xc0)
+        if(data&0xff00)
+        { physical_block("ISP1161_DC_COMMAND_UPPER_BYTE",address,data);return; }
+        if(m_isp_dc_pending || m_isp_dc_read_phase)
+        { physical_block("ISP1161_DC_INCOMPLETE_TRANSFER",address,data);return; }
+        u8 const command=u8(data);
+        if(command==0xf6)
         {
-            m_isp_dc_cmd=0xc0;
-            m_isp_dc_read_snapshot=m_isp_dc_interrupt;
-            m_isp_dc_read_phase=1;
+            isp1161_dc_reset(); // DC software reset, HC is unchanged
             return;
         }
-        if (data!=0xb0 && data!=0xba && data!=0xb8)
-        { physical_block("ISP1161_DC_COMMAND_UNIMPLEMENTED",address,data); return; }
-        m_isp_dc_cmd=u8(data); m_isp_dc_pending=true;
+        if(command==0xf4)
+        {
+            // ACK SETUP command: clear only pending EP0 setup status.
+            m_isp_dc_ep_status[0]&=~u16(0x0040);
+            return;
+        }
+        if(isp1161_dc_write_command(command))
+        {
+            m_isp_dc_cmd=command;m_isp_dc_pending=true;
+            m_isp_dc_write_phase=0;
+            return;
+        }
+        if(isp1161_dc_read_command(command))
+        {
+            m_isp_dc_cmd=command; m_isp_dc_read_phase=1;
+            m_isp_dc_read_snapshot=command==0xc0 ?
+                m_isp_dc_interrupt : m_isp_dc_interrupt_enable;
+            return;
+        }
+        physical_block("ISP1161_DC_COMMAND_UNKNOWN",address,data);
         return;
     }
-    if (offset==2)
+    if(offset==2)
     {
-        if (!m_isp_dc_pending)
-        { physical_block("ISP1161_DC_DATA_WITHOUT_COMMAND",address,data); return; }
-        switch (m_isp_dc_cmd)
+        if(!m_isp_dc_pending)
+        { physical_block("ISP1161_DC_WRITE_WITHOUT_COMMAND",address,data);return; }
+        u8 const code=m_isp_dc_cmd;
+        if(code==0xc2)
+        {
+            if(!m_isp_dc_write_phase)
+            { m_isp_dc_write_low=data;m_isp_dc_write_phase=1;return; }
+            m_isp_dc_interrupt_enable=u32(m_isp_dc_write_low)|(u32(data)<<16);
+            m_isp_dc_write_phase=0;m_isp_dc_pending=false;
+            return;
+        }
+        if(code>=0x20 && code<=0x2f)
+        {
+            if(data&0xff00)
+            { physical_block("ISP1161_DC_ENDPOINT_CONFIG_RESERVED",address,data);return; }
+            m_isp_dc_ep_config[code-0x20]=data;
+        }
+        else switch(code)
         {
         case 0xb0:
-            if (data!=0xaa37)
-            { physical_block("ISP1161_DC_BAD_UNLOCK_CODE",address,data); return; }
+            if(data!=0xaa37)
+            { physical_block("ISP1161_DC_UNLOCK_CODE",address,data);return; }
             m_isp_dc_unlocked=true;
             break;
-        case 0xba:
-            if (!m_isp_dc_unlocked || data!=0x0f04)
-            { physical_block("ISP1161_DC_HARDWARE_UNMODELLED",address,data); return; }
-            m_isp_dc_hw=data;
-            break;
+        case 0xb2: m_isp_dc_scratch=data&0x1fff;break;
+        case 0xb6: m_isp_dc_address=data&0x00ff;break;
         case 0xb8:
-            // GOSUSP bit5 is raised then cleared. Record the request, but
-            // do not fabricate USB signalling, endpoint state or a clock stop.
-            if (!m_isp_dc_unlocked || (data!=0x0020 && data!=0x0000))
-            { physical_block("ISP1161_DC_MODE_UNMODELLED",address,data); return; }
-            if ((m_isp_dc_mode & 0x0020) && !(data & 0x0020))
+            // GOSUSP set/clear sequence is a physical power request;
+            // do not fabricate USB bus suspend or SOF packets.
+            if((m_isp_dc_mode&0x20) && !(data&0x20))
                 m_isp_dc_suspend_requested=true;
             m_isp_dc_mode=data;
             break;
+        case 0xba: m_isp_dc_hw=data;break;
+        case 0xf0: m_isp_dc_dma_cfg=data;break;
+        case 0xf2: m_isp_dc_dma_count=data;break;
         default:
-            physical_block("ISP1161_DC_DATA_COMMAND_INVALID",address,data);
-            return;
+            physical_block("ISP1161_DC_WRITE_UNSUPPORTED",address,data);return;
         }
         m_isp_dc_pending=false;
         logerror("DANA_ISP1161_DC cmd=%02x value=%04x hw=%04x mode=%04x suspend_requested=%u\n",
-            m_isp_dc_cmd,data,m_isp_dc_hw,m_isp_dc_mode,unsigned(m_isp_dc_suspend_requested));
+            code,data,m_isp_dc_hw,m_isp_dc_mode,unsigned(m_isp_dc_suspend_requested));
         return;
     }
     if(offset==1)
