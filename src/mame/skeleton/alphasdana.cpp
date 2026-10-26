@@ -249,15 +249,22 @@ private:
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
     TIMER_CALLBACK_MEMBER(clk32_tick);
-    // VZ 11.2: RTC time-of-day, alarm/IRQ control use a separate 1Hz
-    // oscillator domain, never host wall-clock reads or generic MMIO RAM.
+    // VZ 11.2: RTC time-of-day uses MAME's host-seeded system_time,
+    // exactly like other MAME RTC devices; no second independent counter.
     static constexpr u32 rtc_time_mask=0x1f3f003fU;
     static constexpr bool rtc_time_valid(u32 t)
     {
         return !(t & ~rtc_time_mask) && ((t>>24)&0x1f)<24
             && ((t>>16)&0x3f)<60 && (t & 0x3f)<60;
     }
-    u16 rtc_time_r(offs_t offset) { return u16(m_rtc_time >> (offset ? 0 : 16)); }
+    // One coherent 32-bit timestamp per 68000 high/low longword read.
+    u16 rtc_time_r(offs_t offset)
+    {
+        if (!offset) rtc_sync_from_host();
+        return u16(m_rtc_time >> (offset ? 0 : 16));
+    }
+    u32 rtc_host_seconds();
+    void rtc_sync_from_host();
     void rtc_time_w(offs_t offset, u16 data, u16 mem_mask);
     u16 rtc_control_r() { return m_rtc_control; }
     void rtc_control_w(offs_t, u16 data, u16 mem_mask);
@@ -446,9 +453,10 @@ private:
     emu_timer *m_watchdog_guard=nullptr;
     emu_timer *m_clk32_timer = nullptr;
     emu_timer *m_rtc_timer = nullptr;
-    // RTC is battery-powered on physical hardware. Emulated cold start has
-    // deterministic 00:00:00; machine resets preserve time and day.
-    u32 m_rtc_time=0;
+    // MAME's current_datetime is seeded from the host RTC at machine start,
+    // then advances with guest time. Guest RTCTIME writes use local offset.
+    u32 m_rtc_time=0, m_rtc_last_tick=0;
+    s32 m_rtc_offset_seconds=0;
     u16 m_rtc_day=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
@@ -505,6 +513,8 @@ void alphasdana_state::machine_start()
     m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);
     m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);
     save_item(NAME(m_rtc_time));
+    save_item(NAME(m_rtc_offset_seconds));
+    save_item(NAME(m_rtc_last_tick));
     save_item(NAME(m_rtc_day));
     save_item(NAME(m_rtc_control));
     save_item(NAME(m_rtc_ien));
@@ -612,8 +622,10 @@ void alphasdana_state::machine_reset()
     // As in the pinned MAME DragonBall reference, advance CLK32 via
     // scheduler time rather than toggling it on register reads.
     m_clk32_timer->adjust(attotime::from_hz(32768), 0, attotime::from_hz(32768));
-    // RTC persists across a soft hardware reset; do not reset TOD/DAY.
+    // The host-seeded RTC persists across a soft hardware reset.
     m_rtc_control=0x0080; m_rtc_ien=0; m_rtc_isr=0;
+    rtc_sync_from_host();
+    m_rtc_last_tick=m_rtc_time;
     m_rtc_timer->adjust(attotime::from_seconds(1), 0, attotime::from_seconds(1));
     m_ivr = 0x00;
     m_icr = 0;
@@ -1578,39 +1590,62 @@ void alphasdana_state::rtc_update_irq()
     update_irq_lines();
 }
 
+u32 alphasdana_state::rtc_host_seconds()
+{
+    system_time host;
+    machine().current_datetime(host);
+    auto const &now=host.local_time;
+    return u32(now.hour)*3600U+u32(now.minute)*60U+now.second;
+}
+
+void alphasdana_state::rtc_sync_from_host()
+{
+    if (!(m_rtc_control & 0x0080))
+        return; // RTCEN=0: hold programmed time
+    s32 const raw=s32(rtc_host_seconds())+m_rtc_offset_seconds;
+    s32 const seconds=(raw%86400+86400)%86400;
+    m_rtc_time=(u32(seconds/3600)<<24)
+        | (u32((seconds/60)%60)<<16) | u32(seconds%60);
+}
+
 TIMER_CALLBACK_MEMBER(alphasdana_state::rtc_tick)
 {
     if (!(m_rtc_control & 0x0080)) return;
-    u32 second=(m_rtc_time & 0x3f)+1;
-    u32 minute=(m_rtc_time>>16) & 0x3f;
-    u32 hour=(m_rtc_time>>24) & 0x1f;
-    m_rtc_isr |= 0x0010;  // 1Hz
-    if (second==60)
+    u32 const previous=m_rtc_last_tick;
+    rtc_sync_from_host();
+    u32 const current=m_rtc_time;
+    if (current!=previous)
     {
-        second=0; ++minute; m_rtc_isr |= 0x0002; // minute
-        if (minute==60)
+        m_rtc_isr |= 0x0010;  // 1Hz event, not generated on plain read
+        if (((current>>16)&0x3f)!=((previous>>16)&0x3f))
+            m_rtc_isr |= 0x0002; // minute
+        if (((current>>24)&0x1f)!=((previous>>24)&0x1f))
+            m_rtc_isr |= 0x0020; // hour
+        if (((previous>>24)&0x1f)==23 && ((current>>24)&0x1f)==0)
         {
-            minute=0; ++hour; m_rtc_isr |= 0x0020; // hour
-            if (hour==24)
-            {
-                hour=0; m_rtc_day=(m_rtc_day+1)&0x01ff;
-                m_rtc_isr |= 0x0008; // 24-hour event
-            }
+            m_rtc_day=(m_rtc_day+1)&0x01ff;
+            m_rtc_isr |= 0x0008; // midnight
         }
+        m_rtc_last_tick=current;
     }
-    m_rtc_time=(hour<<24)|(minute<<16)|second;
     rtc_update_irq();
 }
 
 void alphasdana_state::rtc_time_w(offs_t offset, u16 data, u16 mem_mask)
 {
+    rtc_sync_from_host();
     u32 const shift=offset ? 0 : 16;
     u32 const mask=u32(mem_mask)<<shift;
     u32 const value=(m_rtc_time & ~mask)|(u32(data & mem_mask)<<shift);
     if (!rtc_time_valid(value))
     { physical_block("RTC_TIME_INVALID",0xfffffb00+(offset*2),data); return; }
     m_rtc_time=value;
-    logerror("DANA_RTC_TIME_WRITE time=%08x offset=%u mask=%04x\n",m_rtc_time,unsigned(offset),mem_mask);
+    m_rtc_last_tick=value;
+    s32 const wanted=s32(((value>>24)&0x1f)*3600
+        +((value>>16)&0x3f)*60+(value&0x3f));
+    m_rtc_offset_seconds=wanted-s32(rtc_host_seconds());
+    logerror("DANA_RTC_TIME_WRITE time=%08x offset=%u mask=%04x host_offset_s=%d\n",
+        m_rtc_time,unsigned(offset),mem_mask,m_rtc_offset_seconds);
 }
 
 void alphasdana_state::rtc_control_w(offs_t, u16 data, u16 mem_mask)
@@ -1619,7 +1654,20 @@ void alphasdana_state::rtc_control_w(offs_t, u16 data, u16 mem_mask)
     // VZ UM 11.2.6: RTCEN bit7, REFREQ bit5; other bits reserved.
     if (next & ~0x00a0)
     { physical_block("RTC_CONTROL_RESERVED_BITS",0xfffffb0c,next); return; }
+    // Freeze clock on disable; on re-enable keep the stopped time as
+    // origin by recalculating only this device's host offset.
+    bool const was_enabled=bool(m_rtc_control & 0x0080);
+    if (was_enabled && !(next & 0x0080))
+        rtc_sync_from_host();
     m_rtc_control=next;
+    if (!was_enabled && (next & 0x0080))
+    {
+        u32 const t=m_rtc_time;
+        s32 const seconds=s32(((t>>24)&0x1f)*3600
+            + ((t>>16)&0x3f)*60+(t&0x3f));
+        m_rtc_offset_seconds=seconds-s32(rtc_host_seconds());
+        m_rtc_last_tick=t;
+    }
     rtc_update_irq();
     logerror("DANA_RTC_CONTROL value=%04x rtcen=%u refreq=%u\n",
         m_rtc_control,unsigned(bool(m_rtc_control&0x80)),
