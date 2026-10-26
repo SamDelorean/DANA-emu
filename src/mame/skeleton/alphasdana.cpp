@@ -3,6 +3,7 @@
 
 #include "emu.h"
 #include "isp1161_ptd.h"
+#include "vz328_bootstrap.h"
 #include "cpu/m68000/m68000.h"
 #include "imagedev/snapquik.h"
 #include "bus/generic/slot.h"
@@ -57,6 +58,7 @@ public:
         , m_sd_irq(*this, "SDIRQ")
         , m_pd7_pin(*this, "PDPIN7")
         , m_sdram_profile(*this, "PHYSRAM")
+        , m_emubrk_pin(*this, "EMUBRK")
     {
     }
 
@@ -90,6 +92,10 @@ private:
     DECLARE_DEVICE_IMAGE_LOAD_MEMBER(firmware_load);
     void firmware_unload(device_image_interface &image);
     void physical_reset();
+    std::pair<std::error_condition,std::string> bootstrap_load(std::vector<u8> const &data);
+    u16 bootstrap_ibuff_r(offs_t offset,u16 mem_mask);
+    void bootstrap_ibuff_w(offs_t offset,u16 data,u16 mem_mask);
+    u16 bootstrap_wait_r() { return m_bootstrap_mode ? 0x60fe : 0xffff; }
     void boot_postload();
     void physical_block(const char *reason, u32 address, u16 data=0);
     u16 physical_r(offs_t offset, u16 mem_mask=0xffff);
@@ -428,6 +434,7 @@ private:
     required_ioport m_sd_irq;
     required_ioport m_pd7_pin;
     required_ioport m_sdram_profile;
+    required_ioport m_emubrk_pin;
     dana_sd::controller m_spi1;
     emu_timer *m_spi1_timer=nullptr;
     u16 m_spi1_word=0,m_spi1_control=0,m_spi1_received=0,m_ilcr=0x6533;
@@ -435,6 +442,8 @@ private:
     u8 m_pd_extra[4]={},m_sd_last_pins=0x0c,m_sd_edges=0;
     bool m_spi1_busy=false;
     bool m_physical_boot=false, m_physical_blocked=false;
+    bool m_bootstrap_mode=false; // VZ silicon EMUBRK asserted during reset
+    u8 m_bootstrap_ibuff[32]={}; // 0x00FFFFC0 on-chip 32-byte buffer
     u8 m_scr=0x1c, m_flash_sha1[20]={};
     u16 m_cs_base[4]={}, m_cs_select[4]={};
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
@@ -648,6 +657,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_lrra));
     save_item(NAME(m_pwmr));
     save_item(NAME(m_physical_boot)); save_item(NAME(m_physical_blocked));
+    save_item(NAME(m_bootstrap_mode)); save_item(NAME(m_bootstrap_ibuff));
     save_item(NAME(m_scr)); save_item(NAME(m_flash_sha1));
     save_item(NAME(m_cs_base)); save_item(NAME(m_cs_select));
     save_item(NAME(m_cs_upper)); save_item(NAME(m_cs_control));
@@ -734,13 +744,21 @@ void alphasdana_state::machine_reset()
     m_pen_command=0; m_pen_sample=0;
     lcd_bootstrap_reset();
     spi1_reset();
-    m_physical_boot=m_firmware->exists();
-    if (m_physical_boot && m_guest->exists())
-        fatalerror("Select either raw firmware (-rom) or DANARAM1 (-quickload), never both");
+    m_bootstrap_mode=!(m_emubrk_pin->read()&1);
+    m_physical_boot=m_firmware->exists() || m_bootstrap_mode;
+    if (m_firmware->exists() && m_guest->exists() && !m_bootstrap_mode)
+        fatalerror("Flash + guest incompatible except EMUBRK bootstrap");
     m_boot_memory.select(m_physical_boot ? 1 : 0);
     if (m_physical_boot)
     {
         physical_reset();
+        if(m_bootstrap_mode) {
+            for(unsigned i=0;i<sizeof(m_bootstrap_ibuff);i+=2) {
+                m_bootstrap_ibuff[i]=0x4e; m_bootstrap_ibuff[i+1]=0x71;
+            }
+            m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
+            logerror("DANA_VZ_BOOTSTRAP_ENTER emubrk=0 reset=1 uart=19200-8N1 ibuff=00ffffc0\n");
+        }
         // Register-only guarded subset: stop before returning an unmodelled
         // enabled counter after a one-second observation interval. This is a
         // diagnostic deadline, NOT an emulated watchdog expiry or RTC phase.
@@ -759,8 +777,8 @@ void alphasdana_state::machine_reset()
 
 DEVICE_IMAGE_LOAD_MEMBER(alphasdana_state::firmware_load)
 {
-    if (m_guest->exists())
-        return std::make_pair(image_error::INVALIDIMAGE,std::string("Firmware and DANARAM1 are mutually exclusive"));
+    if (m_guest->exists() && (m_emubrk_pin->read()&1))
+        return std::make_pair(image_error::INVALIDIMAGE,std::string("Firmware and DANARAM1 are mutually exclusive; EMUBRK low permits B-records"));
     if (!image.loaded_through_softlist() && image.length()>0x1000000)
         return std::make_pair(image_error::INVALIDLENGTH,std::string("Firmware exceeds VZ CSA maximum decode"));
     u32 const size=m_firmware->common_get_size("rom");
@@ -835,7 +853,7 @@ void alphasdana_state::physical_reset()
 
 void alphasdana_state::boot_postload()
 {
-    if (m_physical_boot!=m_firmware->exists() || (m_physical_boot && m_guest->exists()))
+    if (m_physical_boot!=(m_firmware->exists()||m_bootstrap_mode) || (m_firmware->exists() && m_guest->exists() && !m_bootstrap_mode))
         fatalerror("Boot profile differs from saved state; restart with the original image selection");
     if (m_physical_boot)
     {
@@ -872,6 +890,11 @@ void alphasdana_state::physical_block(const char *reason, u32 address, u16 data)
 u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
 {
     u32 const address=u32(offset)<<1;
+    if(m_bootstrap_mode && address<8) {
+        // Motorola VZ UM Figure 17-1: silicon-generated reset vectors.
+        static constexpr u16 vector[4]={0xfffc,0xfffc,0xffff,0xff00};
+        return vector[address>>1];
+    }
     // CSA's reset boot selection precedes programmed group decoding. A full
     // linear Flash array uses its own address lines; no fixed Palm ROM base.
     bool const boot=!(m_cs_select[0] & 1);
@@ -2379,6 +2402,15 @@ void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
 
 QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
 {
+    // B-record transport can select silicon bootstrap without a Flash ROM.
+    if(image.length()>=10 && image.length()<=4*1024*1024) {
+        std::vector<u8> raw(image.length());
+        if(image.fread(raw.data(),raw.size())!=raw.size())
+            return std::make_pair(image_error::INVALIDIMAGE,std::string("Short bootstrap/guest image read"));
+        if(std::memcmp(raw.data(),"DANARAM1",8))
+            return bootstrap_load(raw);
+        image.fseek(0,SEEK_SET);
+    }
     if (m_firmware->exists() || m_physical_boot)
         return std::make_pair(image_error::INVALIDIMAGE,std::string("DANARAM1 cannot replace a physical Flash boot"));
     // DANARAM1: 64-byte big-endian map-verified envelope, followed by the
@@ -2448,6 +2480,10 @@ void alphasdana_state::program_map(address_map &map)
     map(0x00000000,0xffffffff).view(m_boot_memory);
     m_boot_memory[0](0x00000000,0x003fffff).ram().share("ram");
     m_boot_memory[1](0x00000000,0xffffefff).rw(FUNC(alphasdana_state::physical_r),FUNC(alphasdana_state::physical_w));
+    // Dedicated VZ 32-byte instruction buffer; normal firmware does not
+    // receive a separate emulated ROM or any guest memory injection.
+    m_boot_memory[1](0x00ffffc0,0x00ffffdf).rw(FUNC(alphasdana_state::bootstrap_ibuff_r),FUNC(alphasdana_state::bootstrap_ibuff_w));
+    m_boot_memory[1](0xffffff00,0xffffff01).r(FUNC(alphasdana_state::bootstrap_wait_r));
     // Dana's external Philips ISP1161: HC (A1=0) and DC (A1=1),
     // each a 16-bit data/command pair, with distinct command state.
     m_boot_memory[1](0x1f000000,0x1f000007).rw(FUNC(alphasdana_state::isp1161_r),FUNC(alphasdana_state::isp1161_w));
@@ -2565,7 +2601,7 @@ void alphasdana_state::alphasdana(machine_config &config)
     GENERIC_SOCKET(config,m_firmware,generic_plain_slot,"dana_flash","bin,rom");
     m_firmware->set_device_load(FUNC(alphasdana_state::firmware_load));
     m_firmware->set_device_unload(FUNC(alphasdana_state::firmware_unload));
-    QUICKLOAD(config, m_guest, "dana", attotime::zero).set_load_callback(FUNC(alphasdana_state::guest_load));
+    QUICKLOAD(config, m_guest, "dana,b", attotime::zero).set_load_callback(FUNC(alphasdana_state::guest_load));
     // Placeholder CPU frequency, not a calibrated VZ PLL.
     DANA_VZ_CPU(config, m_maincpu, 1'000'000);
     m_maincpu->set_addrmap(AS_PROGRAM, &alphasdana_state::program_map);
@@ -2579,6 +2615,10 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
+    PORT_START("EMUBRK")
+    PORT_CONFNAME(0x01,0x01,"MC68VZ328 EMUBRK at RESET")
+    PORT_CONFSETTING(0x01,"High - Normal Dana boot")
+    PORT_CONFSETTING(0x00,"Low - Silicon UART bootstrap")
     PORT_START("SDWRITE")
     PORT_CONFNAME(0x01,0x00,"SD0 image writes")
     PORT_CONFSETTING(0x00,"Protected (default)")
