@@ -328,6 +328,7 @@ private:
     DANA_LCD_BYTE(lckcon)
     DANA_LCD_BYTE(lposr)
     DANA_LCD_BYTE(lgpmr)
+    DANA_LCD_BYTE(lblkc)
 #undef DANA_LCD_BYTE
 #define DANA_LCD_WORD(NAME) \
     u16 NAME##_r() { return m_##NAME; } \
@@ -336,6 +337,18 @@ private:
     DANA_LCD_WORD(lymax)
     DANA_LCD_WORD(lrra)
     DANA_LCD_WORD(pwmr)
+#undef DANA_LCD_WORD
+    // MC68VZ328 UM 8.3.5-8.3.8: true LCD cursor registers, with
+    // reserved bits masked and the 68000 word's byte lanes preserved.
+    u16 lcxp_r() { return m_lcxp; }
+    void lcxp_w(offs_t, u16 data, u16 mem_mask)
+    { m_lcxp=((m_lcxp & ~mem_mask) | (data & mem_mask)) & 0xc3ff; }
+    u16 lcyp_r() { return m_lcyp; }
+    void lcyp_w(offs_t, u16 data, u16 mem_mask)
+    { m_lcyp=((m_lcyp & ~mem_mask) | (data & mem_mask)) & 0x01ff; }
+    u16 lcwch_r() { return m_lcwch; }
+    void lcwch_w(offs_t, u16 data, u16 mem_mask)
+    { m_lcwch=((m_lcwch & ~mem_mask) | (data & mem_mask)) & 0x1f1f; }
 #undef DANA_LCD_WORD
     u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
     void lcd_bootstrap_reset();
@@ -420,6 +433,8 @@ private:
     u8 m_lvpw = 0xff;
     u16 m_lxmax = 0x03f0;
     u16 m_lymax = 0x01ff;
+    u16 m_lcxp = 0, m_lcyp = 0, m_lcwch = 0x0101;
+    u8 m_lblkc = 0x7f;
     u8 m_lpicf = 0, m_lpolcf = 0, m_lacdrc = 0, m_lpxcd = 0;
     u8 m_lckcon = 0, m_lposr = 0, m_lgpmr = 0x84;
     u16 m_lrra = 0x00ff, m_pwmr = 0;
@@ -477,6 +492,8 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_lvpw));
     save_item(NAME(m_lxmax));
     save_item(NAME(m_lymax));
+    save_item(NAME(m_lcxp)); save_item(NAME(m_lcyp));
+    save_item(NAME(m_lcwch)); save_item(NAME(m_lblkc));
     save_item(NAME(m_lpicf));
     save_item(NAME(m_lpolcf));
     save_item(NAME(m_lacdrc));
@@ -1414,6 +1431,7 @@ void alphasdana_state::lcd_bootstrap_reset()
     // D0.2 register contract; LCD is off until explicitly programmed by guest.
     // These are controller-register initial values, not a physical LCD reset test.
     m_lssa=0; m_lvpw=0xff; m_lxmax=0x03f0; m_lymax=0x01ff;
+    m_lcxp=0; m_lcyp=0; m_lcwch=0x0101; m_lblkc=0x7f;
     m_lpicf=0; m_lpolcf=0; m_lacdrc=0; m_lpxcd=0;
     m_lckcon=0; m_lposr=0; m_lgpmr=0x84; m_lrra=0x00ff; m_pwmr=0;
 }
@@ -1789,6 +1807,12 @@ void alphasdana_state::program_map(address_map &map)
     // each a 16-bit data/command pair, with distinct command state.
     m_boot_memory[1](0x1f000000,0x1f000007).rw(FUNC(alphasdana_state::isp1161_r),FUNC(alphasdana_state::isp1161_w));
     m_boot_memory[1](0xfffff000,0xffffffff).rw(FUNC(alphasdana_state::physical_mmio_r),FUNC(alphasdana_state::physical_mmio_w));
+    // The genuine UK1.5 ROM accesses the LCD cursor from physical mode.
+    // Scope MMIO to the four manufacturer-defined cursor registers only.
+    m_boot_memory[1](0xfffffa18,0xfffffa19).rw(FUNC(alphasdana_state::lcxp_r),FUNC(alphasdana_state::lcxp_w));
+    m_boot_memory[1](0xfffffa1a,0xfffffa1b).rw(FUNC(alphasdana_state::lcyp_r),FUNC(alphasdana_state::lcyp_w));
+    m_boot_memory[1](0xfffffa1c,0xfffffa1d).rw(FUNC(alphasdana_state::lcwch_r),FUNC(alphasdana_state::lcwch_w));
+    m_boot_memory[1](0xfffffa1f,0xfffffa1f).rw(FUNC(alphasdana_state::lblkc_r),FUNC(alphasdana_state::lblkc_w)).umask16(0x00ff);
     // Additional system/chip-select/DRAM registers exist only in physical mode.
     m_boot_memory[1](0xfffff000,0xfffff000).rw(FUNC(alphasdana_state::scr_r),FUNC(alphasdana_state::scr_w));
     // Fixed VZ part ID from pinned M68VZ328Hwr/EmRegsVZ; mask revision is not guessed.
@@ -1867,6 +1891,10 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffffa05,0xfffffa05).rw(FUNC(alphasdana_state::lvpw_r),FUNC(alphasdana_state::lvpw_w));
     map(0xfffffa08,0xfffffa09).rw(FUNC(alphasdana_state::lxmax_r),FUNC(alphasdana_state::lxmax_w));
     map(0xfffffa0a,0xfffffa0b).rw(FUNC(alphasdana_state::lymax_r),FUNC(alphasdana_state::lymax_w));
+    map(0xfffffa18,0xfffffa19).rw(FUNC(alphasdana_state::lcxp_r),FUNC(alphasdana_state::lcxp_w));
+    map(0xfffffa1a,0xfffffa1b).rw(FUNC(alphasdana_state::lcyp_r),FUNC(alphasdana_state::lcyp_w));
+    map(0xfffffa1c,0xfffffa1d).rw(FUNC(alphasdana_state::lcwch_r),FUNC(alphasdana_state::lcwch_w));
+    map(0xfffffa1f,0xfffffa1f).rw(FUNC(alphasdana_state::lblkc_r),FUNC(alphasdana_state::lblkc_w)).umask16(0x00ff);
     map(0xfffffa20,0xfffffa20).rw(FUNC(alphasdana_state::lpicf_r),FUNC(alphasdana_state::lpicf_w));
     map(0xfffffa21,0xfffffa21).rw(FUNC(alphasdana_state::lpolcf_r),FUNC(alphasdana_state::lpolcf_w));
     map(0xfffffa23,0xfffffa23).rw(FUNC(alphasdana_state::lacdrc_r),FUNC(alphasdana_state::lacdrc_w));
