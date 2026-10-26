@@ -1,3 +1,18 @@
+# V04 — Conteo óptico de terminales U7 y U1 (26/10/2026)
+
+**Atlas actual:** [DANA_Interconexiones_Hardware_Maestro_v04_20261026.xlsx](https://docs.google.com/spreadsheets/d/1xiNMO0Oz4Ng6qk2--O6WoNtQ77z9ox0Y/edit) (78,473 bytes), en la misma carpeta `ALPHASMART/Dana`. La nueva hoja `13_Conteo_Pines_20261026` documenta el método, comparadores de encapsulado, fotos y hojas de datos. Se preserva v03 como respaldo.
+
+**Resultado de fotografía original `IMG_3276`:**
+- **U7** presenta aproximadamente **24 terminales por cada uno de dos lados = 48 pines**, compatible con encapsulado **NOR Flash TSOP-48**, pero la pegatina V33 tapa el fabricante y código JEDEC. Candidatos *sólo por encapsulado* incluyen **SST39VF1601/3201/6401**, **Am29LV320D** y **Am29LV640M**, que comparten 48-TSOP pero ofrecen diferentes geometrías, voltajes/comandos/sectores. **No atribuir uno en particular** ni insertar sus señales en la matriz como continuidad observada.
+- **U1** presenta **16 terminales por lado × cuatro = 64**, coincide con **Philips ISP1161A1 LQFP64**. Y1 marcado 6 MHz junto a U1 es evidencia adicional, no una lectura de topmark ni continuidad.
+- **U5** SDRAM tiene 27×2=54, confirmado Samsung K4S641632F-TL1L; **U4** 36×4=144, Motorola MC68VZ328PV confirmado por marcado.
+- El volcado privado original UK1.5 en único T DIAG mide **`0x5D0000` bytes = 6,094,848 B = 5.8125 MiB**. **Si** es una lectura íntegra de una sola NOR en U7 sin concatenación/reordenamientos, apunta a una capacidad física de al menos 8 MiB/64Mbit. **NO prueba** que ese semiconductor sea de 64 Mbit, y no hay datos para identificarlo como SST o AMD.
+- Próxima corroboración segura de U7: orientación de pin1, tensión de VDD/GND, continuidades de /CE,/OE,/WE y DQ/AD con VZ, marcado bajo adhesivo o lectura JEDEC/CFI compatible *sin borrado*. Para U1: XTAL, bus RD/WR/CS, líneas USB y IRQ según datasheet. **No hacer ningún cambio en driver Flash o ISP1161 basado exclusivamente en encapsulado.**
+
+**Fuentes externas:** [Philips ISP1161A1 Rev03 (LQFP64)](https://www.mouser.com/datasheet/2/302/ISP1161A1-03-196942.pdf), [AMD Am29LV320D (48 TSOP)](https://www.insidegadgets.com/wp-content/uploads/2012/12/AM29LV320D.pdf), [AMD Am29LV640M (48 TSOP)](https://www.farnell.com/datasheets/72290.pdf), [SST39VF6401 48-TSOP pinout](https://dtsheet.com/doc/257118/sst-sst39vf6401), original board photographs saved in Drive by the project owner. No source emulator/operative/firmware modifications.
+
+---
+
 # Actualización documental — fotografías PCB verificadas (v03, 26/10/2026)
 
 **EXCEL MAESTRO VIGENTE:** [DANA_Interconexiones_Hardware_Maestro_v03_20261026.xlsx](https://docs.google.com/spreadsheets/d/1JvpHPIGhImqaCCzvyNUnGwGI69kJyD7q/edit), 74,848 bytes, 13 hojas, conservado en `ALPHASMART/Dana`. Versiones v01/v02 archivadas para comparación histórica.
