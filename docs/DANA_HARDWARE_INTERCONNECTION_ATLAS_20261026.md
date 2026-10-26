@@ -1,3 +1,25 @@
+# Actualización documental — fotografías PCB verificadas (v03, 26/10/2026)
+
+**EXCEL MAESTRO VIGENTE:** [DANA_Interconexiones_Hardware_Maestro_v03_20261026.xlsx](https://docs.google.com/spreadsheets/d/1JvpHPIGhImqaCCzvyNUnGwGI69kJyD7q/edit), 74,848 bytes, 13 hojas, conservado en `ALPHASMART/Dana`. Versiones v01/v02 archivadas para comparación histórica.
+
+**Evidencia fotográfica preservada en la misma carpeta:**
+- [Vista original U1, U7, U5, Y1, J100](https://drive.google.com/file/d/1uCFZGQcwV3yqOmdih5TmbBwNeVggHoqO/view) (foto IMG_3276 del usuario).
+- [Vista original U5, U4, conectores](https://drive.google.com/file/d/180r7qgo_9WoWDuZ6OjgcQoaMyTMhTdNA/view) (foto IMG_3277 del usuario).
+
+**Corrección crítica de identidad física:** `U4` es el **Motorola DragonBall VZ MC68VZ328PV**, identificado por grabado legible en la foto. Sufijo fabricante **PV = 144-pin TQFP** (manual MC68VZ328UM Table 20-1); por ello la hoja `02_VZ_TQFP144` **sí corresponde a la variante soldada** y ya no está pendiente el encapsulado de CPU. Ninguna fotografía confirma por sí sola la continuidad de cada pin a una red.
+
+**U5** lleva grabado legible `Samsung K4S641632F-TL1L`: SDRAM **64Mbit/8MiB por chip**, TSOP-II 54. Fotos confirman un U5 de esta capacidad en la cara visible; no extrapolar a todas las variantes/revisiones de Dana.
+
+**U7** es un encapsulado de dos hileras tipo TSOP **con pegatina V33 ocultando el topmark**. Por ubicación y morfología es el principal **candidato a ROM/Flash**; **NO confirmado el semiconductor exacto**. `V33` no es un número de parte, JEDEC ni una capacidad; fabricante, pin-count exacto, geometría, tensión y pines de control quedan como pendientes. La hoja `11_ROM_Flash_Pendiente` conserva expresamente los campos sin inventar números de pin.
+
+**U1** es QFP cuya marca no se lee, junto a cristal Y1 marcado **6.0MHz**. Es **candidato razonable** al ISP1161A1, no una identificación certificada. Pinout de `03_ISP1161_LQFP64` sigue siendo ficha de fabricante sin continuidad confirmada U1↔VZ.
+
+**J100** son pads 2×4 sin poblar, relevantes para futura investigación de RESET/EMUBRK/UART: **NO asignar señales de bootstrap por cercanía** sin medir conectividad.
+
+La nueva hoja `12_PCB_Fotos_20261026` contiene por elemento: designador U/J/Y, marcado y encapsulado visibles, nivel de certeza, usos del emulador, pruebas pendientes, fotos persistidas y datasheets; se corrigieron `00_Portada`, `01_Inventario`, las notas de pines de CPU/SDRAM/USB, `06_Memoria_y_CS`, `08_Continuidad`, `09_Fuentes` y `11_ROM_Flash_Pendiente`. El atlas mantiene separadas **evidencia del topmark**, **conexión lógica software** y **continuidad real de PCB**. Sin cambios en código del emulador, ROM ni binario operativo.
+
+---
+
 # Dana hardware interconnection atlas — master workbook v02 (2026-10-26)
 
 **CURRENT MASTER — external SDRAM chip identified and full pinout integrated:** [DANA_Interconexiones_Hardware_Maestro_v02_20261026.xlsx](https://docs.google.com/spreadsheets/d/1jdLbavE8u-VQ3hVlcAYBCqBryHYAsOM5/edit). Google Drive `ALPHASMART/Dana`, 70,099 bytes, 12 worksheets. **Older v01 preserved as an archival baseline, not current master.**
