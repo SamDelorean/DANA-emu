@@ -106,9 +106,14 @@ private:
     // with DUPS2. The unprotected region begins at the CSD bank base.
     static constexpr u32 cs_ram_unprotected_bytes(u32 bank_size, u16 csd, u16 csctrl1)
     {
-        unsigned const upsiz=((csd >> 11) & 3)
-            | (((csctrl1 & 0x4010)==0x4010) ? 4 : 0);
-        return bank_size >> (7-upsiz);
+        unsigned const upsiz=(csd >> 11) & 3;
+        // EUPEN=0: legacy VZ size is 32/64/128/256 KiB, independent
+        // of bank size. EUPEN=1: DUPS2 forms UPSIZ[2] and the manual's
+        // extended 2^(7-UPSIZ) bank divisor applies (Cloudpilot/POSE).
+        if (!(csctrl1 & 0x4000))
+            return 0x8000U << upsiz;
+        unsigned const extended=upsiz | ((csctrl1 & 0x0010) ? 4 : 0);
+        return bank_size >> (7-extended);
     }
     static constexpr bool cs_ram_read_allowed(u16 csd, bool supervisor,
         u32 offset, u32 unprotected_size)
