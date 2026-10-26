@@ -102,10 +102,25 @@ private:
     u32 cs_base(unsigned group) const { return u32(m_cs_base[group] & 0xfffe) << 13; }
     u32 physical_sdram_bytes() const { return (m_sdram_profile->read() & 1) ? 0x1000000U : 0x800000U; }
     u32 physical_sdram_index(u32 index) const { return index & (physical_sdram_bytes()-1); }
-    // VZ UM Table 6-10: ROP (bit13) and RO (bit15) forbid WRITES,
-    // not reads. SOP (bit14) forbids user-mode protected accesses.
-    static bool cs_ram_read_allowed(u16 csd, bool supervisor)
-    { return !(csd & 0x4000) || supervisor; }
+    // VZ UM 6.3.5 and Example 6-1: CSCTRL1.EUPEN extends CSD.UPSIZ
+    // with DUPS2. The unprotected region begins at the CSD bank base.
+    static constexpr u32 cs_ram_unprotected_bytes(u32 bank_size, u16 csd, u16 csctrl1)
+    {
+        unsigned const upsiz=((csd >> 11) & 3)
+            | (((csctrl1 & 0x4010)==0x4010) ? 4 : 0);
+        return bank_size >> (7-upsiz);
+    }
+    static constexpr bool cs_ram_read_allowed(u16 csd, bool supervisor,
+        u32 offset, u32 unprotected_size)
+    {
+        return offset<unprotected_size || !(csd & 0x4000) || supervisor;
+    }
+    static constexpr bool cs_ram_write_allowed(u16 csd, bool supervisor,
+        u32 offset, u32 unprotected_size)
+    {
+        return !(csd & 0x8000) && (offset<unprotected_size
+            || (!(csd & 0x2000) && (!(csd & 0x4000) || supervisor)));
+    }
     u32 cs_size(unsigned group) const
     {
         unsigned const siz=(m_cs_select[group] >> 1) & 7;
@@ -740,7 +755,9 @@ u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
         return value;
     }
     if (ram && !flash && cs_ram_read_allowed(m_cs_select[3],
-        bool(m_maincpu->state_int(M68K_SR) & 0x2000)))
+        bool(m_maincpu->state_int(M68K_SR) & 0x2000),
+        address-cs_base(3), cs_ram_unprotected_bytes(cs_size(3),
+            m_cs_select[3],m_cs_control[0])))
     {
         if (!physical_ram_ready() || ((m_dram[2] & 0x8000) && m_sdram_init_phase!=3))
         {
@@ -759,7 +776,11 @@ void alphasdana_state::physical_w(offs_t offset, u16 data, u16 mem_mask)
 {
     u32 const address=u32(offset)<<1;
     bool const boot=!(m_cs_select[0] & 1);
-    if (!boot && cs_hit(3,address) && !cs_hit(0,address) && !(m_cs_select[3] & 0xe000))
+    if (!boot && cs_hit(3,address) && !cs_hit(0,address)
+        && cs_ram_write_allowed(m_cs_select[3],
+            bool(m_maincpu->state_int(M68K_SR) & 0x2000),
+            address-cs_base(3), cs_ram_unprotected_bytes(cs_size(3),
+                m_cs_select[3],m_cs_control[0])))
     {
         if (!physical_ram_ready()) { physical_block("DRAM_DISABLED",address,data); return; }
         // Precharge/mode commands are triggered by SDCTRL writes. RAM data
