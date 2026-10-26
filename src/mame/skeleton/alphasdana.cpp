@@ -245,6 +245,10 @@ private:
     // The UK1.5 write of 0x9f is a full-duty CPUCLK, not a sleep transition.
     u8 pctlr_r() { return m_pctlr; }
     void pctlr_w(u8 data);
+    // Motorola MC68VZ328UM §15.4.1: PWM1 is the 8-bit audio PWM,
+    // independent of LCD contrast PWMR at FFFFFA36.
+    u16 pwm1_control_r();
+    void pwm1_control_w(offs_t, u16 data, u16 mem_mask);
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
@@ -459,6 +463,7 @@ private:
     u32 m_rtc_time=0, m_rtc_last_tick=0;
     s32 m_rtc_offset_seconds=0;
     u16 m_rtc_day=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
+    u16 m_pwm1_control=0x0020; // PWMC1 reset: FIFOAV=1, EN=0
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
     u16 m_tctl2=0;
@@ -526,6 +531,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pllcr));
     save_item(NAME(m_pllfsr));
     save_item(NAME(m_pctlr));
+    save_item(NAME(m_pwm1_control));
     save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
     save_item(NAME(m_guest_loaded));
@@ -619,6 +625,7 @@ void alphasdana_state::machine_reset()
     m_pllcr = 0x24b3;
     m_pllfsr = 0x0347;
     m_pctlr = 0x1f;
+    m_pwm1_control=0x0020;
     m_clk32_high = false;
     // As in the pinned MAME DragonBall reference, advance CLK32 via
     // scheduler time rather than toggling it on register reads.
@@ -1721,6 +1728,34 @@ void alphasdana_state::icemsr_w(offs_t, u16 data, u16 mem_mask)
 // VZ UM 4.4.1: CLKEN gates the CLKO output, not the PLL itself.
 // Keep the qualified PLLFSR-derived CPU/peripheral clocks unchanged. Reject
 // unsupported divider, sleep and wake-delay changes before committing them.
+u16 alphasdana_state::pwm1_control_r()
+{
+    // Motorola §15.4.1: FIFOAV is a read-only status bit. With the
+    // real 5-byte FIFO empty and PWM1 disabled it stays set. Repeat
+    // count bits are write-only and therefore read back as zero.
+    u16 const value=(m_pwm1_control & ~u16(0x000c)) | 0x0020;
+    m_pwm1_control &= ~u16(0x0080); // IRQ status clears on control read
+    return value;
+}
+
+void alphasdana_state::pwm1_control_w(offs_t, u16 data, u16 mem_mask)
+{
+    u16 const next=(m_pwm1_control & ~mem_mask) | (data & mem_mask);
+    // Original UK1.5 ANDI.W #FFEF disables PWM1. Enabling audio,
+    // FIFO interrupts or a software IRQ cannot be claimed without the
+    // actual PWM sample FIFO, clock and sound-output machinery.
+    if ((next & 0x0050) || (data & mem_mask & 0x0080))
+    {
+        physical_block("PWM1_AUDIO_OR_IRQ_UNIMPLEMENTED",0xfffff500,data);
+        return;
+    }
+    // Bit5 FIFOAV is hardware-owned, bit7 IRQ is status; neither is
+    // writable. Other documented fields remain programmable while off.
+    m_pwm1_control=(next & 0xff1f) | 0x0020;
+    logerror("DANA_PWM1_CONTROL value=%04x enabled=0 fifo_available=1\n",
+        m_pwm1_control);
+}
+
 void alphasdana_state::pctlr_w(u8 data)
 {
     // Only valid hardware bits; the two reserved bits read back zero.
@@ -2069,6 +2104,7 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
     m_boot_memory[1](0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
     m_boot_memory[1](0xfffff207,0xfffff207).rw(FUNC(alphasdana_state::pctlr_r),FUNC(alphasdana_state::pctlr_w)).umask16(0x00ff);
+    m_boot_memory[1](0xfffff500,0xfffff501).rw(FUNC(alphasdana_state::pwm1_control_r),FUNC(alphasdana_state::pwm1_control_w));
     m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
     // Native UK1.5 cold-start also writes TCTL2=0000 after TCTL1=0000.
     m_boot_memory[1](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
