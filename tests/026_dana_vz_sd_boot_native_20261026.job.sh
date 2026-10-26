@@ -62,7 +62,9 @@ emu.register_frame_done(function()
  n=n+1
  if n==60 or n==300 or n==360 or n==900 or n==1800 then
   local addr=r(0xfffffa00)*65536+r(0xfffffa02)
-  local pd=r(0xfffff418);local pullsel=r(0xfffff41a);local polen=r(0xfffff41c)\n  local ok,pc=pcall(function() return cpu.state['PC'].value end)\n  f:write(string.format('FRAME=%d LSSA=%08X PC=%08X PDDIR=%02X PDDATA=%02X PDPUEN=%02X PDSEL=%02X PDPOL=%02X PDIEN=%02X PLLFSR=%04X\n',n,addr,(ok and pc) or 0,(pd>>8)&255,pd&255,(pullsel>>8)&255,pullsel&255,(polen>>8)&255,polen&255,r(0xfffff202)))
+  local pd=r(0xfffff418);local pullsel=r(0xfffff41a);local polen=r(0xfffff41c)
+  local ok,pc=pcall(function() return cpu.state['PC'].value end)
+  f:write(string.format('FRAME=%d LSSA=%08X PC=%08X PDDIR=%02X PDDATA=%02X PDPUEN=%02X PDSEL=%02X PDPOL=%02X PDIEN=%02X PLLFSR=%04X\n',n,addr,(ok and pc) or 0,(pd>>8)&255,pd&255,(pullsel>>8)&255,pullsel&255,(polen>>8)&255,polen&255,r(0xfffff202)))
   f:flush()
  end
  if n>=1800 then f:write('END_FRAMES=1800\n');f:close();manager.machine:exit() end
