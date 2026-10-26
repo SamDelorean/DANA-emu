@@ -110,3 +110,16 @@ The authentic firmware proceeds through PalmOS boot, logo, slot-driver library `
 4. SD/MMC SPI1 controller and present/not-present card emulation already implemented: verify whether socket controller notifies startup service as expected, with disk images absent or present, rather than mocking return values.
 
 No code, installed operative, original ROM or extra DIAG changes in this diagnosis.
+
+## E. Source correction after diagnosis — 2026-10-26 (NATIVE PENDING)
+
+One existing MAME driver was corrected in canonical `main`, commit [`b67072518`](https://github.com/SamDelorean/DANA-emu/commit/b67072518c6da732df001b55c8c24823406b0738). This is **SOURCE INTEGRATED / NOT COMPILED OR GUEST-QUALIFIED**; no T/Commander or original UK1.5 replay accompanied the commit.
+
+- **VZ physical GPIO reset:** `PDSEL=F0` in the correct Port D quartet; upper nibble only writable/readable. Port G register reset is unchanged. `PDPOL`, `PDIRQEN` and `PDIRQEG` high nibbles masked (Motorola MC68VZ328UM 10.4.5); existing SD input levels remain externally configurable and unchanged. Nothing assumes CD/WP wiring.
+- **CLK32:** PLLFSR phase now toggles every 1/65536 s rather than every 1/32768 s; physical SYSCLK formula and main CPU dynamic 33 MHz clock remain untouched.
+- **SPI1:** its original bit scheduler uses the physical VZ PLL-derived SYSCLK for physical Palm boot and the prior qualified guest/R-direct clock for EmuTOS. No SD protocol/parser/media or GUI changes.
+- **INT2/INT3:** LOW ISR word write-one clears latched edges only if configured edge-triggered; level requests remain driven by real configured input level. The existing output-latch and GPIO pathways are preserved.
+
+**Required next native evidence, on the SAME canonical T DIAG after explicitly authorized execution:** source/hash preflight; one incremental Clang21 compile; short authentic UK1.5 original ROM trace with live LSSA, `PDDIR/PDDATA/PDSEL/PDPOL/PDIRQEN/PDIRQEG`, and original CPU call chain at `103256DE`/`10325768`/`10317FF2`; compare the already closed default PD2/PD3 high, slot0 low, and both low experiments only as needed to distinguish the *next actual code path*. Keep the earlier original observations as baselines, not successes of this new commit. Run minimum targeted dual-SD CMD17, correct SPI timing, and one EmuTOS 024C regression **without reopening GUI-025/026 or the 33/33 USB campaign**. If Palm OS remains at AlphaSmart, capture the next original caller outside both slot routines with the existing Ghidra scripts; do not change the input defaults by speculation, patch the ROM, or claim boot success from an exit code 0.
+
+**Known documentation mismatch:** Hardware master v04, sheet `CONTRATO HW ↔ MMIO ↔ ROM`, contains an SPI1 `0xFFFFF800` entry; actual VZ SPI1 is `0xFFFFF700..0xFFFFF70B` and SPI2 occupies `0xFFFFF800`. The original workbook has NOT been edited by this source change.
