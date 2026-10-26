@@ -40,7 +40,7 @@ class ISP1161NativeModelTest(unittest.TestCase):
             "m_boot_memory[1](0x1f000000,0x1f000007)",
         ):
             self.assertIn(code, source, code)
-        self.assertEqual(source.count("0x6123"), 2)  # both ID paths
+        self.assertEqual(source.count("0x6123"), 3)  # HC reset, HC read, DC read
         self.assertIn("if(code==0x40 || code==0x41)", source)
         self.assertIn("m_isp_dc_interrupt_enable=u32(m_isp_dc_write_low)", source)
         self.assertIn("m_isp_dc_read_phase=0;", source)
