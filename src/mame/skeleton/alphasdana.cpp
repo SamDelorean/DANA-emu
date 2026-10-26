@@ -413,6 +413,10 @@ private:
     u8 m_isp_dc_cmd=0;
     bool m_isp_dc_pending=false, m_isp_dc_unlocked=false, m_isp_dc_suspend_requested=false;
     u16 m_isp_dc_hw=0, m_isp_dc_mode=0;
+    // Philips ISP1161A1 Rev03 §13.3.6: 32-bit DcInterrupt,
+    // two successive low-then-high 16-bit reads after command C0.
+    u32 m_isp_dc_interrupt=0, m_isp_dc_read_snapshot=0;
+    u8 m_isp_dc_read_phase=0; // 0 idle, 1 low next, 2 high next
     u16 m_isp_low=0, m_isp_up_irq=0, m_isp_itl_len=0,
         m_isp_atl_len=0, m_isp_hardware=0x0028;
     u32 m_isp_control=0, m_isp_interrupt_status=0,
@@ -542,6 +546,9 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_isp_dc_cmd)); save_item(NAME(m_isp_dc_pending));
     save_item(NAME(m_isp_dc_unlocked)); save_item(NAME(m_isp_dc_suspend_requested));
     save_item(NAME(m_isp_dc_hw)); save_item(NAME(m_isp_dc_mode));
+    save_item(NAME(m_isp_dc_interrupt));
+    save_item(NAME(m_isp_dc_read_snapshot));
+    save_item(NAME(m_isp_dc_read_phase));
     save_item(NAME(m_isp_low)); save_item(NAME(m_isp_up_irq));
     save_item(NAME(m_isp_itl_len)); save_item(NAME(m_isp_atl_len));
     save_item(NAME(m_isp_hardware)); save_item(NAME(m_isp_control));
@@ -674,6 +681,7 @@ void alphasdana_state::physical_reset()
     m_isp_cmd=0; m_isp_phase=0; m_isp_low=0;
     m_isp_dc_cmd=0; m_isp_dc_pending=false; m_isp_dc_unlocked=false;
     m_isp_dc_hw=0; m_isp_dc_mode=0; m_isp_dc_suspend_requested=false;
+    m_isp_dc_interrupt=0; m_isp_dc_read_snapshot=0; m_isp_dc_read_phase=0;
     m_isp_up_irq=0; m_isp_itl_len=0; m_isp_atl_len=0;
     m_isp_hardware=0x0028; m_isp_control=0;
     m_isp_interrupt_status=0; m_isp_interrupt_enable=0;
@@ -843,6 +851,15 @@ void alphasdana_state::isp1161_w(offs_t offset, u16 data, u16 mem_mask)
         { physical_block("ISP1161_DC_COMMAND_UPPER_BYTE",address,data); return; }
         if (m_isp_dc_pending)
         { physical_block("ISP1161_DC_INCOMPLETE_WRITE",address,data); return; }
+        if (m_isp_dc_read_phase)
+        { physical_block("ISP1161_DC_INCOMPLETE_READ",address,data); return; }
+        if (data==0xc0)
+        {
+            m_isp_dc_cmd=0xc0;
+            m_isp_dc_read_snapshot=m_isp_dc_interrupt;
+            m_isp_dc_read_phase=1;
+            return;
+        }
         if (data!=0xb0 && data!=0xba && data!=0xb8)
         { physical_block("ISP1161_DC_COMMAND_UNIMPLEMENTED",address,data); return; }
         m_isp_dc_cmd=u8(data); m_isp_dc_pending=true;
@@ -953,6 +970,24 @@ u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
     { physical_block("ISP1161_READ_ACCESS_UNSUPPORTED",address); return 0xffff; }
     if (offset==2)
     {
+        if (m_isp_dc_cmd==0xc0 && m_isp_dc_read_phase)
+        {
+            if (m_isp_dc_read_phase==1)
+            {
+                m_isp_dc_read_phase=2;
+                u16 const low=u16(m_isp_dc_read_snapshot);
+                logerror("DANA_ISP1161_DC_INTERRUPT phase=low value=%04x\n",low);
+                return low;
+            }
+            u16 const high=u16(m_isp_dc_read_snapshot >> 16);
+            m_isp_dc_read_phase=0;
+            // Rev03 §8.6.3: RESET, RESUME, SP_EOT, EOT, SOF are
+            // cleared on a complete DcInterrupt register read. Endpoint
+            // flags are cleared by their own DcEndpointStatus reads.
+            m_isp_dc_interrupt &= ~u32(0x005b);
+            logerror("DANA_ISP1161_DC_INTERRUPT phase=high value=%04x\n",high);
+            return high;
+        }
         // The 68000 performs a read-before-write on CLR.W. With a DC write
         // command selected this value is discarded by the instruction.
         if (m_isp_dc_pending && (m_isp_dc_cmd==0xb8 || m_isp_dc_cmd==0xb0 || m_isp_dc_cmd==0xba))
