@@ -970,6 +970,8 @@ void alphasdana_state::isp1161_hc_reset()
     m_isp_frame_interval=0x27782edf;
     m_isp_hardware=0x0028; m_isp_up_irq=0; m_isp_itl_len=0; m_isp_atl_len=0;
     m_isp_hc_regs32[0]=0x10; // OHCI specification release 1.0
+    // Two actual downstream HC ports (NDP[1:0]=2); neither is connected.
+    m_isp_hc_regs32[0x12]=2;
     m_isp_hc_regs32[0x0d]=m_isp_frame_interval;
     m_isp_hc_regs16[0x20]=m_isp_hardware;
     m_isp_hc_regs16[0x27]=0x6123; // ISP1161A1 Rev03 Table 46
@@ -1013,7 +1015,19 @@ u32 alphasdana_state::isp1161_hc_read32(u8 code)
     case 3: return m_isp_interrupt_status;
     case 4: case 5: return m_isp_interrupt_enable;
     case 0x0d: return m_isp_frame_interval;
-    case 0x0e: return 0; // HC HcFmRemaining is zero while no frame is underway
+    case 0x0e:
+    {
+        // OHCI HcFmRemaining: frame interval in full-speed bit times.
+        // With HC operational the 1-ms period advances on virtual time,
+        // independently of any attached USB downstream devices.
+        if ((m_isp_control & 0xc0)!=0x80) return 0;
+        u32 const fi=m_isp_frame_interval & 0x3fff;
+        if(!fi) return 0;
+        attoseconds_t const frame=ATTOSECONDS_PER_SECOND/1000;
+        attoseconds_t const pos=machine().time().attoseconds()%frame;
+        u32 const elapsed=u32(pos/(frame/fi));
+        return elapsed<fi ? fi-elapsed : 0;
+    }
     default: return m_isp_hc_regs32[code];
     }
 }
