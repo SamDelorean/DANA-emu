@@ -337,7 +337,6 @@ private:
     DANA_LCD_WORD(lymax)
     DANA_LCD_WORD(lrra)
     DANA_LCD_WORD(pwmr)
-#undef DANA_LCD_WORD
     // MC68VZ328 UM 8.3.5-8.3.8: true LCD cursor registers, with
     // reserved bits masked and the 68000 word's byte lanes preserved.
     u16 lcxp_r() { return m_lcxp; }
