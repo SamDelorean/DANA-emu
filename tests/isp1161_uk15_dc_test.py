@@ -45,7 +45,7 @@ class ISP1161NativeModelTest(unittest.TestCase):
         self.assertIn("m_isp_dc_interrupt_enable=u32(m_isp_dc_write_low)", source)
         self.assertIn("m_isp_dc_read_phase=0;", source)
         self.assertIn("m_isp_hc_sof_timer->adjust", source)
-        self.assertIn("if(value!=0xf6)", source)
+        self.assertIn("if (value!=0xf6)", source)
         self.assertTrue(LUA.is_file())
 
     def test_19_real_mame_bus_transactions_when_configured(self):
