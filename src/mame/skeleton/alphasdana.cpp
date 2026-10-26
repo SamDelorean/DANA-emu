@@ -2469,6 +2469,82 @@ QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
     return std::make_pair(std::error_condition(), std::string());
 }
 
+u16 alphasdana_state::bootstrap_ibuff_r(offs_t offset,u16 mem_mask)
+{
+    u32 const byte=u32(offset)*2;
+    if(!m_bootstrap_mode)
+        return physical_r((0x00ffffc0U+byte)>>1,mem_mask);
+    return u16(u16(m_bootstrap_ibuff[byte])<<8)|m_bootstrap_ibuff[byte+1];
+}
+
+void alphasdana_state::bootstrap_ibuff_w(offs_t offset,u16 data,u16 mem_mask)
+{
+    u32 const byte=u32(offset)*2;
+    if(!m_bootstrap_mode)
+    {
+        physical_w((0x00ffffc0U+byte)>>1,data,mem_mask);
+        return;
+    }
+    if(mem_mask&0xff00)m_bootstrap_ibuff[byte]=u8(data>>8);
+    if(mem_mask&0x00ff)m_bootstrap_ibuff[byte+1]=u8(data);
+}
+
+std::pair<std::error_condition,std::string>
+alphasdana_state::bootstrap_load(std::vector<u8> const &data)
+{
+    auto fail=[](std::string why)->std::pair<std::error_condition,std::string> {
+        return {image_error::INVALIDIMAGE,std::move(why)};
+    };
+    vz328_bootstrap::program const p=vz328_bootstrap::parse(
+        std::string_view(reinterpret_cast<char const *>(data.data()),data.size()));
+    if(!p.valid())
+        return fail(p.error);
+    // A B-record image asserts EMUBRK before issuing a simulated reset.
+    // The silicon loader executes via a high-level UART record service;
+    // no external chip or substitute guest ROM is introduced.
+    m_bootstrap_mode=true;
+    m_physical_boot=true;
+    m_boot_memory.select(1);
+    physical_reset();
+    for(unsigned i=0;i<sizeof(m_bootstrap_ibuff);i+=2)
+    {
+        m_bootstrap_ibuff[i]=0x4e;
+        m_bootstrap_ibuff[i+1]=0x71; // Unwritten internal buffer = NOP
+    }
+    m_maincpu->reset();
+    m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
+    auto &bus=m_maincpu->space(AS_PROGRAM);
+    unsigned writes=0;
+    for(auto const &rec:p.records)
+    {
+        if(rec.execute())
+        {
+            if(rec.address&1)
+                return fail("VZ execution address must be even");
+            // A real VZ jumps into RAM, or executes internal IBUFF and
+            // returns to bootstrap. This bridge supports the jump-to-code
+            // use case; IBUFF return-to-loader needs silicon ROM tracing.
+            logerror("DANA_VZ_BOOTSTRAP_EXEC address=%08x writes=%u uart=19200\n",
+                rec.address,writes);
+            m_maincpu->set_state_int(M68K_PC,rec.address);
+            m_guest_ready=1;
+            m_maincpu->resume(SUSPEND_REASON_DISABLE);
+            return {std::error_condition(),std::string()};
+        }
+        for(unsigned i=0;i<rec.count;++i)
+        {
+            bus.write_byte(rec.address+i,rec.data[i]);
+            if(m_physical_blocked)
+                return fail(util::string_format(
+                    "VZ bootstrap bus rejected write to %08x",rec.address+i));
+            ++writes;
+        }
+    }
+    logerror("DANA_VZ_BOOTSTRAP_READY records=%u writes=%u awaiting_exec=1\n",
+        unsigned(p.records.size()),writes);
+    return {std::error_condition(),std::string()};
+}
+
 void alphasdana_state::cpu_space_map(address_map &map)
 {
     // The M68000 IRQ acknowledge vector lives in CPU space, not MMIO RAM.
