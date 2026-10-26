@@ -241,6 +241,10 @@ private:
     u16 pllcr_r() { return m_pllcr; }
     void pllcr_w(offs_t, u16 data, u16 mem_mask);
     bool pllcr_clko_enabled() const { return !(m_pllcr & 0x0010) && !(m_pfsel & 0x04); }
+    // VZ UM 4.5.4: PCEN[7], reserved[6:5], WIDTH[4:0].
+    // The UK1.5 write of 0x9f is a full-duty CPUCLK, not a sleep transition.
+    u8 pctlr_r() { return m_pctlr; }
+    void pctlr_w(u8 data);
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
@@ -430,6 +434,7 @@ private:
     u16 m_icemcr=0, m_icemsr=0;
     u16 m_pllcr = 0x24b3;
     u16 m_pllfsr = 0x0347;
+    u8 m_pctlr = 0x1f;
     bool m_clk32_high = false;
     u8 m_ivr = 0;
     bool m_guest_loaded = false;
@@ -476,6 +481,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_icemcr)); save_item(NAME(m_icemsr));
     save_item(NAME(m_pllcr));
     save_item(NAME(m_pllfsr));
+    save_item(NAME(m_pctlr));
     save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
     save_item(NAME(m_guest_loaded));
@@ -565,6 +571,7 @@ void alphasdana_state::machine_reset()
     m_icemcr=0; m_icemsr=0;
     m_pllcr = 0x24b3;
     m_pllfsr = 0x0347;
+    m_pctlr = 0x1f;
     m_clk32_high = false;
     // As in the pinned MAME DragonBall reference, advance CLK32 via
     // scheduler time rather than toggling it on register reads.
@@ -1522,6 +1529,22 @@ void alphasdana_state::icemsr_w(offs_t, u16 data, u16 mem_mask)
 // VZ UM 4.4.1: CLKEN gates the CLKO output, not the PLL itself.
 // Keep the qualified PLLFSR-derived CPU/peripheral clocks unchanged. Reject
 // unsupported divider, sleep and wake-delay changes before committing them.
+void alphasdana_state::pctlr_w(u8 data)
+{
+    // Only valid hardware bits; the two reserved bits read back zero.
+    u8 const next=data & 0x9f;
+    // PCM burst gating affects the CPU instruction clock, not SYSCLK. Do not
+    // accept a partial-duty or completely disabled CPU clock as fully running.
+    if ((next & 0x80) && (next & 0x1f)!=0x1f)
+    {
+        physical_block("PCTLR_CPU_BURST_UNIMPLEMENTED",0xfffff207,data);
+        return;
+    }
+    m_pctlr=next;
+    logerror("DANA_PCTLR value=%02x pcen=%u width=%u cpuclk_full_duty=1\n",
+        m_pctlr,unsigned(bool(m_pctlr & 0x80)),unsigned(m_pctlr & 0x1f));
+}
+
 void alphasdana_state::pllcr_w(offs_t, u16 data, u16 mem_mask)
 {
     u16 const next=((m_pllcr & ~mem_mask) | (data & mem_mask)) & 0x3fbb;
@@ -1853,6 +1876,7 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
     m_boot_memory[1](0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
+    m_boot_memory[1](0xfffff207,0xfffff207).rw(FUNC(alphasdana_state::pctlr_r),FUNC(alphasdana_state::pctlr_w)).umask16(0x00ff);
     m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
     // Native UK1.5 cold-start also writes TCTL2=0000 after TCTL1=0000.
     m_boot_memory[1](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
