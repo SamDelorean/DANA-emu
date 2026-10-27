@@ -74,7 +74,35 @@ constexpr bool init_crc_and_power()
     if (!c.idle || c.selected || c.blocks!=2048 || c.initial_clocks) return false;
     return true;
 }
-static_assert(init_crc_and_power(),"initial clocks, CRC7, deselect and power state");
+// Execute actual production SPI framing, not a synthetic CMD1 response.
+constexpr bool legacy_cmd1_init_and_sd_isolation()
+{
+    medium m; card c;c.blocks=2048;clocks(c,m);
+    if (command(c,m,0)!=1 || command(c,m,1)!=0) return false;
+    if (c.idle || c.high_capacity) return false;
+    if (command(c,m,16,512)!=0 || command(c,m,17,512)!=0
+        || !token(c,m) || wire(c,m)!=byte(m.identity+1)) return false;
+
+    medium sd;card conventional;conventional.blocks=2048;clocks(conventional,sd);
+    if (command(conventional,sd,0)!=1
+        || command(conventional,sd,55)!=1
+        || command(conventional,sd,41)!=0
+        || conventional.idle || conventional.high_capacity) return false;
+    // A card already in the normal SD ready state is not reclassified as MMC.
+    if (command(conventional,sd,1)!=4) return false;
+
+    // A standard-capacity fallback must not masquerade as SDHC/sector addressing.
+    medium large_media;card large;large.blocks=0x4000000;clocks(large,large_media);
+    if (command(large,large_media,0)!=1
+        || command(large,large_media,1)!=5
+        || !large.idle || large.high_capacity) return false;
+    if (command(large,large_media,55)!=1
+        || command(large,large_media,41,0x40000000)!=0
+        || !large.high_capacity) return false;
+    return true;
+}
+static_assert(init_crc_and_power() && legacy_cmd1_init_and_sd_isolation(),
+    "SD ACMD41 remains qualified; bounded legacy MMC CMD1 R1, sector read, SDHC rejection");
 
 constexpr bool identity_and_capacity()
 {
