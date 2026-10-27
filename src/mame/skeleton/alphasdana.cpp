@@ -56,6 +56,7 @@ public:
         , m_boot_memory(*this, "boot_memory")
         , m_sd(*this, "sd%u", 0U)
         , m_sd_irq(*this, "SDIRQ")
+        , m_nor_profile(*this, "NOR_PROFILE")
         , m_pd7_pin(*this, "PDPIN7")
         , m_sdram_profile(*this, "PHYSRAM")
         , m_emubrk_pin(*this, "EMUBRK")
@@ -438,6 +439,7 @@ private:
     memory_view m_boot_memory;
     required_device_array<dana_sd_image_device,2> m_sd;
     required_ioport m_sd_irq;
+    required_ioport m_nor_profile;
     required_ioport m_pd7_pin;
     required_ioport m_sdram_profile;
     required_ioport m_emubrk_pin;
@@ -451,6 +453,9 @@ private:
     bool m_bootstrap_mode=false; // VZ silicon EMUBRK asserted during reset
     u8 m_bootstrap_ibuff[32]={}; // 0x00FFFFC0 on-chip 32-byte buffer
     u8 m_scr=0x1c, m_flash_sha1[20]={};
+    // Read-only NOR signature/status: no fabricated program/erase operations.
+    // 0=array, 1=electronic signature, 2=status.
+    u8 m_nor_mode=0, m_nor_status=0x80;
     u16 m_cs_base[4]={}, m_cs_select[4]={};
     u16 m_cs_upper=0, m_cs_control[3]={}, m_emucs=0;
     u16 m_dram[4]={};
@@ -665,6 +670,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_physical_boot)); save_item(NAME(m_physical_blocked));
     save_item(NAME(m_bootstrap_mode)); save_item(NAME(m_bootstrap_ibuff));
     save_item(NAME(m_scr)); save_item(NAME(m_flash_sha1));
+    save_item(NAME(m_nor_mode)); save_item(NAME(m_nor_status));
     save_item(NAME(m_cs_base)); save_item(NAME(m_cs_select));
     save_item(NAME(m_cs_upper)); save_item(NAME(m_cs_control));
     save_item(NAME(m_emucs)); save_item(NAME(m_dram));
@@ -825,6 +831,7 @@ void alphasdana_state::physical_reset()
     m_guest_loaded=false;
     m_guest_ready=0;
     m_scr=0x1c;
+    m_nor_mode=0; m_nor_status=0x80;
     std::fill(std::begin(m_cs_base),std::end(m_cs_base),0);
     m_cs_upper=0;
     m_cs_select[0]=0x00b0; m_cs_select[1]=0;
@@ -917,6 +924,19 @@ u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
             physical_block("FLASH_BANK_WINDOW_UNVERIFIED",address);
             return 0xffff;
         }
+        // The optional, explicitly selected NOR signature mode is a chip
+        // response, not data sourced from missing firmware dump bytes.
+        if (m_nor_mode==1)
+        {
+            if (m_nor_profile->read()!=1)
+            { physical_block("NOR_ID_PROFILE_UNQUALIFIED",address); return 0xffff; }
+            u32 const index=boot ? (address & 0x00ffffff) : (address-cs_base(0));
+            if (index==0) return 0x0020; // 16-bit device: manufacturer 20h
+            if (index==2) return 0x8849; // M28W640HCB bottom-boot
+            physical_block("NOR_ID_ADDRESS_UNQUALIFIED",address);
+            return 0xffff;
+        }
+        if (m_nor_mode==2) return u16(m_nor_status);
         // Non-power-of-two streams describe coverage, not chip capacity.
         // Retain the existing full-array aliases; partial streams instead use
         // the VZ maximum 16 MiB reset window and never wrap at supplied length.
@@ -981,11 +1001,41 @@ void alphasdana_state::physical_w(offs_t offset, u16 data, u16 mem_mask)
             return;
         }
     }
-    // Exact NOR part/command set is not established. Do not fabricate an ID,
-    // completed erase/program, or persistent write to the original dump.
+    // Explicit, optional M28W640HCB read-only command path. Read-array
+    // resets are harmless and accepted regardless of selected geometry.
+    // Neither this probe nor the ROM-supplied bytes prove the PCB topmark.
+    if ((boot || cs_hit(0,address)) && (boot || !cs_hit(3,address)))
+    {
+        u8 command=0;
+        if (mem_mask==0xff00) command=u8(data>>8);
+        else if (mem_mask==0x00ff) command=u8(data);
+        else if (mem_mask==0xffff && !(data & 0xff00)) command=u8(data);
+        else
+        { physical_block("NOR_COMMAND_BUS_WIDTH_UNQUALIFIED",address,data); return; }
+        if (command==0xff)
+        {
+            m_nor_mode=0;
+            logerror("DANA_NOR_CMD op=FF mode=ARRAY addr=%08x\n",address);
+            return;
+        }
+        if (m_nor_profile->read()!=1)
+        { physical_block("NOR_PART_ID_NOT_SELECTED",address,data); return; }
+        switch (command)
+        {
+        case 0x90: m_nor_mode=1; break; // Read electronic signature.
+        case 0x70: m_nor_mode=2; break; // Read status register.
+        case 0x50: m_nor_status=0x80; break; // Clear existing status errors.
+        default:
+            // Program, erase, lock and unknown commands must not claim success.
+            physical_block("NOR_COMMAND_NOT_IMPLEMENTED",address,data);
+            return;
+        }
+        logerror("DANA_NOR_CMD op=%02x mode=%u addr=%08x\n",command,unsigned(m_nor_mode),address);
+        return;
+    }
     if (!m_physical_blocked && !machine().side_effects_disabled())
         logerror("DANA_PHYSICAL_WRITE address=%08x data=%04x mask=%04x\n",address,data,mem_mask);
-    physical_block(boot || cs_hit(0,address) ? "FLASH_COMMAND_SET_UNVERIFIED" : "EXTERNAL_WRITE_OR_PROTECTION",address,data);
+    physical_block("EXTERNAL_WRITE_OR_PROTECTION",address,data);
 }
 
 u16 alphasdana_state::physical_mmio_r(offs_t offset, u16 mem_mask)
@@ -2743,6 +2793,10 @@ static INPUT_PORTS_START(alphasdana)
     PORT_CONFNAME(0x80,0x80,"PD7/IRQ6 external level (startup board assumption)")
     PORT_CONFSETTING(0x80,"High / released (boot path)")
     PORT_CONFSETTING(0x00,"Low / asserted (sleep path)")
+    PORT_START("NOR_PROFILE")
+    PORT_CONFNAME(0x01,0x00,"Flash NOR identity (physical topmark unverified)")
+    PORT_CONFSETTING(0x00,"Unknown / guard on signature request")
+    PORT_CONFSETTING(0x01,"M28W640HCB 8 MiB (UK1.5-supported, diagnostic)")
     PORT_START("SDIRQ")
     PORT_CONFNAME(0x04,0x04,"SD0 PD2 external pin level (board function unqualified)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::sd_irq_changed),0)
     PORT_CONFSETTING(0x04,"High / released")
