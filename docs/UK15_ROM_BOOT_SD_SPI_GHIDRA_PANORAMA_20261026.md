@@ -213,3 +213,53 @@ Strong physical evidence for a dedicated socket-state independent of electrical 
 **Verified execution evidence:** `dcjob 1.1` job [028](https://drive.google.com/file/d/1JfN2Z5ZjGwSYUAE5ANQSkEPzI37Sjcs9/view) SHA256 `4c2701e0f3dfc821deab2a94ced790b72c282185b48b4a7351e95264e27dcf74`; daemon PID `133218`; [official PASS summary](https://drive.google.com/file/d/1SGhWSE4Zb1uBU38tzlgOd9pyDNfEtKPg/view) EXIT_CODE=0, 49 s; [immutable result package](https://drive.google.com/file/d/1lyUpaS3BMfr5B4aLqtW6T2F_ixqix7Ib/view) SHA256 `c91e4b246d2e85b3617851f2e5616ca904f02181a4f83186183a4530bca3ef6b`, matching separate checksum sidecar. Detailed `absent.trace`, `both_inserted.trace`, `build.log`, `qualification.log` remain on T under `work/uk15_qualify_20261025/mmc_cmd1_integrated_028` (the dcjob result tar contains the task stdout and summary, **not** these local trace files).
 
 **Disposition:** CMD1 feature `SOURCE + NATIVE BUILD + PRODUCTION CONSTEXPR PASS`; Palm UK1.5 desktop **FAIL/not reached**. Physical card-detect / write-protect circuit and chip between sockets **still unidentified**; no guessed GPIO electrical model should be merged. Next decisive evidence is original-ROM Ghidra evaluation of `10092F0E`, `10326E38/4A`, `10326904/16`, `10327044` and a qualified bounded native SPI1 driver-level trace plus socket signal attribution. Never call 028 a full boot PASS.
+
+## K. 2026-10-26 — Original Ghidra completed SDIO callback loop root-cause disassembly
+
+**Genuine Ghidra 12.1.3 original UK1.5 ROM, no code/ROM patches, no guest execution in this investigation.** Original guest SHA-256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`, existing T project `DanaUK15RelocatedTemp`. New original-local evidence under `work/uk15_qualify_20261025/boot_progress_20261026`:
+
+- `ghidra_slot_rootcause_20261026.txt` (915 lines), `DanaUK15SlotRootCause.java`, covering `10092F0E`, both slot ISR paths and shared `103268DC`.
+- `rom_slot_event_origin.txt` (379 lines), `DanaUK15SlotEventOrigin.java`, covering `10325634`, per-slot ISR, `103268DC`.
+- `rom_card_callback.txt` (202 lines), `DanaUK15CardCallback.java`, covering the exact trampoline.
+- `rom_sdio_callback_body.txt` (297 lines), `DanaUK15SDIOCallbackBody.java`, covering dispatcher at `103220F2`.
+- `rom_sdio_flag_producer.txt` (260 lines), `DanaUK15SDIOFlagProducer.java`, covering exact writers of the flag.
+
+### Real event origin: interrupt status, NOT an SD block read
+
+`10326E28 MOVE.W ($FFFFF30E),D0`; then mask `0x0600` and call `10326E76` for slot0. `10326E3A` samples same VZ **interrupt-status LOW** register and masks `0x0900` before calling `10326FCC` for slot1. These handlers in turn invoke shared `103268DC`, then `TST.W D0` / `BNE` back into **the callback dispatch loop**, at `10326EEC` (slot0) and `10327044` (slot1). The previously observed `10092F0E` is **the return after an indirect system dispatch** (`JSR (A1)` at `10092F0C`), NOT the entry of the card driver or the loop itself.
+
+Shared `103268DC` calls `PrvSpiSetPol0` (`103256DE`) or `PrvSpiSetPol1` (`10325768`) to collect a status word, then returns zero unless *all* of these conditions hold:
+
+1. status bit7 clear: `10326920 BTST #7,(A0)` with branch-to-zero-result on nonzero.
+2. `global+0x38D` nonzero: `10326926 TST.B (0x38D,A3)`.
+3. slot reentrancy counter `slot+0x0A` zero: `1032692C TST.W (0x0A,A2)`.
+4. global nesting/state `global+0x1C` zero: `10326932 TST.W (0x1C,A3)`.
+5. slot config `slot+0x1C` bit7 set: `10326938 BTST #7,(0x1C,A2)`.
+6. sampled status bit6 set: `10326940 BTST #6,(A0)`.
+
+When all six qualify, `1032694E JSR 10325634` dispatches callbacks. The function **retests `global+0x38D`** at `10326962` and returns `D0=1` **only if it remains nonzero**, producing the `10327044 BNE` (or first-slot equivalent) loop. The current ROM **does not poll SPI1 RX FIFO or await MISO at this branch**.
+
+### Exact callback tunnel, verified by original ROM symbolic strings
+
+`10325634 JMP 10321C02` →
+`10321C02 JMP 1031CA1A` →
+`1031CA1A JMP 103220F2`.
+
+Embedded original ROM symbols identify `SpiSdioCallBacksTunnelS` and `SpiSdioCallBacksTunnelP` along the way. `103220F2` is the actual **registered SDIO callback dispatcher**: it traverses **eight per-device entries**, base `global+0xCC` to `global+0x32C` by `0x4C` bytes each, using the callback address at `entry+0x14+8*callback_type`. It calls a nonnull callback function pointer `JSR (A0)` at `10322122`, passing callback index and stored context; if none installed, skips. It does **not** issue an SD command.
+
+### Precisely who writes the flag `global+0x38D`
+
+Original disassembly `103228B8..1032290A` (callback registration/unregistration logic) tests the pointer entries `global+0xE0,0x12C,0x178,0x1C4,0x210,0x25C,0x2A8,0x2F4` (eight first-type callbacks), then:
+
+- `103228F2 MOVE.B #$FF,(0x38D,A2)` when any relevant callback pointer is present.
+- `10322906 CLR.B (0x38D,A2)` when **all eight relevant pointers** are absent.
+
+Hence `+0x38D` means **callback(s) installed**, **NOT** “SD response pending”, “card image present” or a hardware interrupt ACK byte. The callback function itself is **not expected to clear it on every invocation**. `10325F32` reads the same flag to decide whether per-slot interrupt processing should be dispatched. Any previous suggestion “make callbacks clear `+0x38D` to exit” is unsupported and should be superseded by this explanation.
+
+**Precise causal inference, not yet a native runtime measurement:** if slot event bit6 persists, bit7 stays clear, all guard conditions hold and at least one callback remains registered, the ROM deliberately re-dispatches callbacks and `D0` remains 1. Whether a **mis-modelled persistent GPIO/IRQ level or a different software-state condition** keeps this loop active in current UK1.5 is the missing empirical distinction. No physical board circuit can be inferred from just this code, and no extra IC has been positively identified. There is no basis to patch `CMD1`, zero a callback table, fake a return, or change default PD levels merely to bypass this legitimate logic.
+
+### Cross-comparison with recovered AlphaSmart-specific 2003 POSE
+
+Historic vendor `Alphasmart_Dana.zip` was downloaded from PalmDB (archive SHA256 `82ec0a80990c11389e1260b66ba4a43f44202f09ace8ab68a666451dd3939f8a`) and its original `Emulator.exe` statically decompiled through Ghidra x86; separate evidence in [`DANA_POSE_2003_GHIDRA_HARDWARE_REFERENCE.md`](DANA_POSE_2003_GHIDRA_HARDWARE_REFERENCE.md). Its real class `EmRegsVZAlphaSmart` defines external Port D/E/G=0 and internal Port D=0x80, inherited VZ IRQ level code, special SPI2 and Port K MMIO. Current UK1.5 with both low already shows Port D DATA=0x80 and does NOT boot desktop, so this matching input **alone is insufficient**. Vendor POSE readme specifies Dana **1.2** ROM, packaged 1.2.1; it has **not** been run, nor can it validate UK1.5 desktop merely by existing. No general POSE fork checked so far contains this historical Dana-specific class.
+
+**Next decisive native observation if explicitly authorized:** read guest live RAM at system global pointer in low-memory address `0x300`, particularly `+0x38D` and the relevant callback pointer array plus per-slot `+0x3C, +0x1C, +0x0A`; simultaneously read VZ `ISR_L=FFFFF30E`, PortD input and PDPOL/PDIRQEN/PDIRQEG in a short original-ROM trace. Determine *which* condition maintains `D0=1` and which interrupt source is continuously asserted, comparing with POSE vendor PortD and inherited VZ IRQ semantics. No second DIAG, guest patches, speculative part numbers or redundant builds.
