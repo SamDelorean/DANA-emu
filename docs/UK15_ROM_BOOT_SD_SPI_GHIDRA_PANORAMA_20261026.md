@@ -263,3 +263,40 @@ Hence `+0x38D` means **callback(s) installed**, **NOT** “SD response pending�
 Historic vendor `Alphasmart_Dana.zip` was downloaded from PalmDB (archive SHA256 `82ec0a80990c11389e1260b66ba4a43f44202f09ace8ab68a666451dd3939f8a`) and its original `Emulator.exe` statically decompiled through Ghidra x86; separate evidence in [`DANA_POSE_2003_GHIDRA_HARDWARE_REFERENCE.md`](DANA_POSE_2003_GHIDRA_HARDWARE_REFERENCE.md). Its real class `EmRegsVZAlphaSmart` defines external Port D/E/G=0 and internal Port D=0x80, inherited VZ IRQ level code, special SPI2 and Port K MMIO. Current UK1.5 with both low already shows Port D DATA=0x80 and does NOT boot desktop, so this matching input **alone is insufficient**. Vendor POSE readme specifies Dana **1.2** ROM, packaged 1.2.1; it has **not** been run, nor can it validate UK1.5 desktop merely by existing. No general POSE fork checked so far contains this historical Dana-specific class.
 
 **Next decisive native observation if explicitly authorized:** read guest live RAM at system global pointer in low-memory address `0x300`, particularly `+0x38D` and the relevant callback pointer array plus per-slot `+0x3C, +0x1C, +0x0A`; simultaneously read VZ `ISR_L=FFFFF30E`, PortD input and PDPOL/PDIRQEN/PDIRQEG in a short original-ROM trace. Determine *which* condition maintains `D0=1` and which interrupt source is continuously asserted, comparing with POSE vendor PortD and inherited VZ IRQ semantics. No second DIAG, guest patches, speculative part numbers or redundant builds.
+
+## L. 2026-10-26 — ROOT CAUSE NATIVE: PrvSpiSetPol requires 3 low reads; static GPIO causes wait or IRQ storm
+
+**Conclusive causal diagnosis for the *four tested static socket input configurations*, not a claim that the Palm OS desktop now boots.** Original UK1.5 ROM SHA-256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`; single already built `source/danadiagd` SHA256 `f72403cab7e781608f1c3f7050ae245fc62443c29d66c9ceef168461bbe5d2cd`; operative binary unchanged. Work reused original pre-qualified 027 observer and exact source; no alternate MAME build, source changes, ROM patch, CPU return patch, added peripherals or card images. All true UK1.5 traces `work/uk15_qualify_20261025/boot_progress_20261026/irq_rootcause_live/`, including `postboot_low.log`, `postboot_high_fixed.log`, `pd2high_pd3low.log`, `pd2low_pd3high.log`, `rom_pol_wait_exit.txt`. **Important observer safety:** an initial attempt read RAM and interrupt registers at frame 1, freezing the guest at PC=10005360. It is INVALID evidence. The exact original 027 observer was re-run unmodified (2400 frames reaches original SD stack), then one additional state-only probe at frame900 (after initialization) was used. The first high test reused 027's low-only Lua assertion and is INVALID (stderr indicated "Input config SDIRQ != 0"). The corrected high run passed 2400 frames.
+
+### Original-ROM Ghidra: precise unmet condition
+
+Recovered from original binary via Ghidra 12.1.3, script `DanaUK15PolWaitExitAudit.java`, output `rom_pol_wait_exit.txt`:
+
+- Slot0 `103256DE` **PrvSpiSetPol0**:
+  - `103256EA` reads `PDDATA=FFFFF419`, tests `PD2&0x04`; if high, `103256F4` XORs `PDPOL` bit2.
+  - `103256FA` reads PDDATA, tests **PD1&0x02**; if high, `10325704` XORs PDPOL bit1.
+  - `1032570A` waits 250 units through original OS trap (HwrTimeWait), return at `10325712`.
+  - `10325712..10325728` samples **`PDDATA & 0x06`**. If **either PD2 or PD1 is high**, resets D3 to **0**; if **both low**, increments D3. Repeats until D3 reaches **3 consecutive low samples**; only then returns at `10325756`.
+- Slot1 `10325768` **PrvSpiSetPol1**:
+  - `10325774` tests PD3`0x08`, toggles PDPOL bit3 if high; `10325784` tests PD0`0x01`, toggles PDPOL bit0 if high.
+  - Delay, return `1032579C`; `1032579C..103257B2` samples **`PDDATA & 0x09`**, requires **PD3 AND PD0 low** for **3 consecutive samples**; returns at `103257E0`.
+- VZ source `alphasdana.cpp::pd_r` drives PD2/3 from fixed `:SDIRQ` input switches (independent of media and output drive/power), but PD0/PD1 are output latch bits (`PDDIR=0x03`). This is the exact minimal **physical-input response missing**: the two status lines need the correct board-specific state/behavior, not more MMC commands.
+
+### Original-ROM native measurements
+
+The original ROM uses `PDIRQEN=0x0C`, `PDIRQEG=0x00` (LEVEL interrupts), `PDDIR=0x03`; it toggles `PDPOL` while seeking valid input. At frame900: `IMR_L=0xF0ED`; `global=(u32 at RAM $0300)=0006DCC4`; `global+0x38D=0` **all four configurations**; `global+0x1C=0`; **0 callback entries installed** in the eight tested slot registrations (`global+0xE0 + n*0x4C`). Hence the prior K section's loop through callbacks **is not the active cause of THIS guest stall**. The callback code exists statically, but native flags prove none was awaiting service; do not invent a callback failure.
+
+| Live SDIRQ PD2/PD3 (raw) | Frame900 PDPOL | Frame900 ISR_L / IPR_L | Original-ROM state frame2400 | Interpretation |
+|---|---|---|---|---|
+| both low `00` | `00` | `0C00` / `0C00` | slot0/1 callback/interrupt service recurs, LSSA `72A10` | Valid 3-low debounce can finish, but **INT2+INT3 stay LEVEL-asserted** indefinitely as physical input stays low and POL=0, unmasked by `IMR_L`. |
+| both high `0C` | `04` | `0402` / `0402` | stuck in **PrvSpiSetPol0** under `1032596A`, LSSA `72A10` | PD2 HIGH resets counter D3 on each sample: **can't acquire 3 lows**. INT2 simultaneously active while POL bit2=1, plus timer1 pending bit1. |
+| PD2 high/PD3 low `04` | `04` | `0C02` / `0C02` | same slot0 wait, LSSA `72A10` | PD2 HIGH prevents slot0 debounce; both relevant level IRQs asserted. |
+| PD2 low/PD3 high `08` | `00` | `0402` / `0402` | stuck in **PrvSpiSetPol1** under `103259CE`, LSSA `72A10` | PD3 HIGH prevents slot1 3-low debounce; INT2 asserted. |
+
+All four individual runs reached frame2400/40s, did **not** reach Palm desktop and returned code0 as bounded emulator exits. **Runtime is not a regression PASS of boot**.
+
+**Definite, bounded root cause:** the current model supplies static, user-configured external PD2/PD3 **without a validated physical SD-socket detect/IRQ response**. High leads to infinite original-ROM debounce; low leads to unacknowledgeable level-triggered IRQ2/3 re-entry. The exact missing device behavior is the board's **input/polarity/interrupt state transition or an equivalent real electric acknowledgment**; **we cannot yet determine which IC, contact, pull-up/down or pin is responsible** without source-backed vendor POSE more detailed/PCB. Do **not** “fix” by forcing both low or high permanently, deleting callbacks, spoofing (D0), masking IRQ2/3 indefinitely, treating raw SD image mount as a physical switch, or changing the VZ edge/level algorithm contrary to UM.
+
+The vendor-specific original POSE `EmRegsVZAlphaSmart::GetPortInputValue` returns 0 for Port D (and E/G), and `GetPortInternalValue(D)=0x80`; this is actual historical *software configuration*, but native both-low `:SDIRQ=00` already confirmed it is **not sufficient by itself** in our emulator. The vendor software binary's PCB interface logic for CD/IRQ remains to be compared, using the already recovered vtables and GPIO/interrupt handlers — not a newly invented external chip.
+
+**Next bounded resolution step:** real system trace over `103256EA..10325756` / `10325774..103257E0` coupled to startup GPIO outputs PD1/PD0 and INT2/INT3 status, then reproduce precisely the real board/device signal state machine after source evidence. A deliberately synthetic transient input pulse can establish a counterfactual causal test, but cannot be merged as hardware truth. Preserve one DIAG and original ROM.
