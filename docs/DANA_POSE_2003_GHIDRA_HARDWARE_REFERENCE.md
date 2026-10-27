@@ -48,3 +48,31 @@ MSVC RTTI in the actual 2003 PE contains `.?AVEmRegsVZAlphaSmart@@` at VA `0x005
 ## Reproducibility
 
 Historic ZIP and PE: held locally on T only, original PalmDB URL above. PE class matching and Vtable: binary RTTI TypeDescriptor and COL memory references, both vtables compared against base VZ. Ghidra artifacts named above. This reference is **not an emulator build or a replacement architecture** and should remain a static library of hardware evidence.
+
+## Vtable semantic mapping — checked against POSE's EmHALHandler declaration
+
+The full `EmHALHandler` virtual method order is preserved in the historical GPL base header [`SrcShared/Hardware/EmHAL.h`](https://github.com/cloudpilot-emu/pose-original/blob/master/SrcShared/Hardware/EmHAL.h). The first `EmRegsVZAlphaSmart` vtable in the 2003 binary is its **EmHALHandler** virtual table: slot 7 `GetInterruptLevel` points to the *same inherited address* `0x00448830` as base `EmRegsVZ`, so there is **no Dana-only override to suppress or change IRQ level in this virtual method**; general VZ logic applies. Directly verified address mapping:
+
+| First vtable slot | Interface virtual method | Vendor specific function |
+|---|---|---|
+| 9 | `GetLCDScreenOn` | `0x0044A260` |
+| 10 | `GetLCDBacklightOn` | `0x0044A280` |
+| 21 | `GetPortInputValue` | `0x0044A3E0` |
+| 22 | `GetPortInternalValue` | `0x0044A450` |
+| 24 | `GetKeyInfo` | `0x0044A570` |
+
+The separate `EmRegs` vtable slot6 `SetSubBankHandlers` maps to `0x0044A5B0` and registers SPI2/Port K only. This mapping follows the actual 2003 binary vtable offsets; inherited method addresses and names are cross-checked against the original header, **not guessed from x86 instructions alone**.
+
+The vendor-specific input implementation decompiled to C under Ghidra:
+
+```c
+switch(port) {
+case 'D': case 'E': case 'G': return 0;
+case 'K': return EmRegsVZ::GetPortInputValue(port) | (internal_register & 4);
+default: return EmRegsVZ::GetPortInputValue(port);
+}
+```
+
+For `GetPortInternalValue`, `D→0x80`, `G→base|0x04`, otherwise delegate. The complete original C++ implementation was **not recovered**; this is a faithful short paraphrase of directly observed Ghidra output.
+
+The early PE Ghidra import logged `Analysis timed out at 140 seconds` during generic whole-file analysis, but **targeted `-noanalysis` Ghidra disassembly and decompilation PASS** for key exact known methods. Class-vtable RTTI and the manually verified binary refs do not depend on complete global analysis.
