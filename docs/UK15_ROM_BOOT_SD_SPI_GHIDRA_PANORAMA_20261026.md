@@ -370,3 +370,73 @@ Used **existing Ghidra 12.1.3** project `DanaUK15RelocatedTemp`; mapped original
 **REAL integration** in canonical `main`/single T DIAG, [source commit](https://github.com/SamDelorean/DANA-emu/commit/0e8b0016dd861214b62da527413718fe1eab14a3), [full qualification](DANA_NOR_FLASH_20261026.md), [MAME Lua test](../tests/dana_nor_id_readonly_native.lua). Original ROM used 0x1046B328 `FF–FF–FF–90` electronic-signature command sequence. Optional, explicitly selected 16-bit ST/Numonyx M28W640HCB NOR profile gives manufacturer `0x0020`, device `0x8849`; read-array `FF`, read-status `70` (`0080`), clear-status `50`. Other commands guard; power-on/default chip identity unknown (physical board marking not established). Clang21 **real compile+link PASS**. Native original firmware bus qualification `NOR_MODEL_NATIVE_READONLY_PASS` (720 frames) verifies modes and original ROM byte preservation.
 
 **New causal original CPU proof:** with *transient diagnostic* suppression only of CPU IRQ4 delivery from INT2/INT3 (never kept), original UK1.5 repeatedly executed `FF/90/ID/FF` and progressed past the former `FLASH_COMMAND_SET_UNVERIFIED` guard. New real stop `FLASH_BYTES_NOT_SUPPLIED` at `0x107F0000` (offset `0x007F0000` in 8MiB NOR), outside supplied private dump `6,094,848` bytes, at PC `00083D2C`. Unknown upper ROM bytes are NOT guessed, filled, mirrored, or redistributed. After diagnostic, original IRQ delivery restored, NOR feature retained; exact final candidate SHA256 `c8fe219c9ad8f14a1c3f6ae5c6d06b20c1a5c9a7c32a94b25edfdf178993df3e`, source Git blob `343a6f0078e061be541797dd4af25383a7ec2dd4`; untouched original ROM SHA256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3` and operative DIAG SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`. **Neither SDIRQ deadlock nor Palm desktop is resolved.** Remaining evidence required: actual Flash data/verified erased-state semantics for 0x007F0000 and faithful board SDIRQ interface. No isolated build.
+
+## P. 2026-10-26 — Native post-NOR progression RTC, UART2, SPI1 and verified sleep branch
+
+**One canonical DIAG, real original UK1.5 ROM, no new MAME clone/branch/tree.** This section records implementation and native results of the *existing* source driver, plus clearly separated diagnostic-only IRQ and power control experiments. Original firmware SHA256 `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3` and operative `bin/dana-diag` SHA256 `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a` remained untouched. Current committed source Git blob `0d59e7965171878b07ade29b3fbb18eec6745191`, canonical candidate `source/danadiagd` SHA256 `b7dfb27a3d30908043b15cd0f1604c9b2528277890370ba37c14cf0c94dfe3d8`; all C++ builds compiled and linked within existing `source/build/dana-diag`.
+
+### A. Exact NOR updater provenance and optional authentic virgin-cell behavior
+
+Located original `AlphaSmart_Dana1_5_Flash.zip` under T `/home/spc/Projects/Dana-OS3K/firmware/research-only/`. The actual UK150 PRC updater contains **119 Flas resources of 50 KiB and a final one of 2 KiB**: exact coverage `0x000000..0x5CFFFF`, total **`0x5D0000` / 6,094,848 bytes**. The vendor updater **does NOT contain** data from `0x5D0000..0x7FFFFF`, even though UK1.5 Ghidra identifies the NOR 8MiB `0x208849` device and original guest probes e.g. `0x107F0000`. For never-programmed NOR, the data-cell erased state is **`0xFFFF`**, but an actual *used* Dana might hold persistent data. Implemented opt-in `:NOR_FACTORY=1` (requires `:NOR_PROFILE=1`) returning erased read-array words **only** in the absent upper array range and only within the 8MiB geometry. Default `:NOR_FACTORY=0` still guards on missing bytes. No original ROM modified, padded on disk or mirrored. [`DANA_NOR_FLASH_20261026.md`](DANA_NOR_FLASH_20261026.md).
+
+**CPU counterfactual** with *separately temporary IRQ4 INT2/INT3 delivery suppression* traversed the original ROM `FF→90→ID→FF` sequences, then read all erased upper-array words through `0x107FFFFE`, reaching new original CPU MMIO accesses. Entire temporary CPU-IRQ suppression was restored/recompiled after each run.
+
+### B. Newly implemented on-chip VZ registers, genuine CPU events
+
+Real CPU arrived at `0xFFFFFB04`: **`RTCALRM`** 32-bit hour/minute/second alarm (new read/write/save/reset/event bit `0x0004` on RTC 1Hz tick); then read `0xFFFFFB1A` **`DAYR`** and `0xFFFFFB1C` **`DAYALARM`** (9-bit read/write/save/reset, day comparison). Native source regressions in the *same existing emulator* passed 720 frames:
+```text
+ALARM_REGISTER high=161C low=0035
+FACTORY_ERASED_NOR 7f0000=FFFF ROM0=0000
+DAYR_DAYALARM_9BIT_PASS
+RTC_ALARM_AND_FACTORY_NOR_BUS_PASS
+END=720
+```
+Genuine UK1.5 CPU then wrote its own RTCALRM and day/dayalarm values, successfully passed all previously missing-register guards.
+
+Next original CPU read `0xFFFFF918` (**UART2 UMISC2**), not part of the formerly implemented UART1 map. Implemented bounded 7-word **UART2 register bank** `0xFFFFF910..0xFFFFF91D`, with reset `UBAUD2=0x0002` per Motorola VZ **user manual addendum** (supersedes older 0x003F erratum). CPU subsequently wrote UTX2 `0xFFFFF916=0x0800`, which is a documented **`NOCTS` control bit, NOT outgoing serial data**. Production handler now accepts that control change and blocks unsupported actual FIFO traffic. Real CPU log `DANA_UART2_UTX_CONTROL value=0800 mask=ffff`; no fictional UART2 wire transport claimed. Canonical code update [`04555a7a`](https://github.com/SamDelorean/DANA-emu/commit/04555a7a87cf680af6510137ed439e44ddcc2491).
+
+### C. Original SPI1 deadlock disassembled and resolved at the internal engine/bus boundary
+
+After NOR + RTC + UART2 original CPU reached `0x10326174`:
+```68k
+1032616E MOVE.W #-1,$FFFFF702
+10326174 ORI.W #$0100,$FFFFF704  ; XCH
+1032617A MOVE.W $FFFFF704,D0
+1032617E ANDI.W #$0100,D0
+10326182 BNE 1032617A             ; wait for internal XCH to clear
+```
+Former MAME driver called `DANA_SPI1_BLOCKED unsupported_bus_mode control=0730 PJSEL=cf SPC=0000` and **suspended CPU** purely because the original guest's PJSEL selected PJ0/PJ1/PJ2 as GPIO. Motorola [MC68VZ328 User Manual §§10.4.9/13.2, 13.3](https://www.nxp.com/docs/en/user-guide/MC68VZ328UM.pdf) distinguishes internal master-shift `XCH` from *external pin multiplexing*: PJSEL=1 disconnects the peripheral pin and PJSEL=0 enables it, while internal `XCH` auto-clears at end of FIFO shift. MAME implementation now:
+- completes internal shift/timing even when PJ0/PJ1/PJ2 are configured GPIO;
+- routes external SD bits only when **both MOSI/PJ0 and SCLK/PJ2** are dedicated functions; isolates SD images otherwise;
+- treats disconnected MISO/PJ1 as high, consistent with documented GPIO pull-up default; does not fake card responses;
+- preserves previously verified SPI1 dedicated-pin functionality, bus contention rules, and guards for unsupported control/sample modes.
+
+**Native targeted MAME bus regression PASS with original UK1.5 loaded, no ROM writes**:
+```text
+GPIO_MUX_XCH_START
+GPIO_MUX_COMPLETE ctrl=063F rx=FFFF
+DEDICATED_MUX_COMPLETE ctrl=063F rx=FFFF
+SPI1_INTERNAL_XCH_AND_ISOLATION_PASS
+END_FRAME=450
+```
+Tests recorded in GitHub [`tests/dana_spi1_mux_internal_native.lua`](../tests/dana_spi1_mux_internal_native.lua), commit [`cfcbcfa`](https://github.com/SamDelorean/DANA-emu/commit/cfcbcfa52bf6796a8c736e1742b57536618daf09). A *temporary diagnostic IRQ4-filter* original ROM trial with this SPI1 correction moved beyond the earlier `0x10326174` `XCH` loop, reaching legitimate on-chip `PCTLR` power-down. **DO NOT call this Palm desktop PASS.**
+
+### D. Subsequent PCTLR/STOP is a real firmware sleep transition, not an unrelated missing chip
+
+Original Ghidra 12.1.3, script `DanaUK15PowerStopBranch.java`, full `uk15_stop_sleep_ghidra.txt` under `pose_historical_reference/nor_rtc_integrated_20261026/`:
+```68k
+10079766 ANDI #$7FFF,SR
+1007976A NOP
+1007976C MOVE.B #$C0,($207,A0)    ; PCTLR $FFFFF207
+10079772 STOP #$2000
+10079776 TST.B $00000111
+```
+PCTLR `C0` masks reserved bit6 leaving **PCEN=1, WIDTH=0**: the Motorola VZ power module removes CPUCLK while SYSCLK peripherals stay active. `STOP #2000` is the 68000 documented privileged sleep until qualifying interrupt/reset. Production MAME intentionally guards `PCTLR_CPU_BURST_UNIMPLEMENTED` rather than falsely executing at full speed; **do not “fix” by hardcoding full CPU speed.** A separate **reversible-only** trial allowed PCTLR WIDTH=0 with the guest 68000 native STOP semantics; ROM progressed to `PC=10079776` and remained in STOP through frame2400, without `DANA_PHYSICAL_BLOCKED`. That demonstration was **combined with the temporary suppression of INT2/INT3 IRQ4**; without interrupt delivery, no natural wakeup can be inferred. The console remained on the second splash; no desktop. Source/compiled candidate restored after trial. Thus this is a legitimate VZ low-power branch whose wake source must be analyzed; not a new fabricated chip.
+
+### E. Remaining real limitation
+
+**Default/native electrical behavior still unqualified:** `:SDIRQ` PD2/PD3 are static config pins; both low produce IRQ4 INT2/3 continuously, while high prevents original three-low debounce in `PrvSpiSetPol0/1`. The user-supplied manufacturer POSE historical class `EmRegsVZAlphaSmart` returns input D=0, but this does not reveal physical board contact logic; neither more SD CMD1 replies nor blind IRQ masking is a valid fix.
+
+Under **normal IRQ4 delivery** the authentic original ROM still loops in initial SD initialization/`HwrDelay` and stays at LSSA `0x00072A10`. Under **temporary** IRQ4 suppression it can reach PCTLR sleep; the CRT/RTC and SPI1 corrections are genuine tested, but actual display progression requires a faithful IRQ electrical/input-state model **and** a qualified power wake source. Default NOR identity and factory-erased-memory hypothesis remain deliberately **opt-in**; non-diagnostic users continue to receive real guardrails instead of hidden workarounds.
+
+**State / source integrity:** completed features synchronized to GitHub `main`, all regression files saved; one single T DIAG candidate, no duplicated build tree. Final source Git blob `0d59e7965171878b07ade29b3fbb18eec6745191`, candidate `b7dfb27a3d30908043b15cd0f1604c9b2528277890370ba37c14cf0c94dfe3d8`. Original ROM and operative binary intact.
