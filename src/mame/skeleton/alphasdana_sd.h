@@ -139,6 +139,20 @@ struct card
         { response(r1|8); return; }
         if (op==0)
         { idle=true; high_capacity=false; crc_enabled=false; multi_read=multi_write=false; write_left=0; status=0; response(1); return; }
+        // Legacy MMC SPI SEND_OP_COND. MMC uses CMD1 rather than SD's
+        // CMD55/ACMD41 pair; neither CMD1 nor MMC SPI carries an OCR
+        // payload. Only offer byte-addressed standard-capacity mode.
+        // This is a compatibility fallback, not a board/card-type probe.
+        if (op==1)
+        {
+            bool hc=false; byte mult=0; word size=0;
+            if (!idle || !geometry(blocks,hc,mult,size) || hc)
+            { response(byte(r1|4)); return; }
+            high_capacity=false;
+            idle=false;
+            response(0);
+            return;
+        }
         if (op==8)
         { response((arg & 0xf00)==0x100 ? r1 : byte(r1|0x40));
           append(0); append(0); append(arg>>8); append(arg); return; }
