@@ -2533,6 +2533,16 @@ void alphasdana_state::update_irq_lines()
             m_maincpu->set_input_line(level,CLEAR_LINE);
         return;
     }
+    // MC68VZ328UM 4.5.3/4.5.4: a qualifying wake event
+    // disables PCM (PCEN) and restores full CPUCLK, preserving WIDTH.
+    // This is not a synthetic interrupt; only an existing unmasked
+    // peripheral IRQ can invoke it. An unmasked IRQ during DISPLL=1
+    // must first pass the PLL-reacquisition timer above.
+    if (m_physical_boot && (m_pctlr & 0x80) && active)
+    {
+        m_pctlr &= ~u8(0x80);
+        logerror("DANA_PCM_WAKE pcen=0 pctlr=%02x irq=%08x\n",m_pctlr,active);
+    }
     unsigned const spi_level=(m_ilcr>>12)&7;
     for (unsigned level=1;level<=6;++level)
     {
