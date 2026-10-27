@@ -314,3 +314,53 @@ Investigated the actual 2003 POSE AlphaSmart-specific executable and original in
 **One concrete emulator difference**: POSE generic `EmRegsVZ` writes `PDPOL` through `StdWrite` without calling `UpdatePortDInterrupts` on that write, whereas current MAME `pd_extra_w` recomputes level INT2/INT3 immediately. The original vendor Dana override has fixed Port-D inputs and inherits generic VZ IRQ handlers. This is an implementation discrepancy, not yet verified Motorola electrical truth or a proven boot fix.
 
 Bounded native test with both ROMs on **one existing DIAG**: vendor 1.2.1 stuck earlier at `CURPC=100052BC`, `LSSA=0` from first through 2400th frame; UK1.5 on identical DIAG/observer progresses to `LSSA=72A10` then remains. Do **not** assert the historical POSE emulator itself failed or that this older ROM reached SD under MAME; older-ROM startup requires a separately analyzed firmware memory/bootstrap compatibility difference before comparing SD runtime. No binary, source/ROM writes, isolated emulation build or guest PC substitution.
+
+## N. 2026-10-26 — Reverse-engineered successive blockers: INT2/INT3 and on-board NOR command set
+
+**This section records real CPU results and original UK1.5 Ghidra 68000 code, not a new emulator version.** The one existing DIAG source/Clang21 cache/target at `mame-stage/diag/source` was used for **two reversible** source-only diagnostic counterfactuals, and restored/recompiled to **identical final hashes**. No additional DIAG tree/standalone candidate, no change to operative `bin/dana-diag`, no original ROM modifications, no proposed spoofed CPU return.
+
+### Trial A: exact historical POSE IRQ update-event semantics
+
+Vendor Dana-specific `EmRegsVZAlphaSmart` inherits generic POSE VZ Port-D IRQ handling. Generic GPL [`EmRegsVZ.cpp`](https://github.com/cloudpilot-emu/pose-original/blob/master/SrcShared/Hardware/EmRegsVZ.cpp) binds `portDPolarity` and `portDIntEdge` to regular `StdWrite`; `portDIntReqEn` has a handler that recalculates IRQ, and `portDData` updates the IRQ via `PortDataChanged`. Temporary MAME `pd_extra_w()` only invoked `sd_gpio_irq()` for `reg==1` (IRQEN), and `pd_w()` only for `reg==1` (DATA), instead of on *every* register write. Single-tree candidate SHA256 `b45e81458d34f68dfdd34ed76f100b1c425e0fe936dd5df6f40104ba01ce7ab5`, compiled with existing `make -j3`. **Original UK1.5 2400-frame runs:**
+
+| Frame900 physical SDIRQ | Pre-existing MAME ISR_L | Historical POSE-update-timing ISR_L | UK1.5 boot |
+|---|---|---|---|
+| Both PD2/PD3 LOW, `00` | `0C00` | `0C00` | Both remain on AlphaSmart `LSSA=72A10` |
+| Both HIGH, `0C` | `0412` | **`0012`** | Both remain on AlphaSmart `LSSA=72A10` |
+
+**Outcome:** genuine timing difference exists, but **copying POSE update timing is insufficient**. Reverted exact original source/compiled candidate after the test. Source/logs under `work/uk15_qualify_20261025/pose_historical_reference/irq_parity_20261026/`. NO change integrated into production, because old POSE behavior may be an incomplete simplification of actual VZ hardware.
+
+### Trial B: causal CPU delivery of INT2/INT3, showing a second independent blocker
+
+Original ROM at frame900 with physical PD2/PD3 both LOW has `ISR_L=0C00`, `IPR_L=0C00`, `IMR_L=F0ED`, `PC=1007B098` (inside `HwrDelay`), `global+38D=00`, callback count=0, second AlphaSmart LCD. For a strictly synthetic, **diagnostic-only** experiment, temporarily suppress **CPU IRQ4 delivery** of only INT2/INT3 by changing level4 condition in `update_irq_lines` from `active & 0x00000C14` to `active & 0x00000014`. All guest-visible pending registers, Port-D GPIO, Flash map and ROM unchanged. Same-tree candidate SHA256 `90212cb3c0a7b7c52765dd1ec654073ec1d14f301a315ea35ef788f0cbe87c22`, genuine native bounded 2400 frames:
+
+- `PC=00084654` from frame295 onward; `ISR_L=0000` (masked), `IPR_L=0C02` still records INT2/3/timer sources, `IMR_L=FFFF`; LCD still `72A10`. CPU is **not executing a successful desktop**.
+- A baseline-unmodified original UK1.5 RAM observer proved the **exact instruction bytes** at `00084654` are `14 BC 00 FF` (68k `MOVE.B #$FF,(A2)`) at all baseline sampled frames; the 60+ consecutive bytes match **exactly once** in the original UK1.5 ROM at file offset `0x46B328` (ROM VA `1046B328`). The code was **copied/relocated from original ROM to RAM** as part of genuine startup, not an invented branch.
+- To prove why the emulator halts on that write, repeated the diagnostic with real MAME `-log`, still same temporary candidate and private ROM. **Authoritative native `error.log`**:
+```
+DANA_PHYSICAL_WRITE address=10000000 data=ffff mask=ff00
+DANA_PHYSICAL_BLOCKED reason=FLASH_COMMAND_SET_UNVERIFIED address=10000000 data=ffff pc=0008465a
+DANA_PHYSICAL_CPU curpc=00084654 ir=14bc sp=0006ef0a usp=00000000 sr=2008 a4=00002818
+DANA_PHYSICAL_DECODE csa=018d csd=2283 csgba=8000 csgbd=0000 csugba=0000 csctrl=4150/d000/9c00 dram=0f00/8000/d43f/0000
+```
+Thus **second blocker unequivocally proven**: a real original-CPU **Flash NOR command write at boot Flash base `0x10000000`**, intentionally stopped by current `alphasdana.cpp::physical_w` guard (`FLASH_COMMAND_SET_UNVERIFIED`), which calls `physical_block()` and suspends CPU. This blocker was concealed by normal unreleased SD interrupts. No extra hardware chip between SD sockets has been identified by this: the address belongs to the flash CS/boot aperture, **not an independently verified extra SD-chip**.
+
+### Original Ghidra exact supported Flash command/ID sets
+
+Used **existing Ghidra 12.1.3** project `DanaUK15RelocatedTemp`; mapped original read-only private ROM offset `0x460000..0x46FFFF` to `0x10460000..0x1046FFFF`, scripts `DanaUK15FlashIdentification.java` and `DanaUK15FlashAcceptedIDs.java`, output `pose_historical_reference/flash_probe_20261026/{uk15_rom_flash_id_ghidra.txt,uk15_rom_flash_accepted_ids.txt,error.log}`. UK1.5-specific relocated RAM routine maps to ROM `1046B30C` and does:
+
+- `1046B328/32C/330`: writes `FF` three times to boot Flash base (reset/read-array).
+- `1046B334`: writes `90` (read electronic signature/ID).
+- `1046B338`: reads **32-bit ID** from Flash base; `1046B33A` compares with **`0x00208849`**. **If matched**, stores size **`0x800000` (8 MiB)**. This is specifically manufacturer **0x20**, device **0x8849**, STMicroelectronics/Numonyx **M28W640HCB** bottom-boot, 64 Mbit NOR. [Flashrom registry](https://github.com/flashrom/flashrom/blob/main/include/flashchips.h) and [manufacturer datasheet](https://www.part-elec.com/datasheet/micron/M28W640HCB70N6E.pdf) independently verify this ID. **Supported by ROM != proven actual chip topmark or PCB BOM.**
+- `1046B364`: writes `FF` to exit ID mode.
+- Separate second family `1046B370`: AMD unlock command sequence `F0, AA` at base+`0xAAA`, `55` at base+`0x554`, `90` at base+`0xAAA` (68k byte-access address convention); reads ID and compares sequential cumulative arithmetic (ROM `1046B3BC..1046B3D2`):
+  - `0x000122F9` → **`0x400000` / 4 MiB** (manufacturer `0x01`, AMD/Spansion 29LV320 bottom-boot family; [S29AL032D spec](https://www.cs.columbia.edu/~sedwards/classes/2008/4840/Spansion-S29AL032D-Flash.pdf)).
+  - `0x00202249` → **`0x200000` / 2 MiB** (ST M29W160EB).
+  - `0x002022CB` → **`0x400000` / 4 MiB** (exact ST part **not confirmed**; do not assign model from identifier alone).
+  - Unknown ID clears size and handler pointers; reset `F0` on exit.
+- The ROM contains symbols `NuPermaCardOpen`, `NuPermaCardSectorRead` and a nearby `LPmCDriver` dispatch table; this code is within the UK1.5 Flash/PermaCard subsystem. The 2003 POSE-bundled Dana 1.2.1 ROM **does not contain the same literal instruction sequence or these newer NuPermaCard symbol names**, so vendor POSE can reproduce an older ROM's SD startup without necessarily modelling these **later UK1.5 memory operations**.
+- Imported UK1.5 ROM is only **6,094,848 bytes**, while the supported 0x208849 Flash part nominally has 8 MiB. These are different concepts: supplied dump length vs physical capacity; **do not assume unprovided upper Flash data are zero/FF**, do not mirror partial ROM or redistribute it. For a future flash model, identify actual part/geometry/configuration before choosing an ID and accept only the necessary read-ID/reset/status/program commands that original code invokes, consistent with manufacturer behavior. Preserve side-effect-free code/ROM and avoid fabricated erase/program results.
+
+**Scientific conclusion:** source-level/ROM reverse engineering now proves **two sequential real blockers**: (1) static SD PD2/PD3 Port-D IRQ level/polarity creates repeated IRQ4 or failed debounce under four fixed input profiles; (2) once IRQ delivery is temporarily disabled, original UK1.5 reaches Flash NOR ID operations that current DIAG explicitly refuses and suspends on. No Palm desktop has been observed and no physical part marking on the board has been proved. Neither spoof CPU returns nor suppress IRQs nor emulate an unsupported chip identity in the product merely to declare PASS.
+
+**Reproducibility/integrity:** experiments ran in **one** original DIAG cache and candidate, both temporary source modifications **restored and recompiled**; final original source Git blob `b25c759e2c62ddbdbe0a3e16544458d7e96eef38`; final candidate SHA256 `f72403cab7e781608f1c3f7050ae245fc62443c29d66c9ceef168461bbe5d2cd`; operative `0a72dffb23420da5d5830b7ee6725eb734cd59e17d87700a3d5c47a67dc6ea4a`; ROM `2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3`. No extra executable copy. This is only a reference / diagnostic finding and does **not** claim a product fix or completed boot.
