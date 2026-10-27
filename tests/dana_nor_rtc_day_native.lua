@@ -1,0 +1,37 @@
+local cpu=assert(manager.machine.devices[':maincpu'])
+local bus=assert(cpu.spaces['program'])
+local f=assert(io.open(assert(os.getenv('DANA_TRACE_FILE')),'w'))
+local n=0
+emu.register_frame_done(function()
+ n=n+1
+ if n==300 then
+  assert(assert(manager.machine.ioport.ports[':NOR_PROFILE']):read()==1)
+  assert(assert(manager.machine.ioport.ports[':NOR_FACTORY']):read()==1)
+  local a=0xfffffb04
+  assert(bus:read_u16(a)==0 and bus:read_u16(a+2)==0,'RTCALRM reset 32bit')
+  bus:write_u16(a,0x161c)
+  bus:write_u16(a+2,0x0035)
+  local hi=bus:read_u16(a)
+  local lo=bus:read_u16(a+2)
+  f:write(string.format('ALARM_REGISTER high=%04X low=%04X\n',hi,lo))
+  assert(hi==0x161c and lo==0x0035,'RTCALRM read-back')
+  bus:write_u16(0xfffffb10,0x0004)
+  assert(bus:read_u16(0xfffffb10)==4,'alarm interrupt enable')
+  bus:write_u16(0xfffffb10,0x0000)
+  local orig=bus:read_u16(0x10000000)
+  local spare=bus:read_u16(0x107f0000)
+  f:write(string.format('FACTORY_ERASED_NOR 7f0000=%04X ROM0=%04X\n',spare,orig))
+  assert(spare==0xffff,'fresh erase geometry')
+  assert(bus:read_u16(0x10000000)==orig,'original ROM protection')
+  assert(bus:read_u16(0xfffffb1a)==0,'DAYR reset')
+  assert(bus:read_u16(0xfffffb1c)==0,'DAYALARM reset')
+  bus:write_u16(0xfffffb1a,0x0135)
+  bus:write_u16(0xfffffb1c,0x0136)
+  assert(bus:read_u16(0xfffffb1a)==0x0135,'DAYR read-back')
+  assert(bus:read_u16(0xfffffb1c)==0x0136,'DAYALARM read-back')
+  f:write('DAYR_DAYALARM_9BIT_PASS\n')
+  f:write('RTC_ALARM_AND_FACTORY_NOR_BUS_PASS\n')
+  f:flush()
+ end
+ if n==720 then f:write('END=720\n');f:close();manager.machine:exit()end
+end)
