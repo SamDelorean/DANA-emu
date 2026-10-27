@@ -1936,7 +1936,10 @@ void alphasdana_state::spi1_schedule()
     // SD SPI permits modes 0 and 3. Never treat an unsupported master/slave,
     // sample/test or phase configuration as successful SD wire traffic.
     bool const polarity=m_spi1.control&0x10, phase=m_spi1.control&0x20;
-    if (polarity!=phase || (m_gpio[23]&7) || m_spi1.spc)
+    // PJSEL selects EXTERNAL signal routing. It must not disable the
+    // internal shift engine or leave SPICONT1.XCH stuck set forever.
+    // GPIO-selected MOSI/CLK is disconnected from external SD devices.
+    if (polarity!=phase || m_spi1.spc)
     {
         logerror("DANA_SPI1_BLOCKED unsupported_bus_mode control=%04x PJSEL=%02x SPC=%04x\n",m_spi1.control,m_gpio[23],m_spi1.spc);
         m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); return;
@@ -1954,14 +1957,20 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::spi1_complete)
     // Refresh actual output pins at each serial bit, including power/CS
     // transitions during an exchange; no whole-command host shortcut.
     sd_lines();
-    if (m_sd[0]->selected() && m_sd[1]->selected())
+    bool const external_shift=!(m_gpio[23] & 0x05); // PJ0 MOSI and PJ2 SCLK1
+    bool const external_input=!(m_gpio[23] & 0x02); // PJ1 MISO
+    if (external_shift && m_sd[0]->selected() && m_sd[1]->selected())
     {
         logerror("DANA_SPI1_BLOCKED TWO_SELECTED_CARDS_BUS_CONTENTION\n");
         m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); return;
     }
     bool const outgoing=(m_spi1_word>>(m_spi1_bits_left-1))&1;
-    bool const a=m_sd[0]->bit(outgoing), b=m_sd[1]->bit(outgoing);
-    m_spi1_received=(m_spi1_received<<1)|(a && b);
+    // When PJ0/PJ2 are GPIO, no external serial clock/data reaches SD.
+    // The unconnected default MISO/PJ1 is pulled high by the VZ.
+    // Do not clock any card image through a GPIO-selected SPI bus.
+    bool const a=external_shift ? m_sd[0]->bit(outgoing) : true;
+    bool const b=external_shift ? m_sd[1]->bit(outgoing) : true;
+    m_spi1_received=(m_spi1_received<<1)|(external_input ? (a && b) : true);
     if (--m_spi1_bits_left)
     { m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),
         m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz())); return; }
