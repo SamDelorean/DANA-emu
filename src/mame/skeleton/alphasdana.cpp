@@ -57,6 +57,7 @@ public:
         , m_sd(*this, "sd%u", 0U)
         , m_sd_irq(*this, "SDIRQ")
         , m_nor_profile(*this, "NOR_PROFILE")
+        , m_nor_factory(*this, "NOR_FACTORY")
         , m_pd7_pin(*this, "PDPIN7")
         , m_sdram_profile(*this, "PHYSRAM")
         , m_emubrk_pin(*this, "EMUBRK")
@@ -242,6 +243,38 @@ private:
     void uart1_utx_w(offs_t, u16 data, u16 mem_mask);
     u16 uart1_umisc_r() { return m_umisc1; }
     void uart1_umisc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_umisc1); }
+    // VZ UART2 register bank (0xfffff910–0xfffff91d).  A register-level
+    // implementation only; external UART2 TX/RX and FIFO are not yet qualified.
+    u16 uart2_r(offs_t offset) {
+        return m_uart2_regs[offset];
+    }
+    void uart2_w(offs_t offset, u16 data, u16 mem_mask)
+    {
+        if (offset==2) // URX2 is read-only on the VZ.
+        { physical_block("UART2_RX_REGISTER_READONLY",0xfffff914,data); return; }
+        if (offset==3)
+        {
+            // VZ UTX2 bits 11/12/8 are writable control/status: NOCTS,
+            // SEND_BREAK, CTS_DELTA. Data bits are a separate TX FIFO path.
+            // A word write 0800 by UK1.5 only sets NOCTS (bit 11), it
+            // is not a request to send character 0x00 with UART disabled.
+            if ((m_uart2_regs[0] & 0xa000)==0xa000 && (mem_mask & 0x00ff))
+            { physical_block("UART2_TX_FIFO_UNIMPLEMENTED",0xfffff916,data); return; }
+            if ((data & mem_mask & 0x1000) && (m_uart2_regs[0] & 0x8000))
+            { physical_block("UART2_SEND_BREAK_UNIMPLEMENTED",0xfffff916,data); return; }
+            // bit8 CTS_DELTA: writable, but no actual cable CTS events yet.
+            u16 const mask=mem_mask & 0x1900;
+            m_uart2_regs[3]=(m_uart2_regs[3] & ~mask)|(data & mask);
+            logerror("DANA_UART2_UTX_CONTROL value=%04x mask=%04x\n",
+                m_uart2_regs[3],mem_mask);
+            return;
+        }
+        u16 const value=(m_uart2_regs[offset] & ~mem_mask) | (data & mem_mask);
+        // UMISC2 bit8 RTS2TRIG confirmed by VZ addendum; 9,1,0 reserved.
+        if (offset==4 && (value & 0x0203))
+        { physical_block("UART2_UMISC_RESERVED_BITS",0xfffff918,value); return; }
+        m_uart2_regs[offset]=value;
+    }
     u16 uart1_prescaler_r() { return m_uart_prescaler1; }
     void uart1_prescaler_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_uart_prescaler1); }
     // VZ UM 5.2.4: pad drive strength only (0=2 mA, 1=4 mA).
@@ -285,10 +318,16 @@ private:
     u32 rtc_host_seconds();
     void rtc_sync_from_host();
     void rtc_time_w(offs_t offset, u16 data, u16 mem_mask);
+    u16 rtc_alarm_r(offs_t offset) { return u16(m_rtc_alarm >> (offset ? 0 : 16)); }
+    void rtc_alarm_w(offs_t offset, u16 data, u16 mem_mask);
     u16 rtc_control_r() { return m_rtc_control; }
     void rtc_control_w(offs_t, u16 data, u16 mem_mask);
     u16 rtc_ien_r() { return m_rtc_ien; }
     void rtc_ien_w(offs_t, u16 data, u16 mem_mask);
+    u16 rtc_day_r() { return m_rtc_day; }
+    void rtc_day_w(offs_t, u16 data, u16 mem_mask);
+    u16 rtc_day_alarm_r() { return m_rtc_day_alarm; }
+    void rtc_day_alarm_w(offs_t, u16 data, u16 mem_mask);
     u16 rtc_isr_r() { return m_rtc_isr; }
     void rtc_isr_w(offs_t, u16 data, u16 mem_mask);
     void rtc_update_irq();
@@ -440,6 +479,7 @@ private:
     required_device_array<dana_sd_image_device,2> m_sd;
     required_ioport m_sd_irq;
     required_ioport m_nor_profile;
+    required_ioport m_nor_factory;
     required_ioport m_pd7_pin;
     required_ioport m_sdram_profile;
     required_ioport m_emubrk_pin;
@@ -544,9 +584,9 @@ private:
     emu_timer *m_rtc_timer = nullptr;
     // MAME's current_datetime is seeded from the host RTC at machine start,
     // then advances with guest time. Guest RTCTIME writes use local offset.
-    u32 m_rtc_time=0, m_rtc_last_tick=0;
+    u32 m_rtc_time=0, m_rtc_last_tick=0, m_rtc_alarm=0;
     s32 m_rtc_offset_seconds=0;
-    u16 m_rtc_day=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
+    u16 m_rtc_day=0, m_rtc_day_alarm=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
     u16 m_pwm1_control=0x0020; // PWMC1 reset: FIFOAV=1, EN=0
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
@@ -554,6 +594,7 @@ private:
     u16 m_tcr1=0, m_tcn1=0, m_tstat1=0, m_tstat_clear1=0;
     u32 m_timer1_compares=0, m_timer1_iacks=0;
     u16 m_ustcnt1=0, m_ubaud1=0x0002, m_urx1=0, m_utx1=0, m_umisc1=0;
+    u16 m_uart2_regs[7]={0,0x0002,0,0,0,0,0x0102};
     u16 m_uart_prescaler1=0;
     u16 m_iodcr=0x1fff;
     u16 m_icemcr=0, m_icemsr=0;
@@ -604,9 +645,11 @@ void alphasdana_state::machine_start()
     m_isp_hc_sof_timer=timer_alloc(FUNC(alphasdana_state::isp1161_hc_sof),this);
     m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);
     save_item(NAME(m_rtc_time));
+    save_item(NAME(m_rtc_alarm));
     save_item(NAME(m_rtc_offset_seconds));
     save_item(NAME(m_rtc_last_tick));
     save_item(NAME(m_rtc_day));
+    save_item(NAME(m_rtc_day_alarm));
     save_item(NAME(m_rtc_control));
     save_item(NAME(m_rtc_ien));
     save_item(NAME(m_rtc_isr));
@@ -632,6 +675,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_ustcnt1)); save_item(NAME(m_ubaud1));
     save_item(NAME(m_urx1)); save_item(NAME(m_utx1));
     save_item(NAME(m_umisc1)); save_item(NAME(m_uart_prescaler1));
+    save_item(NAME(m_uart2_regs));
     save_item(NAME(m_pcdir));
     save_item(NAME(m_pcdata));
     save_item(NAME(m_pcpden));
@@ -732,7 +776,8 @@ void alphasdana_state::machine_reset()
     // a phase change is required every half period (65536 per second).
     m_clk32_timer->adjust(attotime::from_hz(65536), 0, attotime::from_hz(65536));
     // The host-seeded RTC persists across a soft hardware reset.
-    m_rtc_control=0x0080; m_rtc_ien=0; m_rtc_isr=0;
+    m_rtc_control=0x0080; m_rtc_ien=0; m_rtc_isr=0; m_rtc_alarm=0;
+    m_rtc_day_alarm=0;
     rtc_sync_from_host();
     m_rtc_last_tick=m_rtc_time;
     m_rtc_timer->adjust(attotime::from_seconds(1), 0, attotime::from_seconds(1));
@@ -746,6 +791,8 @@ void alphasdana_state::machine_reset()
     m_timer1_timer->adjust(attotime::never);
     m_ustcnt1=0; m_ubaud1=0x0002; m_urx1=0;
     m_utx1=0; m_umisc1=0; m_uart_prescaler1=0;
+    std::fill(std::begin(m_uart2_regs),std::end(m_uart2_regs),0);
+    m_uart2_regs[1]=0x0002; m_uart2_regs[6]=0x0102;
     update_irq_lines();
     // dbztool@d327023 danainit.sh configures PCPDEN=PCSEL=0 before RAM
     // entry. This machine implements that synthetic post-bootstrap profile.
@@ -945,6 +992,13 @@ u16 alphasdana_state::physical_r(offs_t offset, u16 mem_mask)
                                : (boot ? address : address-cs_base(0)) & (size-1);
         if (index>=size || size-index<2)
         {
+            // Explicit virgin-device initialization; never attribute these
+            // erased bits to the historical updater or an actual used Dana.
+            // On NOR an erased memory cell reads one; the updater has no data
+            // beyond its exact 0x5D0000-byte Flas resource payload.
+            if (m_nor_profile->read()==1 && m_nor_factory->read()==1
+                && index>=size && index+1<0x800000)
+                return 0xffff;
             if (!machine().side_effects_disabled())
                 logerror("DANA_PHYSICAL_MISSING_BYTES address=%08x array_offset=%08x mask=%04x supplied_bytes=%u\n",address,index,mem_mask,size);
             physical_block("FLASH_BYTES_NOT_SUPPLIED",address);
@@ -2085,6 +2139,11 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::rtc_tick)
             m_rtc_day=(m_rtc_day+1)&0x01ff;
             m_rtc_isr |= 0x0008; // midnight
         }
+        // VZ RTCALRM matches programmed hours/minutes/seconds on a
+        // real 1 Hz tick, not when a host observer merely reads RTCTIME.
+        if ((m_rtc_ien & 0x0004) && current==m_rtc_alarm
+            && m_rtc_day==m_rtc_day_alarm)
+            m_rtc_isr |= 0x0004; // Alarm: RTCISR.ALM
         m_rtc_last_tick=current;
     }
     rtc_update_irq();
@@ -2105,6 +2164,37 @@ void alphasdana_state::rtc_time_w(offs_t offset, u16 data, u16 mem_mask)
     m_rtc_offset_seconds=wanted-s32(rtc_host_seconds());
     logerror("DANA_RTC_TIME_WRITE time=%08x offset=%u mask=%04x host_offset_s=%d\n",
         m_rtc_time,unsigned(offset),mem_mask,m_rtc_offset_seconds);
+}
+
+void alphasdana_state::rtc_alarm_w(offs_t offset, u16 data, u16 mem_mask)
+{
+    u32 const shift=offset ? 0 : 16;
+    u32 const mask=u32(mem_mask)<<shift;
+    u32 const value=(m_rtc_alarm & ~mask)|(u32(data & mem_mask)<<shift);
+    // RTCALRM uses exactly the documented RTCTIME hour/minute/second bit map.
+    if (!rtc_time_valid(value))
+    { physical_block("RTC_ALARM_INVALID",0xfffffb04+(offset*2),data); return; }
+    m_rtc_alarm=value;
+    logerror("DANA_RTC_ALARM time=%08x half=%u mask=%04x\n",
+        m_rtc_alarm,unsigned(offset),mem_mask);
+}
+
+void alphasdana_state::rtc_day_w(offs_t, u16 data, u16 mem_mask)
+{
+    u16 const value=(m_rtc_day & ~mem_mask) | (data & mem_mask);
+    if (value & ~0x01ff)
+    { physical_block("RTC_DAY_RESERVED_BITS",0xfffffb1a,value); return; }
+    m_rtc_day=value;
+    logerror("DANA_RTC_DAY value=%03x\n",m_rtc_day);
+}
+
+void alphasdana_state::rtc_day_alarm_w(offs_t, u16 data, u16 mem_mask)
+{
+    u16 const value=(m_rtc_day_alarm & ~mem_mask) | (data & mem_mask);
+    if (value & ~0x01ff)
+    { physical_block("RTC_DAY_ALARM_RESERVED_BITS",0xfffffb1c,value); return; }
+    m_rtc_day_alarm=value;
+    logerror("DANA_RTC_DAY_ALARM value=%03x\n",m_rtc_day_alarm);
 }
 
 void alphasdana_state::rtc_control_w(offs_t, u16 data, u16 mem_mask)
@@ -2137,8 +2227,9 @@ void alphasdana_state::rtc_ien_w(offs_t, u16 data, u16 mem_mask)
 {
     u16 const next=(m_rtc_ien & ~mem_mask)|(data & mem_mask);
     // 1Hz, minute, hour and 24h are generated by the 1Hz timer.
-    // Subsecond rates, alarm and stopwatch need dedicated mechanics.
-    if (next & ~0x003a)
+    // Subsecond and stopwatch require independent timers; alarm is
+    // generated on the RTC second tick by the real RTCALRM comparator.
+    if (next & ~0x003e)
     { physical_block("RTC_INTERRUPT_RATE_UNIMPLEMENTED",0xfffffb10,next); return; }
     m_rtc_ien=next; rtc_update_irq();
     logerror("DANA_RTC_IEN value=%04x\n",m_rtc_ien);
@@ -2662,9 +2753,12 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
     m_boot_memory[1](0xfffff411,0xfffff411).rw(FUNC(alphasdana_state::pcdata_r),FUNC(alphasdana_state::pcdata_w)).umask16(0x00ff);
     m_boot_memory[1](0xfffffb00,0xfffffb03).rw(FUNC(alphasdana_state::rtc_time_r),FUNC(alphasdana_state::rtc_time_w));
+    m_boot_memory[1](0xfffffb04,0xfffffb07).rw(FUNC(alphasdana_state::rtc_alarm_r),FUNC(alphasdana_state::rtc_alarm_w));
     m_boot_memory[1](0xfffffb0c,0xfffffb0d).rw(FUNC(alphasdana_state::rtc_control_r),FUNC(alphasdana_state::rtc_control_w));
     m_boot_memory[1](0xfffffb0e,0xfffffb0f).rw(FUNC(alphasdana_state::rtc_isr_r),FUNC(alphasdana_state::rtc_isr_w));
     m_boot_memory[1](0xfffffb10,0xfffffb11).rw(FUNC(alphasdana_state::rtc_ien_r),FUNC(alphasdana_state::rtc_ien_w));
+    m_boot_memory[1](0xfffffb1a,0xfffffb1b).rw(FUNC(alphasdana_state::rtc_day_r),FUNC(alphasdana_state::rtc_day_w));
+    m_boot_memory[1](0xfffffb1c,0xfffffb1d).rw(FUNC(alphasdana_state::rtc_day_alarm_r),FUNC(alphasdana_state::rtc_day_alarm_w));
     m_boot_memory[1](0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
     m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
     m_boot_memory[1](0xfffffd0c,0xfffffd0d).rw(FUNC(alphasdana_state::icemcr_r),FUNC(alphasdana_state::icemcr_w));
@@ -2692,6 +2786,9 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff906,0xfffff907).rw(FUNC(alphasdana_state::uart1_utx_r),FUNC(alphasdana_state::uart1_utx_w));
     map(0xfffff908,0xfffff909).rw(FUNC(alphasdana_state::uart1_umisc_r),FUNC(alphasdana_state::uart1_umisc_w));
     map(0xfffff90a,0xfffff90b).rw(FUNC(alphasdana_state::uart1_prescaler_r),FUNC(alphasdana_state::uart1_prescaler_w));
+    // Full 7-word UART2 register address decode: USTCNT2, UBAUD2,
+    // URX2, UTX2, UMISC2, NIPR2 and HMARK2.  No fictitious serial I/O.
+    map(0xfffff910,0xfffff91d).rw(FUNC(alphasdana_state::uart2_r),FUNC(alphasdana_state::uart2_w));
 
     // VZ Port C: eight pulldown enables and eight GPIO/function selects.
     // Native u8 handlers preserve the M68000 high/even and low/odd lanes,
@@ -2793,6 +2890,10 @@ static INPUT_PORTS_START(alphasdana)
     PORT_CONFNAME(0x80,0x80,"PD7/IRQ6 external level (startup board assumption)")
     PORT_CONFSETTING(0x80,"High / released (boot path)")
     PORT_CONFSETTING(0x00,"Low / asserted (sleep path)")
+    PORT_START("NOR_FACTORY")
+    PORT_CONFNAME(0x01,0x00,"NOR upper sectors without updater data (virtual erase-state)")
+    PORT_CONFSETTING(0x00,"Unknown original contents / block read")
+    PORT_CONFSETTING(0x01,"Virgin erased NOR 8 MiB / FF (explicit experiment)")
     PORT_START("NOR_PROFILE")
     PORT_CONFNAME(0x01,0x00,"Flash NOR identity (physical topmark unverified)")
     PORT_CONFSETTING(0x00,"Unknown / guard on signature request")
