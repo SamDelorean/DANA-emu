@@ -65,3 +65,12 @@ Pruebas `pre_stop_power_matrix/hold_from_boot.log`, `pulse_650.log`, `pulse_1150
 ## Pendiente de resolución completa (no confundir con PASS)
 
 La ROM original no ha mostrado la pantalla de calibración o el lanzador Palm. **La primera transición STOP→IRQ6 está implementada y comprobada, pero UK1.5 luego ejecuta un segundo STOP legítimo en `0x1007A196`**, con la pantalla AlphaSmart `LSSA=00072A10`. El comportamiento observable es compatible con un estado de energía del sistema operativo, pero **no hay evidencia suficiente para atribuirlo a batería, señal de un chip o programa faltante**. Investigar con Ghidra y evidencia nativa el origen de la solicitud de reposo (gestor de energía / planificador, callbacks y fuente de wake de segundo STOP); no inyectar una PC, ROM ni constante en RAM para proclamar escritorio PASS. No modificar la fuente ni duplicar el DIAG sin nueva evidencia causal.
+
+## Comprobación adicional: teclado ST y segunda pulsación tras STOP
+
+En el mismo DIAG compilado y sin escribir registros del guest, se ejecutó una matriz nativa adicional de 3500 cuadros: tecla física On/off presionada frame1600, tecla A (código de exploración ST original) frame1900 y segunda pulsación On/off frame3000, soltadas sin cambiar la ROM ni alterar la CPU. Evidencia: `work/uk15_qualify_20261025/pose_historical_reference/pll_sleep_wake_20261026/post_stop_keyboard_wake/input_matrix.log`. Todos los eventos fueron aceptados por las entradas MAME; no se observó pantalla Palm OS.
+
+- Primer STOP en `10079776` (frame1400).
+- Tras primera pulsación, segundo STOP en `1007A196` con `PC=1007A19A` y `PLLCR=238B`.
+- Al pulsar A y luego On/off de nuevo, los muestreos en frames1901,1925,2000,3001,3030,3200 y3500 permanecen `PC=1007A19A`, con `LSSA=00072A10`.
+- Las capturas a intervalo de cuadros **no prueban por sí solas que el segundo evento no haya generado interrupciones entre cuadros**. Por tanto NO afirmar un fallo preciso del segundo IRQ6 sin traza IACK/más fina. Tampoco corresponde declarar el desktop implementado. La condición actual debe investigarse como estado de suspensión del gestor Palm y fuente de reactivación, no rellenarse con una rutina ficticia de teclado.
