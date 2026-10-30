@@ -51,3 +51,11 @@
 - Se conserva el indicador MAME `MACHINE_NOT_WORKING` en el driver: procede mientras falta fidelidad general, pese a que el Palm OS/AlphaWord concreto sí funciona.
 - La foto del PCB confirma U4 MC68VZ328PV y U5 Samsung, pero U7 no tiene chip identificado y las nets no han sido medidas; consultar `DANA_HARDWARE_INTERCONNECTION_ATLAS_20261026.md` antes de asumir conectividad.
 - Los estados ACREDITADO se circunscriben al alcance de las pruebas nativas archivadas; por ejemplo, WAV con muestras no nulas no es una escucha externa, y SPI SD de dos tarjetas no es detección eléctrica de ambas ranuras.
+
+## Incorporación posterior a la cola — 30/oct/2026 (sin modificar la auditoría del corte)
+
+**LCD D3.6 — P5 / EN COLA, posterior al ISP1161:** cuatro niveles de gris mediante framebuffer de 2 bpp; confirmar LPICF, LGPMR, stride, conversión de píxeles y prueba de 4 valores desde RAM real del invitado.
+
+**LCD D3.7 — P5 / EN COLA, posterior al ISP1161:** dieciséis niveles de gris mediante framebuffer de 4 bpp; confirmar LPICF, memoria, orden de bits, 16 valores efectivos y características por versión de Dana/Dana Wireless.
+
+Ambas capacidades deben coexistir con el renderizador 1 bpp ya acreditado, sin cambiar ni parchear Palm OS, y sin presentar un efecto de posprocesado del host como soporte de hardware. **Estado: pendientes, no implementadas; ninguna prueba ejecutada en esta incorporación.** Los 21 estados de la auditoría de hardware permanecen intactos. Control rector: pestaña HITOS (D3.6-LCD-4G, D3.7-LCD-16G), AUD_HW_20261030 (HW30-04) y BITACORA.
