@@ -1,3 +1,5 @@
+2026-10-29 PWM1 audio: Mono speaker generated from guest PWM1, with Volume and Mute in Tab > General Settings > Sound Options. Installed original-ROM audio WAV nonzero, Setup 4/Enter Data regression PASS. Details docs/PALM_UK15_PWM1_AUDIO_20261029.md.
+
 **2026-10-29 Palm original Setup 3->4->Enter Data PASS:** The single dana-diag now models PWM1 control/FIFO and no longer halts the real ROM on its legitimate audio enable. Manual GUI mouse confirmation remains pending. Full report: docs/PALM_UK15_SETUP3_PWM1_20261029.md.
 
 **2026-10-29 Palm digitizer:** Original UK1.5 native 3-point calibration reaches Setup 3 of 4 with sole dana-diag. See docs/PALM_UK15_CALIBRATION_20261029.md for Ghidra evidence and manual run command. Human mouse click acceptance remains pending.

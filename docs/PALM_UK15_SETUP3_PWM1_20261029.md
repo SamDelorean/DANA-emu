@@ -1,3 +1,5 @@
+2026-10-29 sound follow-up: original PWM1 now emits mono sound through MAME speaker_sound_device, with volume/mute options; see PALM_UK15_PWM1_AUDIO_20261029.md for verification and limitations.
+
 # Original Palm UK1.5: Setup 3 mouse/CPU freeze fixed at PWM1
 
 ## Root cause (2026-10-29)

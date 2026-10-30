@@ -1,3 +1,5 @@
+2026-10-29 audio increment: PWM1 mono speaker signal and integrated Sound Options Volume 0-100 / Mute implemented in unique dana-diag. Original UK1.5 WAV and Setup 4 / Enter Data native PASS; user listening and physical mouse controls pending. Details PALM_UK15_PWM1_AUDIO_20261029.md.
+
 > **2026-10-29 PWM1 native increment CLOSED/PASS:** after 3-point stylus calibration, the real ROM used PWM1 and the driver stopped the CPU. Hardware PWM1 register/FIFO model now permits Setup 3->4->Enter Data; single installed dana-diag PASS, manual SDL acceptance pending. See PALM_UK15_SETUP3_PWM1_20261029.md.
 
 # DANA-emu — incremental development and qualification master plan

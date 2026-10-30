@@ -9,6 +9,8 @@
 #include "bus/generic/slot.h"
 #include "bus/generic/carts.h"
 #include "screen.h"
+#include "speaker.h"
+#include "sound/spkrdev.h"
 #include "util/hashing.h"
 #include "alphasdana_sd_image.h"
 
@@ -46,6 +48,7 @@ public:
         , m_guest(*this, "guest")
         , m_guest_ready(*this, "dana_guest_loaded")
         , m_screen(*this, "screen")
+        , m_pwm1_speaker(*this, "pwm1speaker")
         , m_ram(*this, "ram")
         , m_keys(*this, "KEYS")
         , m_st_extended_keys(*this, "EXKEY%u", 0U)
@@ -310,6 +313,7 @@ private:
     void pwm1_period_count_w(offs_t, u16 data, u16 mem_mask);
     TIMER_CALLBACK_MEMBER(pwm1_tick);
     void pwm1_schedule();
+    TIMER_CALLBACK_MEMBER(pwm1_fall);
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
@@ -499,6 +503,7 @@ private:
     required_device<quickload_image_device> m_guest;
     output_finder<> m_guest_ready;
     required_device<screen_device> m_screen;
+    required_device<speaker_sound_device> m_pwm1_speaker;
     required_shared_ptr<u16> m_ram;
     required_ioport m_keys;
     required_ioport_array<4> m_st_extended_keys;
@@ -624,7 +629,8 @@ private:
     u16 m_pwm1_control=0x0020, m_pwm1_sample=0;
     u8 m_pwm1_period=0xfe, m_pwm1_counter=0;
     u8 m_pwm1_fifo[5]={}, m_pwm1_head=0, m_pwm1_count=0;
-    emu_timer *m_pwm1_timer=nullptr;
+    u8 m_pwm1_last_sample=0;
+    emu_timer *m_pwm1_timer=nullptr, *m_pwm1_fall_timer=nullptr;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
     u16 m_tctl2=0;
@@ -695,6 +701,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_rtc_isr));
     m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
     m_pwm1_timer = timer_alloc(FUNC(alphasdana_state::pwm1_tick), this);
+    m_pwm1_fall_timer = timer_alloc(FUNC(alphasdana_state::pwm1_fall), this);
     save_item(NAME(m_iodcr));
     save_item(NAME(m_icemcr)); save_item(NAME(m_icemsr));
     save_item(NAME(m_pllcr));
@@ -703,6 +710,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pwm1_control));
     save_item(NAME(m_pwm1_sample)); save_item(NAME(m_pwm1_period)); save_item(NAME(m_pwm1_counter));
     save_item(NAME(m_pwm1_fifo)); save_item(NAME(m_pwm1_head)); save_item(NAME(m_pwm1_count));
+    save_item(NAME(m_pwm1_last_sample));
     save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
     save_item(NAME(m_guest_loaded));
@@ -819,7 +827,10 @@ void alphasdana_state::machine_reset()
     m_pwm1_control=0x0020; m_pwm1_sample=0; m_pwm1_period=0xfe;
     m_pwm1_counter=0; m_pwm1_head=0; m_pwm1_count=0;
     std::fill(std::begin(m_pwm1_fifo),std::end(m_pwm1_fifo),0);
+    m_pwm1_last_sample=0;
     m_pwm1_timer->adjust(attotime::never);
+    m_pwm1_fall_timer->adjust(attotime::never);
+    m_pwm1_speaker->level_w(0);
     m_clk32_high = false;
     // VZ UM 4.3.1/4.4.2: CLK32 is a 32768 Hz square wave, and
     // PLLFSR[15] reports HIGH/LOW phase. Both clock edges count:
@@ -2410,7 +2421,12 @@ void alphasdana_state::icemsr_w(offs_t, u16 data, u16 mem_mask)
 void alphasdana_state::pwm1_schedule()
 {
     if (!(m_pwm1_control & 0x0010))
-    { m_pwm1_timer->adjust(attotime::never); return; }
+    {
+        m_pwm1_timer->adjust(attotime::never);
+        m_pwm1_fall_timer->adjust(attotime::never);
+        m_pwm1_speaker->level_w(0);
+        return;
+    }
     u32 const src=(m_pwm1_control & 0x8000) ? 32768
         : (m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
     u32 const prescale=((m_pwm1_control>>8)&0x7f)+1;
@@ -2418,12 +2434,38 @@ void alphasdana_state::pwm1_schedule()
     m_pwm1_timer->adjust(attotime::from_ticks(
         u64(prescale)*divider*(u32(m_pwm1_period)+2),src));
 }
+TIMER_CALLBACK_MEMBER(alphasdana_state::pwm1_fall)
+{
+    // The active-high PWM1 output drops when the actual duty counter
+    // reaches the latched sample. MAME speaker device anti-aliases pulses.
+    m_pwm1_speaker->level_w(0);
+}
 TIMER_CALLBACK_MEMBER(alphasdana_state::pwm1_tick)
 {
     if (!(m_pwm1_control & 0x0010)) return;
     m_pwm1_counter=0;
     if (m_pwm1_count)
-    { m_pwm1_head=(m_pwm1_head+1)%5; --m_pwm1_count; }
+    {
+        m_pwm1_last_sample=m_pwm1_fifo[m_pwm1_head];
+        m_pwm1_head=(m_pwm1_head+1)%5;
+        --m_pwm1_count;
+    }
+
+    // One PWM period has PWMP1+2 prescaled clock steps. The register
+    // PWMS1 determines how long the output is high during that period.
+    // This generates a real audible digital pulse train, not a sampled
+    // notification or a host-generated beep unrelated to the 68000.
+    u32 const clock=(m_pwm1_control & 0x8000) ? 32768
+        : (m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
+    u64 const clocks_per_step=u64(((m_pwm1_control>>8)&0x7f)+1)
+        * (2U<<(m_pwm1_control&3));
+    unsigned const total=u32(m_pwm1_period)+2;
+    unsigned const high=std::min(unsigned(m_pwm1_last_sample),total);
+    m_pwm1_fall_timer->adjust(attotime::never);
+    m_pwm1_speaker->level_w(high ? 1 : 0);
+    if (high && high<total)
+        m_pwm1_fall_timer->adjust(attotime::from_ticks(clocks_per_step*high,clock));
+
     if (m_pwm1_count<=1)
     {
         m_pwm1_control |= 0x0080;
@@ -2453,12 +2495,15 @@ void alphasdana_state::pwm1_control_w(offs_t, u16 data, u16 mem_mask)
         m_pwm1_control&=~u16(0x0080);
         m_pending&=~u32(0x00000080);
         m_pwm1_timer->adjust(attotime::never);
+        m_pwm1_fall_timer->adjust(attotime::never);
+        m_pwm1_last_sample=0;
+        m_pwm1_speaker->level_w(0);
     }
     else
     {
         if (!old_enable)
         {
-            m_pwm1_count=0; m_pwm1_head=0;
+            m_pwm1_count=0; m_pwm1_head=0; m_pwm1_last_sample=0;
             m_pwm1_control |= 0x0080;
         }
         if (data & mem_mask & 0x0080) m_pwm1_control|=0x0080;
@@ -3127,6 +3172,8 @@ void alphasdana_state::alphasdana(machine_config &config)
     m_screen->set_size(560,160);
     m_screen->set_visarea(0,559,0,159);
     m_screen->set_screen_update(FUNC(alphasdana_state::screen_update));
+    SPEAKER(config, "mono").front_center();
+    SPEAKER_SOUND(config, m_pwm1_speaker).add_route(ALL_OUTPUTS, "mono", 0.30);
 }
 
 static INPUT_PORTS_START(alphasdana)
@@ -3291,4 +3338,4 @@ ROM_END
 } // anonymous namespace
 
 COMP(2002, asmdana, 0, 0, alphasdana, alphasdana, alphasdana_state, empty_init,
-    "AlphaSmart, Inc.", "AlphaSmart Dana (D1.1 skeleton)", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+    "AlphaSmart, Inc.", "AlphaSmart Dana (D1.1 skeleton)", MACHINE_NOT_WORKING)
