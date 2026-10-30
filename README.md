@@ -1,3 +1,5 @@
+> **2026-10-29 authoritative runtime:** Exactly one active Dana executable is permitted: `runtime/diag/bin/dana-diag`. This is the current instrumented emulator for Palm OS, EmuTOS and future OS3K; `main` is the only development branch. The original UK1.5 Palm OS has been requalified to `Setup 1 of 4` (native framebuffer hash `B395EBF3`) using the opt-in NOR/SDIRQ diagnostic profile. Interactive Palm touchscreen is not yet qualified. See [boot profile and exact run command](docs/PALM_UK15_INTERACTIVE_BOOT_20261029.md). Historical earlier-stage build notes below are superseded.
+
 # DANA-emu
 
 **[General Work Plan — permanent project direction, source reuse, Codex workflow, and operating rules](docs/GENERAL_WORK_PLAN.md)**. The current technical checkpoint remains in the [DIAG-FIRST execution ledger](docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md).
