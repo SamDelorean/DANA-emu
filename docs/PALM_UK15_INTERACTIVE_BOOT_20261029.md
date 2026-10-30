@@ -23,14 +23,20 @@ Runtime traces: `local-evidence/runtime-compare/current.log`, `current-with-conf
 
 ## Interactive execution on T
 
-From `/home/spc/Projects/alphasmart/DANA-emu/runtime/diag`:
+From any terminal on T:
 
 ```bash
-./bin/dana-diag asmdana -rom ./work/uk15_qualify_20261025/UK15_private.raw -cfg_directory ./cfg -window -nomaximize -lightgun -lightgun_device lightgun -lightgunprovider sdl -nomouse
+/home/spc/Projects/alphasmart/DANA-emu/tools/run-palm-uk15.sh
 ```
+
+Never start the Palm UK1.5 test with `-cfg_directory ./cfg`: this config is automatically rewritten by MAME and can lose the experimental NOR/SDIRQ boot requirements. The launcher calls the sole executable `runtime/diag/bin/dana-diag` with `-lightgun` SDL input and an isolated **temporary settings folder**, not an isolated emulator.
 
 Await `Setup 1 of 4`. Attempt a real left-button tap inside the LCD. Palm touchscreen delivery and `Setup 2 of 4` are **not yet qualified**. The power key is host `Pause`, but `Setup 1 of 4` was observed by frame 1400 **before** the scripted power key at frame 1600, so it is **not required to get past the logo**.
 
 ## Single authorized executable (2026-10-29)
 
 The **only active executable** is `runtime/diag/bin/dana-diag` (SHA-256 `50487355727baab96b93acaebc108cb40deb2d7fc00c0fec225f7e96a5dae9de`). The previously misleading executable name `source/danadiagd` is retired. The runtime tree no longer contains the old isolated increment directory name. Only `main` of `SamDelorean/DANA-emu` is operational. Original MAME source is under `runtime/diag/source`; historical files are archival evidence, not alternate build trees or runnable products. The original UK1.5 frame-1800 hash `B395EBF3` was requalified with this exact `dana-diag` executable.
+
+## 2026-10-29 final regression
+
+The exact graphical input flags (`-lightgun -lightgun_device lightgun -lightgunprovider sdl -nomouse`) were reproduced in a bounded native test through `tools/run-palm-uk15.sh` (headless renderer only). Frame 1800 = `B395EBF3` and frame 2400 unchanged, matching the known Setup 1 of 4. Recorded evidence at `local-evidence/runtime-compare/launcher-full-args.log`. Actual host graphical visibility and Palm touch press acknowledgement require a user GUI test and **are not yet marked PASS**.
