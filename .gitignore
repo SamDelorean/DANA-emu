@@ -46,3 +46,7 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Local MAME build tree and device-specific evidence (never publish)
+/runtime/
+/local-evidence/
