@@ -101,9 +101,9 @@ struct Model {
     static constexpr bool rtc_time_valid(u32);
     HostMachine host;
     HostMachine &machine() {return host;}
-    u32 m_rtc_time=0,m_rtc_last_tick=0,m_pending=0;
+    u32 m_rtc_time=0,m_rtc_last_tick=0,m_pending=0,m_rtc_alarm=0;
     s32 m_rtc_offset_seconds=0;
-    u16 m_rtc_day=0,m_rtc_control=0x0080,m_rtc_ien=0,m_rtc_isr=0;
+    u16 m_rtc_day=0,m_rtc_day_alarm=0,m_rtc_control=0x0080,m_rtc_ien=0,m_rtc_isr=0;
     bool blocked=false;
     const char* error="";
     u32 rtc_host_seconds();

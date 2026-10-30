@@ -6,7 +6,7 @@ local x=assert(machine.ioport.ports[":PENX"]:field(0xffff))
 local y=assert(machine.ioport.ports[":PENY"]:field(0xffff))
 local dest=assert(os.getenv("DANA_LCD_DUMP_DIR"))
 local trace=assert(io.open(assert(os.getenv("DANA_TRACE_FILE")),"w"))
-local sequence={{1900,1960,0x8000,0x8000},{2220,2280,0x8000,0x8000},{2560,2620,0x0600,0x0c00},{2900,2960,0xf900,0xf300},{3240,3300,0x8000,0x6600},{3780,3840,0x7A00,0xF200},{4210,4270,0x7A00,0xF200}}
+local sequence=DANA_PEN_SEQUENCE or {{1900,1960,0x8000,0x8000},{2220,2280,0x8000,0x8000},{2560,2620,0x0600,0x0c00},{2900,2960,0xf900,0xf300},{3240,3300,0x8000,0x6600},{3780,3840,0x7A00,0xF200},{4210,4270,0x7A00,0xF200}}
 local frame=0
 local function capture()
  local base=bus:read_u16(0xfffffa00)*65536+bus:read_u16(0xfffffa02)
@@ -27,7 +27,7 @@ local function capture()
  end
  trace:write("\n");trace:flush()
 end
-local caps={[1800]=true,[2080]=true,[2340]=true,[2490]=true,[2570]=true,[2590]=true,[2610]=true,[2690]=true,[2840]=true,[2910]=true,[2930]=true,[2950]=true,[3030]=true,[3180]=true,[3370]=true,[3510]=true,[3710]=true,[3790]=true,[3830]=true,[3900]=true,[4090]=true,[4220]=true,[4290]=true,[4400]=true,[4600]=true,[4800]=true}
+local caps=DANA_CAPTURE_FRAMES or {[1800]=true,[2080]=true,[2340]=true,[2490]=true,[2570]=true,[2590]=true,[2610]=true,[2690]=true,[2840]=true,[2910]=true,[2930]=true,[2950]=true,[3030]=true,[3180]=true,[3370]=true,[3510]=true,[3710]=true,[3790]=true,[3830]=true,[3900]=true,[4090]=true,[4220]=true,[4290]=true,[4400]=true,[4600]=true,[4800]=true}
 emu.register_frame_done(function()
  frame=frame+1
  for i,evt in ipairs(sequence) do
@@ -38,5 +38,5 @@ emu.register_frame_done(function()
   if frame==evt[2] then pen:clear_value();trace:write("UP="..frame.."\n") end
  end
  if caps[frame] then capture() end
- if frame==4800 then trace:close();machine:exit() end
+ if frame==(DANA_EXIT_FRAME or 4800) then trace:close();machine:exit() end
 end)

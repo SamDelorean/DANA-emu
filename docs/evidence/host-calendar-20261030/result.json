@@ -1,0 +1,154 @@
+{
+  "status": "CLOSED/NATIVE_PASS",
+  "date": "2026-10-30",
+  "base_commit": "c55b560bd124b3be57346d361eea143495c7e51d",
+  "binary_sha256": "1d2478b107c150321e5aca2051c09c80dad061e32079e1cb066c684d89b26d6e",
+  "driver_sha256": "cf70b2c2bc2c24f1c321e2c1a0b1776b4a5a6a706fa6ad0a565da1e6d4f05dca",
+  "compiler": "Clang 21.1.8",
+  "build": "incremental driver/archive/link",
+  "source_synchronized": true,
+  "rom_sha256": "2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3",
+  "clock_source": "machine().current_datetime, local_time, same source as RTCTIME",
+  "host_local_at_install": "2026-10-30T00:28:05-06:00",
+  "cases": {
+    "installed-host": {
+      "status": "PASS",
+      "observed_frame": 3510,
+      "calendar_hours": "00106de8",
+      "preset_count": 1,
+      "physical_blocks": 0,
+      "lua_errors": 0,
+      "console_sha256": "f1f78bd40e81e54d0f5e7eb4ae05f0a922f7bcc2da4c644db7781e7269a83ea8",
+      "calendar_trace_sha256": "4573702b831794433d169a535776eb456693aa6f85932421fdfd1acf67c722c5",
+      "audio": {
+        "channels": 1,
+        "sample_rate": 48000,
+        "samples": 3839041,
+        "peak": 5980,
+        "nonzero": 3289
+      }
+    },
+    "installed-leap": {
+      "status": "PASS",
+      "observed_frame": 3510,
+      "calendar_hours": "00101298",
+      "preset_count": 1,
+      "physical_blocks": 0,
+      "lua_errors": 0,
+      "console_sha256": "253d75d122bc776fa510381168bd3b38918a5a97bd64c7210590355e47929bb4",
+      "calendar_trace_sha256": "76a368ed76833d898687b7f3787d51b72a20d7de90a5ee5140cf0367fb955e28",
+      "audio": {
+        "channels": 1,
+        "sample_rate": 48000,
+        "samples": 3839041,
+        "peak": 5980,
+        "nonzero": 3289
+      }
+    },
+    "installed-year": {
+      "status": "PASS",
+      "observed_frame": 3510,
+      "calendar_hours": "001073d0",
+      "preset_count": 1,
+      "physical_blocks": 0,
+      "lua_errors": 0,
+      "console_sha256": "13f87128be2038efe604702f228c606bbc9c8d623544e09c10d935429e75299b",
+      "calendar_trace_sha256": "6f4115ef76bfbc9f6329770ccbfe782bcbace9c6396e3390f1db8aaab746ce6e",
+      "audio": {
+        "channels": 1,
+        "sample_rate": 48000,
+        "samples": 3839041,
+        "peak": 5980,
+        "nonzero": 3289
+      }
+    },
+    "installed-preservation": {
+      "status": "PASS",
+      "observed_frame": 12300,
+      "calendar_hours": "00106dd0",
+      "preset_count": 1,
+      "physical_blocks": 0,
+      "lua_errors": 0,
+      "console_sha256": "7d6f74b06e9296c7ed9a9cdf6410952c0eab66b7976b7cad7584638e290710f7",
+      "calendar_trace_sha256": "1ca199c2e5c95ff1788f907b6995ec80493b1bc75bb636796b539716af4022b8",
+      "audio": {
+        "channels": 1,
+        "sample_rate": 48000,
+        "samples": 10559041,
+        "peak": 5852,
+        "nonzero": 1645
+      },
+      "state_restore_frame": 12900
+    }
+  },
+  "screenshots": {
+    "installed-host-setup3.png": {
+      "sha256": "ca00b9a87030ff9c027a56317339f37069ee16391ec9c3a7f567c674c0b90675",
+      "frame": 3510,
+      "case": "installed-host",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    },
+    "installed-setup1.png": {
+      "sha256": "4867c9e83caf49c64d8c14569aae1a3c4d5842a60748178e1a5aeafdd71858e0",
+      "frame": 1800,
+      "case": "installed-host",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    },
+    "installed-setup4.png": {
+      "sha256": "f3c5f1d82eb0735c81675aab53c0fda1f1ba647676cf15ee116831bcd5a6ad2d",
+      "frame": 3900,
+      "case": "installed-host",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    },
+    "installed-enter-data.png": {
+      "sha256": "093d25694cecf53f180f983aa15bee1300078a233f0126103970458a0c893f30",
+      "frame": 4400,
+      "case": "installed-host",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    },
+    "leap-setup3.png": {
+      "sha256": "69e56abeeda600480e76af43b209cc93057b35911ee0f9073d1bfd4a81ba0feb",
+      "frame": 3510,
+      "case": "installed-leap",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    },
+    "year-setup3.png": {
+      "sha256": "010359daa4913154675603db790546a07bd80e00b68a704b861137350b48f767",
+      "frame": 3510,
+      "case": "installed-year",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    },
+    "user-date-after-reset.png": {
+      "sha256": "927f903b2976647de9c89ca34e713205ffac56aaa26d6d711f6801204b971acf",
+      "frame": 12300,
+      "case": "installed-preservation",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    },
+    "user-date-after-load.png": {
+      "sha256": "bda05545ab63ed9db06febe0e52a5f16f07543dffba010791c7e605066ac4d5f",
+      "frame": 12900,
+      "case": "installed-preservation",
+      "decoding": "unmodified 1-bit 560x160 framebuffer"
+    }
+  },
+  "local_tests": {
+    "production_calendar": "PASS",
+    "existing_rtc_regression": "PASS"
+  },
+  "regressions": [
+    "UK1.5 reset and CPU boot",
+    "Setup 1",
+    "three-point native digitizer calibration",
+    "Setup 3 original host date",
+    "Next to Setup 4",
+    "Enter Data",
+    "PWM1",
+    "mono WAV output"
+  ],
+  "manual_acceptance_unchanged": [
+    "physical speaker listening",
+    "desktop mouse input"
+  ],
+  "sole_installed_executable": "runtime/diag/bin/dana-diag",
+  "build_candidate_removed": true
+}

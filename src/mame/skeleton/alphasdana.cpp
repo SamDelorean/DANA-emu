@@ -334,6 +334,8 @@ private:
         rtc_sync_from_host();
         return u16(m_rtc_time >> (offset ? 0 : 16));
     }
+    static u32 calendar_hours(int year, int month, int day);
+    u16 calendar_format_word(u32 index, u16 data, u16 mem_mask);
     u32 rtc_host_seconds();
     void rtc_sync_from_host();
     void rtc_time_w(offs_t offset, u16 data, u16 mem_mask);
@@ -625,6 +627,8 @@ private:
     // then advances with guest time. Guest RTCTIME writes use local offset.
     u32 m_rtc_time=0, m_rtc_last_tick=0, m_rtc_alarm=0;
     s32 m_rtc_offset_seconds=0;
+    u32 m_calendar_store=0, m_calendar_hours=0;
+    u8 m_calendar_phase=0;
     u16 m_rtc_day=0, m_rtc_day_alarm=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
     u16 m_pwm1_control=0x0020, m_pwm1_sample=0;
     u8 m_pwm1_period=0xfe, m_pwm1_counter=0;
@@ -690,6 +694,8 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pll_wake_pending));
     m_isp_hc_sof_timer=timer_alloc(FUNC(alphasdana_state::isp1161_hc_sof),this);
     m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);
+    save_item(NAME(m_calendar_store)); save_item(NAME(m_calendar_hours));
+    save_item(NAME(m_calendar_phase));
     save_item(NAME(m_rtc_time));
     save_item(NAME(m_rtc_alarm));
     save_item(NAME(m_rtc_offset_seconds));
@@ -1110,6 +1116,7 @@ void alphasdana_state::physical_w(offs_t offset, u16 data, u16 mem_mask)
         u32 const index=physical_sdram_index(address-cs_base(3));
         if (index<0x400000)
         {
+            data=calendar_format_word(index,data,mem_mask);
             COMBINE_DATA(&m_ram[index>>1]);
             return;
         }
@@ -2247,6 +2254,74 @@ void alphasdana_state::rtc_update_irq()
     else
         m_pending &= ~u32(0x00000010);
     update_irq_lines();
+}
+
+
+// Palm UK1.5 keeps the calendar in SysNVParams.rtcHours, not VZ DAYR.
+// This is a firmware-specific first-format preset, not an MC68VZ328 register.
+// See docs/DANA_HOST_CALENDAR_PRESET_20261029.md for Ghidra/native proof.
+u32 alphasdana_state::calendar_hours(int year, int month, int day)
+{
+    auto leap=[](int y) { return !(y%4) && ((y%100) || !(y%400)); };
+    static constexpr unsigned lengths[]={31,28,31,30,31,30,31,31,30,31,30,31};
+    if (year<1904 || year>2040 || month<0 || month>11 || day<1
+        || unsigned(day)>lengths[month]+unsigned(month==1 && leap(year)))
+        return 0xffffffffU;
+    u32 days=0;
+    for (int y=1904;y<year;++y) days+=365+leap(y);
+    for (int m=0;m<month;++m) days+=lengths[m]+unsigned(m==1 && leap(year));
+    days+=day-1;
+    // TimGetSeconds is unsigned 32-bit. Require the entire local day to fit.
+    return days<=((0xffffffffU-86399U)/86400U) ? days*24U : 0xffffffffU;
+}
+
+u16 alphasdana_state::calendar_format_word(u32 index, u16 data, u16 mem_mask)
+{
+    if (mem_mask!=0xffff || (!m_calendar_phase && data!=0xfeed)
+        || machine().side_effects_disabled())
+        return data;
+    static constexpr u8 uk15_sha1[20]={
+        0xc8,0x9b,0x8a,0x2b,0x2a,0x5d,0x2a,0x9e,0xd4,0x9a,
+        0x7a,0xb2,0x17,0x0a,0xce,0xde,0xcf,0xd2,0x74,0x18};
+    u32 const pc=u32(m_maincpu->state_int(STATE_GENPCBASE));
+    if (pc==0x10015c84 && data==0xfeed && index<=0x3fff00
+        && !std::memcmp(m_flash_sha1,uk15_sha1,sizeof(uk15_sha1)))
+    {
+        // The real formatter just cleared all 256 header bytes. Merely
+        // finding the factory date in a valid/persisted store is NOT enough.
+        for (unsigned n=0;n<128;++n)
+            if (m_ram[(index>>1)+n]) return data;
+        m_calendar_store=index;
+        m_calendar_phase=1;
+    }
+    else if (m_calendar_phase==1 && index==m_calendar_store+2
+        && pc==0x10015c84 && data==0xface)
+        m_calendar_phase=2;
+    else if (m_calendar_phase==2 && index==m_calendar_store+0x4c
+        && pc==0x10015cc2 && data==0x000c
+        && u32(m_maincpu->state_int(M68K_D4))==0x000cd740
+        && m_ram[(m_calendar_store+4)>>1]==1
+        && m_ram[(m_calendar_store+6)>>1]==1)
+    {
+        system_time host;
+        machine().current_datetime(host); // Same local clock as RTCTIME.
+        auto const &now=host.local_time;
+        m_calendar_hours=calendar_hours(now.year,now.month,now.mday);
+        // Original Setup deliberately replaces exactly 2000-01-01 with 2005.
+        // Do not patch that guest policy or overflow its 32-bit epoch.
+        m_calendar_phase=(m_calendar_hours!=0xffffffffU
+            && m_calendar_hours!=0x000cd740U) ? 3 : 0;
+        if (m_calendar_phase==3) return u16(m_calendar_hours>>16);
+    }
+    else if (m_calendar_phase==3 && index==m_calendar_store+0x4e
+        && pc==0x10015cc2 && data==0xd740)
+    {
+        m_calendar_phase=0;
+        logerror("DANA_HOST_CALENDAR store=%08x rtc_hours=%08x first_format=1 checksum=guest\n",
+            m_calendar_store,m_calendar_hours);
+        return u16(m_calendar_hours);
+    }
+    return data;
 }
 
 u32 alphasdana_state::rtc_host_seconds()
