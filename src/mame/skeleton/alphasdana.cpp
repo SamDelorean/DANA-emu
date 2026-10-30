@@ -67,6 +67,8 @@ public:
     void alphasdana(machine_config &config);
     DECLARE_INPUT_CHANGED_MEMBER(sd_irq_changed);
     DECLARE_INPUT_CHANGED_MEMBER(pd7_pin_changed);
+    DECLARE_INPUT_CHANGED_MEMBER(pen_changed);
+    void pen_irq5_update();
     DECLARE_INPUT_CHANGED_MEMBER(st_key_changed);
 
 protected:
@@ -344,6 +346,7 @@ private:
     {
         COMBINE_DATA(&m_icr); m_icr &= 0xff80;
         pd7_irq(false); // polarity/edge mode change, no synthetic edge
+        pen_irq5_update(); // ICR.POL5 can alter a real IRQ5 pad level
     }
     u16 imr_r(offs_t offset) { return m_imr >> (offset ? 0 : 16); }
     void imr_w(offs_t offset, u16 data, u16 mem_mask);
@@ -402,7 +405,17 @@ private:
     }
     void pf_w(offs_t reg, u8 value) { m_gpio[3*4+reg]=value; sd_lines(); }
     // PG2 selects the external pen ADC, distinct from PE3 selecting the ST.
-    u8 pg_r(offs_t reg) { return m_gpio[4*4+reg]; }
+    u8 pg_r(offs_t reg)
+    {
+        u8 value=m_gpio[4*4+reg];
+        // UK1.5 Palm ROM 0x1007B5F8..0x1007B628 (Ghidra): release PG1
+        // as an input, then sample P G DATA bit 1 for physical stylus.
+        // Reflect the external pin only as an input; never drive an output
+        // latch, modify the guest's direction register or spoof an IRQ.
+        if (reg==1 && !(m_gpio[4*4] & 0x02))
+            value=(value & ~u8(0x02)) | ((m_pen_contact->read() & 1) ? 0x02 : 0);
+        return value;
+    }
     void pg_w(offs_t reg, u8 value)
     {
         m_gpio[4*4+reg]=value;
@@ -1828,16 +1841,20 @@ u8 alphasdana_state::st_exchange(u8 command)
 
 u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
 {
-    // EmuTOS dana.c::pen_send_recv sends 0x90/0xD0 (8 clocks), followed
-    // by a 16-clock read on the same active-low PG2 chip-select window.
+    // EmuTOS dana.c::pen_send_recv uses an 8-bit 0x90/0xD0 command.
+    // Ghidra UK1.5 at 0x1007B126 and 0x1007F4C2 additionally proves
+    // a 7-clock command (command >> 1), a 1-clock suffix and a 16-clock
+    // ADC read. These are actual SPI2 clock phases, not Palm OS hooks.
     // The guest consumes (received >> 4) as an unsigned 12-bit sample.
     // No claimed factory calibration: these bounded endpoints are a
     // provisional emulator digitizer mapping, separate from the LCD pixels.
     if (!(m_pen_contact->read() & 1))
         return 0xffff;
-    if (width==8)
+    if (width==8 || width==7)
     {
-        m_pen_command=(outgoing==0x90 || outgoing==0xd0) ? u8(outgoing) : 0;
+        u16 const command=width==7 ? u16((outgoing & 0x7f)<<1) : outgoing;
+        m_pen_command=(command==0x90 || command==0xd0 || command==0xd8)
+            ? u8(command) : 0;
         if (!m_pen_command)
         {
             m_pen_sample=0;
@@ -1849,6 +1866,8 @@ u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
         m_pen_sample=u16(minimum+(coord*span)/65535U);
         return 0xff; // command phase clocks out idle data
     }
+    if (width==1 && m_pen_command)
+        return 0xffff; // second command clock; ADC sample remains pending
     if (width==16 && m_pen_command)
     {
         u16 const sample=u16(m_pen_sample<<4);
@@ -2048,6 +2067,25 @@ void alphasdana_state::sd_gpio_irq()
 }
 INPUT_CHANGED_MEMBER(alphasdana_state::sd_irq_changed) { sd_gpio_irq(); }
 INPUT_CHANGED_MEMBER(alphasdana_state::pd7_pin_changed) { pd7_irq(true); }
+INPUT_CHANGED_MEMBER(alphasdana_state::pen_changed)
+{
+    pen_irq5_update();
+    logerror("DANA_PEN_IRQ5 edge host_contact=%u pending=%08x masked=%08x\n",
+        unsigned(m_pen_contact->read() & 1), m_pending, m_imr);
+}
+
+void alphasdana_state::pen_irq5_update()
+{
+    // MC68VZ328UM table 9-7: IPR[20]=external IRQ5; ICR.POL5[7]
+    // selects active high (1) vs active low (0), IRQ5 is level-sensitive.
+    // Ghidra original UK1.5 0x1007F370 explicitly unmasks IMR[20] for
+    // pen handling and 0x1007F392 masks it during teardown.
+    // The resistive stylus pad is high when released, low when pressed.
+    bool const pad_high=!(m_pen_contact->read() & 1);
+    bool const asserted=(m_icr & 0x0080) ? pad_high : !pad_high;
+    m_pending=(m_pending & ~u32(0x00100000)) | (asserted ? 0x00100000 : 0);
+    update_irq_lines();
+}
 
 void alphasdana_state::pd7_irq(bool physical_transition)
 {
@@ -2547,7 +2585,9 @@ void alphasdana_state::update_irq_lines()
     for (unsigned level=1;level<=6;++level)
     {
         bool const spi=(spi_level==level) && (active & 0x00200000);
-        if (level!=4 && level!=6) m_maincpu->set_input_line(level,spi ? ASSERT_LINE : CLEAR_LINE);
+        bool const external5=(level==5) && (active & 0x00100000);
+        if (level!=4 && level!=6)
+            m_maincpu->set_input_line(level,(spi || external5) ? ASSERT_LINE : CLEAR_LINE);
     }
     m_maincpu->set_input_line(6,((active & 0x00080002) || (spi_level==6 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
     m_maincpu->set_input_line(4,((active & 0x00000c14) || (spi_level==4 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
@@ -3031,7 +3071,7 @@ static INPUT_PORTS_START(alphasdana)
     // Interactive Linux profile: -lightgun -lightgun_device lightgun
     // -lightgunprovider sdl -nomouse (avoid two competing input streams).
     PORT_START("PEN")
-    PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Dana Stylus Contact") PORT_CODE(GUNCODE_BUTTON1) PORT_PLAYER(1)
+    PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Dana Stylus Contact") PORT_CODE(GUNCODE_BUTTON1) PORT_PLAYER(1) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::pen_changed),0)
     PORT_BIT(0xfe, IP_ACTIVE_HIGH, IPT_UNUSED)
     PORT_START("PENX")
     PORT_BIT(0xffff, 0x8000, IPT_LIGHTGUN_X) PORT_MINMAX(0,0xffff) PORT_SENSITIVITY(50) PORT_KEYDELTA(256) PORT_PLAYER(1)

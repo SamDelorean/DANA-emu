@@ -40,3 +40,7 @@ The **only active executable** is `runtime/diag/bin/dana-diag` (SHA-256 `5048735
 ## 2026-10-29 final regression
 
 The exact graphical input flags (`-lightgun -lightgun_device lightgun -lightgunprovider sdl -nomouse`) were reproduced in a bounded native test through `tools/run-palm-uk15.sh` (headless renderer only). Frame 1800 = `B395EBF3` and frame 2400 unchanged, matching the known Setup 1 of 4. Recorded evidence at `local-evidence/runtime-compare/launcher-full-args.log`. Actual host graphical visibility and Palm touch press acknowledgement require a user GUI test and **are not yet marked PASS**.
+
+## 2026-10-29 touchscreen native qualification
+
+Ghidra original ROM evidence confirms PG1 input contact, SPI2 7+1+16 ADC transfers and external IRQ5 (IPR bit 20). These paths were implemented in the only emulator `runtime/diag/bin/dana-diag`. A real M68000-original-ROM native test received one hardware-level `:PEN` event and successfully advanced `Setup 1 of 4` to `Setup 2 of 4` (frame 2000, FNV `66009CA8`; same at frame 2400). Installed executable SHA256 `edbda9209b960a6855c1911dcc00b9870400f2b75fab5292893401dcb4d54852`. The established command remains `/home/spc/Projects/alphasmart/DANA-emu/tools/run-palm-uk15.sh`. Manual real GUI click acceptance and later calibration screens still require separate observation; no additional emulator versions allowed.
