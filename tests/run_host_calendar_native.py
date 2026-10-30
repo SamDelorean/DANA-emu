@@ -32,6 +32,7 @@ def main():
  with tempfile.TemporaryDirectory(prefix=".calendar-",dir=root/"runtime/diag/work") as cfg:
   if args.candidate:
    shutil.copy2(root/"config/palm-uk15/asmdana.cfg",Path(cfg)/"asmdana.cfg")
+   shutil.copy2(root/"config/palm-uk15/default.cfg",Path(cfg)/"default.cfg")
    command=[str(binary),"asmdana","-rom",str(root/"runtime/diag/work/uk15_qualify_20261025/UK15_private.raw"),
     "-cfg_directory",cfg,"-window","-nomaximize","-lightgun","-lightgun_device","lightgun",
     "-lightgunprovider","sdl","-nomouse"]+extra

@@ -1,0 +1,35 @@
+FOCUS 0x400007 0x400007
+{
+  "frames": 273,
+  "codes": [
+    5,
+    9,
+    10,
+    11,
+    13,
+    19,
+    24,
+    30,
+    43,
+    44,
+    53,
+    69,
+    70,
+    83,
+    91,
+    98,
+    101,
+    105,
+    110,
+    115,
+    116,
+    122,
+    123,
+    126
+  ],
+  "menu_frames": 23,
+  "paused_frames": 0,
+  "ui_active": true
+}
+F12_SNAPSHOTS 1
+SDL_HOST_TO_ORIGINAL_PALM_PASS

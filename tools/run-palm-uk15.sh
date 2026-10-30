@@ -15,6 +15,7 @@ CFG="$(mktemp -d "$DIAG/work/.palm-uk15-input.XXXXXXXX")"
 cleanup() { rm -rf -- "$CFG"; }
 trap cleanup EXIT
 cp -- "$PROFILE" "$CFG/asmdana.cfg"
+cp -- "$ROOT/config/palm-uk15/default.cfg" "$CFG/default.cfg"
 if ! grep -q 'tag=":NOR_PROFILE".*value="1"' "$CFG/asmdana.cfg" ||
    ! grep -q 'tag=":NOR_FACTORY".*value="1"' "$CFG/asmdana.cfg" ||
    [[ $(grep -c 'tag=":SDIRQ".*value="0"' "$CFG/asmdana.cfg") -ne 2 ]]; then
@@ -23,4 +24,4 @@ fi
 cd "$DIAG"
 echo "Dana Palm UK1.5 — SINGLE dana-diag; fixed NOR/SDIRQ profile; ORIGINAL ROM"
 "$BIN" asmdana -rom "$ROM" -cfg_directory "$CFG" \
- -window -nomaximize -lightgun -lightgun_device lightgun -lightgunprovider sdl -nomouse "$@"
+ -window -nomaximize -lightgun -lightgun_device lightgun -lightgunprovider sdl -nomouse -ui_active "$@"

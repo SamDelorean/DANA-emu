@@ -1,3 +1,5 @@
+> **2026-10-30 original Palm keyboard — CLOSED / NATIVE PASS:** The sole installed `runtime/diag/bin/dana-diag` writes and edits text in AlphaWord under original UK1.5. All 81 physical inputs, five simultaneous combinations, real host SDL typing and F12 screenshots passed; directed RTC/calendar/touch/PWM/audio/mute/SD/EmuTOS regressions passed. Memo/App4 is Right Alt; MAME menu is Left Ctrl+Left Alt+Tab. [Native report, full host key map and original screenshots](docs/DANA_UK15_KEYBOARD_NATIVE_PASS_20261030.md). Older checkpoint notices below are historical.
+
 2026-10-29 PWM1 audio: Mono speaker generated from guest PWM1, with Volume and Mute in Tab > General Settings > Sound Options. Installed original-ROM audio WAV nonzero, Setup 4/Enter Data regression PASS. Details docs/PALM_UK15_PWM1_AUDIO_20261029.md.
 
 **2026-10-29 Palm original Setup 3->4->Enter Data PASS:** The single dana-diag now models PWM1 control/FIFO and no longer halts the real ROM on its legitimate audio enable. Manual GUI mouse confirmation remains pending. Full report: docs/PALM_UK15_SETUP3_PWM1_20261029.md.

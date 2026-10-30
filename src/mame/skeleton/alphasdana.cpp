@@ -357,6 +357,7 @@ private:
     void icr_w(offs_t, u16 data, u16 mem_mask)
     {
         COMBINE_DATA(&m_icr); m_icr &= 0xff80;
+        st_irq_update(false);
         pd7_irq(false); // polarity/edge mode change, no synthetic edge
         pen_irq5_update(); // ICR.POL5 can alter a real IRQ5 pad level
     }
@@ -455,6 +456,10 @@ private:
     u8 st_exchange(u8 command);
     u16 pen_exchange(unsigned width, u16 outgoing);
     void st_input_reset();
+    void st_sample_keys(u32 *live);
+    void st_queue_snapshot();
+    void st_irq_update(bool transition);
+    u8 st_version_exchange(u8 command);
 
     // Guest-owned VZ LCD configuration registers; the DMA-backed screen
     // reads real emulated RAM. No LCD IRQ, contrast voltage or clock emulation.
@@ -668,6 +673,8 @@ private:
     bool m_st_ready = false, m_st_hello = false, m_st_reset_held = false;
     u32 m_st_old_keys[4]={}, m_st_pending_keys[4]={};
     u8 m_st_queue_left=0;
+    bool m_st_irq_high=true, m_st_irq_edge=false;
+    u8 m_st_version_in=0, m_st_version_out=0;
     static constexpr unsigned ST_EVENT_CAPACITY=64;
     u32 m_st_host_held[4]={},m_st_events[ST_EVENT_CAPACITY*4]={};
     u8 m_st_event_head=0,m_st_event_count=0;
@@ -744,6 +751,8 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pen_command));
     save_item(NAME(m_pen_command_7bit));
     save_item(NAME(m_pen_sample));
+    save_item(NAME(m_st_irq_high)); save_item(NAME(m_st_irq_edge));
+    save_item(NAME(m_st_version_in)); save_item(NAME(m_st_version_out));
     save_item(NAME(m_st_ready));
     save_item(NAME(m_st_hello));
     save_item(NAME(m_st_reset_held));
@@ -994,6 +1003,18 @@ void alphasdana_state::boot_postload()
             fatalerror("Flash image differs from saved state");
     }
     m_boot_memory.select(m_physical_boot ? 1 : 0);
+    // Host switches are physical inputs, not saved guest state. A modifier
+    // released since the snapshot must produce a real ST release packet.
+    u32 live[4]={};
+    st_sample_keys(live);
+    if (!std::equal(std::begin(live),std::end(live),std::begin(m_st_host_held)))
+    {
+        std::copy(std::begin(live),std::end(live),std::begin(m_st_host_held));
+        m_st_power_pressed=bool(live[0] & (1U<<15));
+        pd7_irq(true);
+        st_queue_snapshot();
+    }
+    else st_irq_update(false);
 }
 
 void alphasdana_state::physical_block(const char *reason, u32 address, u16 data)
@@ -1728,6 +1749,52 @@ void alphasdana_state::gpio_bootstrap_reset()
 }
 
 
+
+void alphasdana_state::st_sample_keys(u32 *live)
+{
+    std::fill(live,live+4,0U);
+    static constexpr u8 original_scan[6]={0x2b,0x7a,0x2e,0x7e,0x46,0x6d};
+    u8 const original=m_keys->read()&0x3f;
+    for (unsigned i=0;i<6;++i)
+        if (BIT(original,i))
+            live[original_scan[i]>>5]|=u32(1)<<(original_scan[i]&31);
+    for (unsigned i=0;i<4;++i) live[i]|=m_st_extended_keys[i]->read();
+}
+
+void alphasdana_state::st_irq_update(bool transition)
+{
+    // ST data-ready is the active-low board input PD4 / external IRQ1.
+    // MC68VZ328 ICR: POL1 bit15, ET1 bit11. PDSEL=0 selects IRQ1.
+    bool const high=!m_st_ready || m_st_reset_held || !m_st_event_count;
+    bool const active=(m_icr & 0x8000) ? high : !high;
+    if (transition && high!=m_st_irq_high && active && (m_icr & 0x0800))
+        m_st_irq_edge=true;
+    m_st_irq_high=high;
+    bool const pin=!(m_gpio[4]&0x10) && !(m_gpio[7]&0x10);
+    bool const pending=pin && ((m_icr&0x0800) ? m_st_irq_edge : active);
+    m_pending=(m_pending&~0x00010000U)|(pending?0x00010000U:0);
+    update_irq_lines();
+}
+
+u8 alphasdana_state::st_version_exchange(u8 command)
+{
+    // Wire protocol independently implemented from the pinned POSE contract.
+    // "06.8" is the reference ST model revision, not a measured physical chip.
+    static constexpr char request[]="Get Ver!";
+    static constexpr char reply[]="06.8";
+    m_st_queue_left=0;
+    std::fill(std::begin(m_st_pending_keys),std::end(m_st_pending_keys),0U);
+    if (m_st_version_in==8)
+    {
+        u8 const result=u8(reply[m_st_version_out++]);
+        if (m_st_version_out==4) m_st_version_in=m_st_version_out=0;
+        return result;
+    }
+    if (command==u8(request[m_st_version_in])) ++m_st_version_in;
+    else m_st_version_in=0;
+    return 0;
+}
+
 void alphasdana_state::st_input_reset()
 {
     // The reference Dana has a separate ST controller; initialize the
@@ -1738,6 +1805,15 @@ void alphasdana_state::st_input_reset()
     for (unsigned i=0;i<4;++i) m_st_host_held[i]=0;
     for (unsigned i=0;i<ST_EVENT_CAPACITY*4;++i) m_st_events[i]=0;
     m_st_event_head=0; m_st_event_count=0;
+    m_st_version_in=m_st_version_out=0;
+    m_st_irq_high=true; m_st_irq_edge=false;
+    st_sample_keys(m_st_host_held);
+    if (m_st_host_held[0]||m_st_host_held[1]||m_st_host_held[2]||m_st_host_held[3])
+    {
+        std::copy(std::begin(m_st_host_held),std::end(m_st_host_held),m_st_events);
+        m_st_event_count=1;
+    }
+    st_irq_update(false);
     m_spi2_data=0; m_spi2_ctrl=0;
 }
 
@@ -1758,6 +1834,7 @@ void alphasdana_state::pb_w(offs_t reg, u8 value)
             m_st_reset_held=false;
             m_st_ready=true;
             m_st_hello=true;
+            st_irq_update(true);
         }
     }
     sd_lines();
@@ -1786,6 +1863,7 @@ void alphasdana_state::pk_w(offs_t reg, u8 value)
         // Once released as input, PKDATA reports the ready line.
         m_st_ready=true;
         m_st_hello=true;
+        st_irq_update(true);
     }
     sd_lines();
 }
@@ -1800,8 +1878,8 @@ u8 alphasdana_state::st_exchange(u8 command)
         m_st_hello=false;
         return 0xaa;
     }
-    if (command)
-        return 0;
+    if (command || m_st_version_in==8)
+        return st_version_exchange(command);
     // Never interleave one key-state packet with another.
     if (m_st_queue_left)
     {
@@ -1817,19 +1895,12 @@ u8 alphasdana_state::st_exchange(u8 command)
             }
         }
         m_st_queue_left=0;
+        st_irq_update(true);
         return 0;
     }
 
-    // Sample all 81 physical inputs, including six original KEY bindings.
-    // Sampling also restores held state if ST was reset while a key was down.
     u32 live[4]={};
-    static constexpr u8 original_scan[6]={0x2b,0x7a,0x2e,0x7e,0x46,0x6d};
-    u8 const original=m_keys->read()&0x3f;
-    for (unsigned i=0;i<6;++i)
-        if (BIT(original,i))
-            live[original_scan[i]>>5]|=u32(1)<<(original_scan[i]&31);
-    for (unsigned i=0;i<4;++i)
-        live[i]|=m_st_extended_keys[i]->read();
+    st_sample_keys(live);
 
     u32 next[4]={};
     bool changed=false;
@@ -1853,7 +1924,7 @@ u8 alphasdana_state::st_exchange(u8 command)
             changed |= next[i]!=m_st_old_keys[i];
         }
     }
-    if (!changed) return 0;
+    if (!changed) { st_irq_update(true); return 0; }
     for (unsigned i=0;i<4;++i)
     {
         m_st_old_keys[i]=next[i];
@@ -1872,6 +1943,7 @@ u8 alphasdana_state::st_exchange(u8 command)
         }
     }
     m_st_queue_left=u8(count);
+    st_irq_update(true);
     return u8(0x40|count);
 }
 
@@ -2093,6 +2165,8 @@ u8 alphasdana_state::pd_r(offs_t reg)
         // Motorola VZ PD7/IRQ6: input DATA reads the actual external pin.
         // UK1.5 boot samples PD7 after disabling its internal pull-up; do
         // not conflate the DATA output latch with board input voltage.
+        u8 const pd4_input=~m_gpio[4] & 0x10;
+        result=(result & ~pd4_input)|(m_st_irq_high ? pd4_input : 0);
         u8 const pd7_input=~m_gpio[4] & 0x80;
         result=(result & ~pd7_input)|(pd7_line() & pd7_input);
     }
@@ -2104,6 +2178,7 @@ void alphasdana_state::pd_w(offs_t reg,u8 value)
     m_gpio[4+reg] = reg==3 ? (value & 0xf0) : value;
     if (reg==1) m_sd_edges&=~(value & m_pd_extra[3]);
     sd_gpio_irq();
+    st_irq_update(false);
     pd7_irq(false); // PDDIR/PDSEL may change IRQ6 eligibility
 }
 void alphasdana_state::sd_gpio_irq()
@@ -2158,6 +2233,21 @@ void alphasdana_state::pd7_irq(bool physical_transition)
     update_irq_lines();
 }
 
+void alphasdana_state::st_queue_snapshot()
+{
+    if (m_st_event_count==ST_EVENT_CAPACITY)
+    {
+        m_st_event_head=u8((unsigned(m_st_event_head)+1)%ST_EVENT_CAPACITY);
+        --m_st_event_count;
+        logerror("DANA_ST_EVENT_OVERFLOW oldest_snapshot_discarded=1\n");
+    }
+    unsigned const tail=(unsigned(m_st_event_head)+m_st_event_count)%ST_EVENT_CAPACITY;
+    for (unsigned i=0;i<4;++i)
+        m_st_events[tail*4+i]=m_st_host_held[i];
+    ++m_st_event_count;
+    st_irq_update(true);
+}
+
 INPUT_CHANGED_MEMBER(alphasdana_state::st_key_changed)
 {
     // param is the physical Dana scan code. Preserve press/release edges
@@ -2175,16 +2265,7 @@ INPUT_CHANGED_MEMBER(alphasdana_state::st_key_changed)
         m_st_power_pressed=bool(newval);
         pd7_irq(true);
     }
-    if (m_st_event_count==ST_EVENT_CAPACITY)
-    {
-        m_st_event_head=u8((unsigned(m_st_event_head)+1)%ST_EVENT_CAPACITY);
-        --m_st_event_count;
-        logerror("DANA_ST_EVENT_OVERFLOW oldest_snapshot_discarded=1\n");
-    }
-    unsigned const tail=(unsigned(m_st_event_head)+m_st_event_count)%ST_EVENT_CAPACITY;
-    for (unsigned i=0;i<4;++i)
-        m_st_events[tail*4+i]=m_st_host_held[i];
-    ++m_st_event_count;
+    st_queue_snapshot();
 }
 
 void alphasdana_state::spi2_ctrl_w(offs_t, u16 data, u16 mem_mask)
@@ -2754,6 +2835,8 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
         u16 const edges = ((m_icr >> 11) & 1) | ((m_icr >> 9) & 2)
             | ((m_icr >> 7) & 4) | ((m_icr >> 5) & 8);
         m_pending &= ~(u32(data & mem_mask & edges) << 16);
+        if ((m_icr & 0x0800) && (data & mem_mask & 0x0001))
+        { m_st_irq_edge=false; st_irq_update(false); }
         if ((m_icr & 0x0100) && (data & mem_mask & 0x0008))
         {
             m_pd7_edge_pending=false;
@@ -2811,9 +2894,10 @@ void alphasdana_state::update_irq_lines()
     for (unsigned level=1;level<=6;++level)
     {
         bool const spi=(spi_level==level) && (active & 0x00200000);
+        bool const external1=(level==1) && (active & 0x00010000);
         bool const external5=(level==5) && (active & 0x00100000);
         if (level!=4 && level!=6)
-            m_maincpu->set_input_line(level,(spi || external5) ? ASSERT_LINE : CLEAR_LINE);
+            m_maincpu->set_input_line(level,(spi || external1 || external5) ? ASSERT_LINE : CLEAR_LINE);
     }
     m_maincpu->set_input_line(6,((active & 0x00080082) || (spi_level==6 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
     m_maincpu->set_input_line(4,((active & 0x00000c14) || (spi_level==4 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
@@ -3327,7 +3411,7 @@ static INPUT_PORTS_START(alphasdana)
     PORT_BIT(0x00000200,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Left shift") PORT_CODE(KEYCODE_LSHIFT) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),9)
     PORT_BIT(0x00000400,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("T") PORT_CODE(KEYCODE_T) PORT_CHAR('t') PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),10)
     PORT_BIT(0x00000800,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Tab") PORT_CODE(KEYCODE_TAB) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),11)
-    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Caps lock (control)") PORT_CODE(KEYCODE_CAPSLOCK) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),12)
+    PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Caps lock") PORT_CODE(KEYCODE_CAPSLOCK) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),12)
     PORT_BIT(0x00002000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F3") PORT_CODE(KEYCODE_F3) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),13)
     PORT_BIT(0x00004000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Backspace") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),14)
     PORT_BIT(0x00008000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("On/off (escape)") PORT_CODE(KEYCODE_PAUSE) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),15)
@@ -3373,7 +3457,7 @@ static INPUT_PORTS_START(alphasdana)
     PORT_BIT(0x00001000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F1") PORT_CODE(KEYCODE_F1) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),76)
     PORT_BIT(0x00002000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("F2") PORT_CODE(KEYCODE_F2) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),77)
     PORT_BIT(0x00004000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Calendar (F9)") PORT_CODE(KEYCODE_F9) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),78)
-    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Memo pad (F12)") PORT_CODE(KEYCODE_F12) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),83)
+    PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Memo pad (Right Alt)") PORT_CODE(KEYCODE_RALT) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),83)
     PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("0") PORT_CODE(KEYCODE_0) PORT_CHAR('0') PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),84)
     PORT_BIT(0x00200000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("9") PORT_CODE(KEYCODE_9) PORT_CHAR('9') PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),85)
     PORT_BIT(0x00800000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("8") PORT_CODE(KEYCODE_8) PORT_CHAR('8') PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),87)
@@ -3403,7 +3487,7 @@ static INPUT_PORTS_START(alphasdana)
     PORT_BIT(0x00080000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Esc") PORT_CODE(KEYCODE_ESC) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),115)
     PORT_BIT(0x00100000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("/") PORT_CODE(KEYCODE_SLASH) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),116)
     PORT_BIT(0x01000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("N") PORT_CODE(KEYCODE_N) PORT_CHAR('n') PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),120)
-    PORT_BIT(0x08000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Left ctrl (caps lock)") PORT_CODE(KEYCODE_LCONTROL) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),123)
+    PORT_BIT(0x08000000,IP_ACTIVE_HIGH,IPT_KEYBOARD) PORT_NAME("Left ctrl") PORT_CODE(KEYCODE_LCONTROL) PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::st_key_changed),123)
     PORT_BIT(0xf6e0a01a,IP_ACTIVE_HIGH,IPT_UNUSED)
 INPUT_PORTS_END
 
