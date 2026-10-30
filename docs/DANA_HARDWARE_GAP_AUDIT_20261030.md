@@ -59,3 +59,11 @@
 **LCD D3.7 — P5 / EN COLA, posterior al ISP1161:** dieciséis niveles de gris mediante framebuffer de 4 bpp; confirmar LPICF, memoria, orden de bits, 16 valores efectivos y características por versión de Dana/Dana Wireless.
 
 Ambas capacidades deben coexistir con el renderizador 1 bpp ya acreditado, sin cambiar ni parchear Palm OS, y sin presentar un efecto de posprocesado del host como soporte de hardware. **Estado: pendientes, no implementadas; ninguna prueba ejecutada en esta incorporación.** Los 21 estados de la auditoría de hardware permanecen intactos. Control rector: pestaña HITOS (D3.6-LCD-4G, D3.7-LCD-16G), AUD_HW_20261030 (HW30-04) y BITACORA.
+
+## Registro complementario — audio de la placa Dana (P5; 30/oct/2026)
+
+**AUDIO-HW-01 — P5 / EN COLA, posterior al ISP1161:** revisar qué capacidades de generación de sonido del MC68VZ328 están **efectivamente conectadas** en la placa y usadas por la ROM: PWM1, PWM2, posibles mezclas, amplificación, altavoz, rutas GPIO y respuesta de interrupciones. Cruce obligatorio de datasheet + Ghidra + atlas/fotos de placa; las señales no medidas no son PASS físico.
+
+**AUDIO-HW-02 — P5 / EN COLA, condicionado a AUDIO-HW-01:** implementar con fidelidad las capacidades acreditadas, reutilizando PWM1 ya operativo; verificar FIFOs, REPEAT, temporización, IRQ y salida mono. PWM2 y mezcla únicamente si se constata conexión funcional en el Dana, nunca por su existencia en el chip. Evidencia nativa ROM/MAME, capturas WAV y regresión.
+
+**Estado:** solo tareas futuras, sin ejecutar ni alterar binario o ROM. El registro HW30-07 (PWM1 mono) permanece **ACREDITADO en el alcance antes probado**; el bloque de audio integral no se declara cerrado. Orden: ISP1161 → AUDITORÍA AUDIO → implementación sustentada; no requiere esperar LCD D3.6/D3.7. Excel rector: HITOS AUDIO-HW-01/02, AUD_HW_20261030 HW30-07 y BITACORA.

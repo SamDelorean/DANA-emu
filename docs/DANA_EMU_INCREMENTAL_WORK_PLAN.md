@@ -130,6 +130,17 @@ Cross-check register effects against POSE VZ and the manual; **do not implement 
 
 No final UI or keyboard in D3.
 
+### P5-AUDIO — capacidades realmente implementadas en el Dana (EN COLA; después de ISP1161)
+
+| ID | Estado | Trabajo acotado y dependencias | Criterio de cierre |
+|---|---|---|---|
+| **AUDIO-HW-01** | **PENDIENTE / AUDITORÍA FÍSICA** | Contrastar Motorola MC68VZ328UM, el atlas de placa Dana, topmarks/fotos/conexiones verificables y Ghidra sobre la ROM UK1.5: PWM1, PWM2, generadores/FIFO, selección de clocks, GPIO/IRQ, rutas de salida, amplificador, altavoz y posibles conectores. Identificar qué rutas están realmente cableadas y utilizadas en Dana original/Wireless; registrar desconocido como NO VERIFICADO, sin asumir segundo canal, estéreo, micrófono o mezcla por la sola capacidad del silicio. | Matriz **silicio ↔ PCB ↔ ROM ↔ emulación** con fuentes, direcciones Ghidra y estado acreditado por capacidad. Mantener **PWM1 mono nativo/WAV PASS**. |
+| **AUDIO-HW-02** | **PENDIENTE / IMPLEMENTACIÓN CONDICIONADA** | Reutilizar el PWM1 y SPEAKER_SOUND ya funcionales; completar únicamente prestaciones sustentadas de la placa (p. ej., REPEAT/FIFO/IRQ/timing/duty y PWM2/mezcla **solo si existe ruta física confirmada**), sin sonidos sintéticos del host. Pruebas invitado + MAME con ondas/PCM, captura WAV, ajustes Palm, pausa/save-state y no regresión de teclado, RTC, USB y arranque. | Señal de origen CPU/ROM → registros/MMIO → salida de audio comprobada; comparar muestras/periodicidad, errores y modos con manual. No declarar reproducción de hardware no conectado como función real de Dana. |
+
+**Orden:** completar ISP1161 antes de iniciar audio; el trabajo AUDIO-HW-01 precede obligatoriamente a AUDIO-HW-02. No depende de terminar los modos LCD D3.6/D3.7 y no interrumpe la labor USB en curso. La incorporación es **solo documental**, no autoriza código, compilación, ejecución, cambios en la ROM ni pruebas de audio.
+
+Fuentes ya disponibles: [PWM1 audio nativo](PALM_UK15_PWM1_AUDIO_20261029.md), [Motorola MC68VZ328UM](https://www.nxp.com/docs/en/user-guide/MC68VZ328UM.pdf), [atlas interconexiones Dana](DANA_HARDWARE_INTERCONNECTION_ATLAS_20261026.md), [auditoría HW](DANA_HARDWARE_GAP_AUDIT_20261030.md).
+
 ### D4 — ST auxiliary controller, SPI2 and Dana keyboard
 
 | ID | Single product change | T closure test |
