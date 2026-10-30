@@ -32,3 +32,7 @@ Manual test command from T graphical desktop:
 /home/spc/Projects/alphasmart/DANA-emu/tools/run-palm-uk15.sh
 
 At Setup 1 tap anywhere, at Setup 2 tap to begin calibration, then tap the three displayed target centers. Expected Setup 3 of 4. Real desktop mouse event path remains pending user confirmation; Setup 4 and final Palm launcher remain out of scope of this pass.
+
+## 2026-10-29 subsequent independent blocker
+
+Setup 3 mouse inactivity came from a physical PWM1 halt, not a regression in the PG1/IRQ5/SPI2 digitizer. Original ROM now progresses through Setup 4 and Enter Data using PWM1 MMIO; see PALM_UK15_SETUP3_PWM1_20261029.md.

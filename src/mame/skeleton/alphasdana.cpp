@@ -304,6 +304,12 @@ private:
     // independent of LCD contrast PWMR at FFFFFA36.
     u16 pwm1_control_r();
     void pwm1_control_w(offs_t, u16 data, u16 mem_mask);
+    u16 pwm1_sample_r() { return m_pwm1_sample; }
+    void pwm1_sample_w(offs_t, u16 data, u16 mem_mask);
+    u16 pwm1_period_count_r();
+    void pwm1_period_count_w(offs_t, u16 data, u16 mem_mask);
+    TIMER_CALLBACK_MEMBER(pwm1_tick);
+    void pwm1_schedule();
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
     void pllfsr_w(offs_t, u16 data, u16 mem_mask);
@@ -615,7 +621,10 @@ private:
     u32 m_rtc_time=0, m_rtc_last_tick=0, m_rtc_alarm=0;
     s32 m_rtc_offset_seconds=0;
     u16 m_rtc_day=0, m_rtc_day_alarm=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
-    u16 m_pwm1_control=0x0020; // PWMC1 reset: FIFOAV=1, EN=0
+    u16 m_pwm1_control=0x0020, m_pwm1_sample=0;
+    u8 m_pwm1_period=0xfe, m_pwm1_counter=0;
+    u8 m_pwm1_fifo[5]={}, m_pwm1_head=0, m_pwm1_count=0;
+    emu_timer *m_pwm1_timer=nullptr;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
     u16 m_tctl2=0;
@@ -685,12 +694,15 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_rtc_ien));
     save_item(NAME(m_rtc_isr));
     m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
+    m_pwm1_timer = timer_alloc(FUNC(alphasdana_state::pwm1_tick), this);
     save_item(NAME(m_iodcr));
     save_item(NAME(m_icemcr)); save_item(NAME(m_icemsr));
     save_item(NAME(m_pllcr));
     save_item(NAME(m_pllfsr));
     save_item(NAME(m_pctlr));
     save_item(NAME(m_pwm1_control));
+    save_item(NAME(m_pwm1_sample)); save_item(NAME(m_pwm1_period)); save_item(NAME(m_pwm1_counter));
+    save_item(NAME(m_pwm1_fifo)); save_item(NAME(m_pwm1_head)); save_item(NAME(m_pwm1_count));
     save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
     save_item(NAME(m_guest_loaded));
@@ -804,7 +816,10 @@ void alphasdana_state::machine_reset()
     m_pll_wake_pending=false;
     m_pll_wake_timer->adjust(attotime::never);
     m_pctlr = 0x1f;
-    m_pwm1_control=0x0020;
+    m_pwm1_control=0x0020; m_pwm1_sample=0; m_pwm1_period=0xfe;
+    m_pwm1_counter=0; m_pwm1_head=0; m_pwm1_count=0;
+    std::fill(std::begin(m_pwm1_fifo),std::end(m_pwm1_fifo),0);
+    m_pwm1_timer->adjust(attotime::never);
     m_clk32_high = false;
     // VZ UM 4.3.1/4.4.2: CLK32 is a 32768 Hz square wave, and
     // PLLFSR[15] reports HIGH/LOW phase. Both clock edges count:
@@ -2390,34 +2405,101 @@ void alphasdana_state::icemsr_w(offs_t, u16 data, u16 mem_mask)
 // VZ UM 4.4.1: CLKEN gates the CLKO output, not the PLL itself.
 // Keep the qualified PLLFSR-derived CPU/peripheral clocks unchanged. Reject
 // unsupported divider, sleep and wake-delay changes before committing them.
+// MC68VZ328UM 15.4.1-15.4.4: PWM1 has a five-byte sample FIFO.
+// Hardware status FIFOAV and IRQ are not writable state.
+void alphasdana_state::pwm1_schedule()
+{
+    if (!(m_pwm1_control & 0x0010))
+    { m_pwm1_timer->adjust(attotime::never); return; }
+    u32 const src=(m_pwm1_control & 0x8000) ? 32768
+        : (m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
+    u32 const prescale=((m_pwm1_control>>8)&0x7f)+1;
+    u32 const divider=2U<<(m_pwm1_control&3);
+    m_pwm1_timer->adjust(attotime::from_ticks(
+        u64(prescale)*divider*(u32(m_pwm1_period)+2),src));
+}
+TIMER_CALLBACK_MEMBER(alphasdana_state::pwm1_tick)
+{
+    if (!(m_pwm1_control & 0x0010)) return;
+    m_pwm1_counter=0;
+    if (m_pwm1_count)
+    { m_pwm1_head=(m_pwm1_head+1)%5; --m_pwm1_count; }
+    if (m_pwm1_count<=1)
+    {
+        m_pwm1_control |= 0x0080;
+        if (m_pwm1_control & 0x0040) m_pending |= 0x00000080;
+    }
+    update_irq_lines();
+    pwm1_schedule();
+}
 u16 alphasdana_state::pwm1_control_r()
 {
-    // Motorola §15.4.1: FIFOAV is a read-only status bit. With the
-    // real 5-byte FIFO empty and PWM1 disabled it stays set. Repeat
-    // count bits are write-only and therefore read back as zero.
-    u16 const value=(m_pwm1_control & ~u16(0x000c)) | 0x0020;
-    m_pwm1_control &= ~u16(0x0080); // IRQ status clears on control read
-    return value;
+    u16 const ret=(m_pwm1_control & ~u16(0x002c))
+       | (m_pwm1_count<5 ? 0x0020 : 0);
+    m_pwm1_control &= ~u16(0x0080);
+    m_pending &= ~u32(0x00000080);
+    update_irq_lines();
+    return ret;
 }
-
 void alphasdana_state::pwm1_control_w(offs_t, u16 data, u16 mem_mask)
 {
     u16 const next=(m_pwm1_control & ~mem_mask) | (data & mem_mask);
-    // Original UK1.5 ANDI.W #FFEF disables PWM1. Enabling audio,
-    // FIFO interrupts or a software IRQ cannot be claimed without the
-    // actual PWM sample FIFO, clock and sound-output machinery.
-    if ((next & 0x0050) || (data & mem_mask & 0x0080))
+    bool const old_enable=bool(m_pwm1_control & 0x0010);
+    bool const enable=bool(next & 0x0010);
+    m_pwm1_control=(next & 0xff53) | (m_pwm1_control & 0x0080);
+    if (!enable)
     {
-        physical_block("PWM1_AUDIO_OR_IRQ_UNIMPLEMENTED",0xfffff500,data);
-        return;
+        m_pwm1_count=0; m_pwm1_head=0; m_pwm1_counter=0;
+        m_pwm1_control&=~u16(0x0080);
+        m_pending&=~u32(0x00000080);
+        m_pwm1_timer->adjust(attotime::never);
     }
-    // Bit5 FIFOAV is hardware-owned, bit7 IRQ is status; neither is
-    // writable. Other documented fields remain programmable while off.
-    m_pwm1_control=(next & 0xff1f) | 0x0020;
-    logerror("DANA_PWM1_CONTROL value=%04x enabled=0 fifo_available=1\n",
-        m_pwm1_control);
+    else
+    {
+        if (!old_enable)
+        {
+            m_pwm1_count=0; m_pwm1_head=0;
+            m_pwm1_control |= 0x0080;
+        }
+        if (data & mem_mask & 0x0080) m_pwm1_control|=0x0080;
+        if ((m_pwm1_control & 0x00c0)==0x00c0)
+            m_pending |= 0x00000080;
+        else m_pending &= ~u32(0x00000080);
+        pwm1_schedule();
+    }
+    update_irq_lines();
+    logerror("DANA_PWM1_CONTROL value=%04x fifo=%u\n",m_pwm1_control,unsigned(m_pwm1_count));
 }
-
+void alphasdana_state::pwm1_sample_w(offs_t, u16 data, u16 mem_mask)
+{
+    if (!(m_pwm1_control & 0x0010)) return;
+    // UM 15.4.2: 16-bit loads high then low byte; 8-bit loads LOW byte.
+    auto write_byte=[this](u8 value) {
+        if (m_pwm1_count==5) return;
+        m_pwm1_fifo[(m_pwm1_head+m_pwm1_count)%5]=value;
+        ++m_pwm1_count;
+    };
+    if (mem_mask & 0xff00) write_byte(u8(data>>8));
+    if (mem_mask & 0x00ff) write_byte(u8(data));
+    m_pwm1_sample=(m_pwm1_sample & ~mem_mask) | (data & mem_mask);
+    if (m_pwm1_count>1)
+    {
+        m_pwm1_control &= ~u16(0x0080);
+        m_pending &= ~u32(0x00000080);
+    }
+    update_irq_lines();
+}
+u16 alphasdana_state::pwm1_period_count_r()
+{
+    return (u16(m_pwm1_period)<<8) | m_pwm1_counter;
+}
+void alphasdana_state::pwm1_period_count_w(offs_t, u16 data, u16 mem_mask)
+{
+    if (!(m_pwm1_control & 0x0010)) return;
+    // F504 is writable period (even, high lane); F505 is read-only count.
+    if (mem_mask & 0xff00)
+    { m_pwm1_period=u8(data>>8); pwm1_schedule(); }
+}
 void alphasdana_state::pctlr_w(u8 data)
 {
     // Only valid hardware bits; the two reserved bits read back zero.
@@ -2613,7 +2695,7 @@ void alphasdana_state::update_irq_lines()
         if (level!=4 && level!=6)
             m_maincpu->set_input_line(level,(spi || external5) ? ASSERT_LINE : CLEAR_LINE);
     }
-    m_maincpu->set_input_line(6,((active & 0x00080002) || (spi_level==6 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(6,((active & 0x00080082) || (spi_level==6 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
     m_maincpu->set_input_line(4,((active & 0x00000c14) || (spi_level==4 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -2931,6 +3013,8 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
     m_boot_memory[1](0xfffff207,0xfffff207).rw(FUNC(alphasdana_state::pctlr_r),FUNC(alphasdana_state::pctlr_w)).umask16(0x00ff);
     m_boot_memory[1](0xfffff500,0xfffff501).rw(FUNC(alphasdana_state::pwm1_control_r),FUNC(alphasdana_state::pwm1_control_w));
+    m_boot_memory[1](0xfffff502,0xfffff503).rw(FUNC(alphasdana_state::pwm1_sample_r),FUNC(alphasdana_state::pwm1_sample_w));
+    m_boot_memory[1](0xfffff504,0xfffff505).rw(FUNC(alphasdana_state::pwm1_period_count_r),FUNC(alphasdana_state::pwm1_period_count_w));
     m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
     // Native UK1.5 cold-start also writes TCTL2=0000 after TCTL1=0000.
     m_boot_memory[1](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));

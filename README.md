@@ -1,3 +1,5 @@
+**2026-10-29 Palm original Setup 3->4->Enter Data PASS:** The single dana-diag now models PWM1 control/FIFO and no longer halts the real ROM on its legitimate audio enable. Manual GUI mouse confirmation remains pending. Full report: docs/PALM_UK15_SETUP3_PWM1_20261029.md.
+
 **2026-10-29 Palm digitizer:** Original UK1.5 native 3-point calibration reaches Setup 3 of 4 with sole dana-diag. See docs/PALM_UK15_CALIBRATION_20261029.md for Ghidra evidence and manual run command. Human mouse click acceptance remains pending.
 
 > **2026-10-29 Palm stylus native PASS:** the sole `runtime/diag/bin/dana-diag` now converts an actual stylus hardware event into PG1/IRQ5/SPI2 input; the genuine UK1.5 CPU advanced from `Setup 1 of 4` to **`Setup 2 of 4`** (framebuffer `66009CA8`, captured image inspected). Ghidra analysis and native test are preserved in `main`. Host GUI mouse confirmation remains pending; launch `tools/run-palm-uk15.sh`. See [technical evidence](docs/UK15_ROM_BOOT_SD_SPI_GHIDRA_PANORAMA_20261026.md).
