@@ -1,3 +1,5 @@
+2026-10-29 original Palm host date requirement: OPEN/NOT IMPLEMENTED. Existing host RTC provides time only. Ghidra 10080148 clears 9-bit DAYR during alarm setup, so seeding DAYR is not a valid full calendar. Next: discover Time Manager calendar epoch/backing date through original ROM, then implement host-date first-boot initialization with valid OS semantics and verify Setup 3. Evidence and scope: DANA_HOST_CALENDAR_PRESET_20261029.md.
+
 2026-10-29 audio increment: PWM1 mono speaker signal and integrated Sound Options Volume 0-100 / Mute implemented in unique dana-diag. Original UK1.5 WAV and Setup 4 / Enter Data native PASS; user listening and physical mouse controls pending. Details PALM_UK15_PWM1_AUDIO_20261029.md.
 
 > **2026-10-29 PWM1 native increment CLOSED/PASS:** after 3-point stylus calibration, the real ROM used PWM1 and the driver stopped the CPU. Hardware PWM1 register/FIFO model now permits Setup 3->4->Enter Data; single installed dana-diag PASS, manual SDL acceptance pending. See PALM_UK15_SETUP3_PWM1_20261029.md.
