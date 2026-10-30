@@ -1,0 +1,574 @@
+{
+  "installed_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+  "previous_sha256": "db7404acb1b0ea44431d05e442dac231c1add2508bd1bcd217c35c2d628f5f3e",
+  "source_sha256": {
+    "alphasdana.cpp": "af5a5182a67a28b7b20e1b1aa295e7730ddfbbc09526828bccf2a7df5e9043b9",
+    "isp1161_usb.h": "aaf160b00e2dc9b0fbc3c1fe1f35e3ca7b1ec8ef0144e6ee51765768bf986393",
+    "isp1161_dana.h": "4ed2f5b4e14125f483a0b094dddce517f53cee1fd92927d14e8f3aefff70a45f",
+    "isp1161_ptd.h": "adcc76f82b15cad0a9a664e907dc94af7d5da04afdf0eb31be8840efea13d192",
+    "isp1161_link.h": "121fad6f4547af6b812a34d49eba214a7571f09c9ac365b25b323ef025287921"
+  },
+  "sole_executable": "runtime/diag/bin/dana-diag",
+  "date": "2026-10-30",
+  "integral_status": "OPEN_PARTIAL",
+  "original_alphaword_print": "PASS",
+  "original_device_enumeration": "PENDING",
+  "hotsync_end_to_end": "PENDING",
+  "candidate": {
+    "candidate-bus-final": {
+      "mode": "bus",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "native_bus_assertions": 33,
+      "status": "NATIVE_PASS"
+    },
+    "candidate-host-accepted": {
+      "mode": "host-printer",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "cpu": {
+        "marker": 42330,
+        "phase": 112,
+        "pc": 20366,
+        "cpu_usb_writes": 37212,
+        "frames": 22,
+        "save_restore": true,
+        "irq2_handler_entries": 0,
+        "explicit_unplug": true,
+        "overcurrent_recovered": true,
+        "usbtest": 0,
+        "overcurrent_input": 0,
+        "ptd_readbacks": 33
+      },
+      "printed_jobs": [
+        "DANA USB CPU PRINT PORT 1\r\n",
+        "DANA USB CPU PRINT PORT 2\r\n"
+      ],
+      "status": "NATIVE_PASS",
+      "itl_banks_observed": []
+    },
+    "candidate-itl-accepted": {
+      "mode": "host-faults",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "cpu": {
+        "marker": 42330,
+        "phase": 112,
+        "pc": 25480,
+        "cpu_usb_writes": 45909,
+        "frames": 23,
+        "save_restore": true,
+        "irq2_handler_entries": 0,
+        "explicit_unplug": true,
+        "overcurrent_recovered": true,
+        "usbtest": 0,
+        "overcurrent_input": 0,
+        "ptd_readbacks": 54
+      },
+      "status": "NATIVE_PASS",
+      "itl_banks_observed": [
+        0,
+        1
+      ]
+    },
+    "candidate-dc-accepted": {
+      "mode": "device",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "disconnect_reconnect": true,
+      "upstream_packets": 38,
+      "native_ep0_echo": "4001123456780800",
+      "dma_payload": "ABCDE / XYZ / GH",
+      "hc_dc_concurrent": true,
+      "suspend_resume": true,
+      "cpu": {
+        "marker": 42330,
+        "phase": 223,
+        "pc": 15552,
+        "cpu_usb_writes": 94332,
+        "frames": 15,
+        "save_restore": false,
+        "irq2_handler_entries": 1,
+        "explicit_unplug": false,
+        "overcurrent_recovered": false,
+        "usbtest": 2,
+        "overcurrent_input": 0,
+        "ptd_readbacks": 0
+      },
+      "status": "NATIVE_PASS",
+      "itl_banks_observed": []
+    },
+    "original_alphaword": {
+      "mode": "printer",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "returncode": 0,
+      "blocked": [],
+      "print_bytes": 10409,
+      "print_sha256": "792013e870ceeba0de25c1476b0132286befcca35da05478b2acfcb4dfd8e6b8",
+      "contains_test_phrase": true,
+      "postscript_complete": true,
+      "status": "ORIGINAL_ALPHAWORD_USB_PRINT_PASS"
+    },
+    "general_regression": {
+      "status": "NATIVE_PASS",
+      "sound_ui_mute_restore": "MAME_SOUND_UI_MUTE_AND_RESTORE_PASS",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "all81": {
+        "expected": 81,
+        "seen": [
+          43,
+          122,
+          46,
+          126,
+          70,
+          109,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          18,
+          19,
+          20,
+          23,
+          24,
+          26,
+          29,
+          30,
+          36,
+          37,
+          39,
+          40,
+          41,
+          42,
+          44,
+          45,
+          51,
+          52,
+          53,
+          55,
+          56,
+          58,
+          59,
+          60,
+          61,
+          64,
+          65,
+          68,
+          69,
+          71,
+          72,
+          74,
+          75,
+          76,
+          77,
+          78,
+          83,
+          84,
+          85,
+          87,
+          88,
+          90,
+          91,
+          92,
+          93,
+          94,
+          96,
+          98,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          110,
+          112,
+          113,
+          114,
+          115,
+          116,
+          120,
+          123
+        ],
+        "missing": [],
+        "host_missing": [],
+        "release_missing": [],
+        "chords": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "headers": 184,
+        "releases": 87
+      },
+      "robustness": {
+        "stale_modifier": false,
+        "native_codes": 208
+      },
+      "compatibility": {
+        "sd_protected": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "sd_crc": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "sd_both_write": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "sd_reopen": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "emutos": {
+          "codes": [
+            43,
+            46,
+            122
+          ],
+          "spi_reads": 609,
+          "releases": 3,
+          "pc_samples_changed": 14,
+          "pdsel": 16,
+          "irq1_pending": 0
+        },
+        "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b"
+      },
+      "host_sdl": {
+        "frames": 276,
+        "codes": [
+          5,
+          9,
+          10,
+          11,
+          13,
+          19,
+          24,
+          30,
+          43,
+          44,
+          53,
+          69,
+          83,
+          91,
+          98,
+          101,
+          105,
+          110,
+          115,
+          116,
+          122,
+          126
+        ],
+        "menu_frames": 23,
+        "paused_frames": 0,
+        "ui_active": true
+      },
+      "driver_sha256": "af5a5182a67a28b7b20e1b1aa295e7730ddfbbc09526828bccf2a7df5e9043b9"
+    }
+  },
+  "installed": {
+    "installed-bus": {
+      "mode": "bus",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "native_bus_assertions": 33,
+      "status": "NATIVE_PASS"
+    },
+    "installed-ptd-bus": {
+      "mode": "ptd-bus",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "native_bus_assertions": 7,
+      "status": "NATIVE_PASS"
+    },
+    "installed-host": {
+      "mode": "host-printer",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "cpu": {
+        "marker": 42330,
+        "phase": 112,
+        "pc": 20366,
+        "cpu_usb_writes": 37212,
+        "frames": 22,
+        "save_restore": true,
+        "irq2_handler_entries": 0,
+        "explicit_unplug": true,
+        "overcurrent_recovered": true,
+        "usbtest": 0,
+        "overcurrent_input": 0,
+        "ptd_readbacks": 33
+      },
+      "printed_jobs": [
+        "DANA USB CPU PRINT PORT 1\r\n",
+        "DANA USB CPU PRINT PORT 2\r\n"
+      ],
+      "status": "NATIVE_PASS",
+      "itl_banks_observed": []
+    },
+    "installed-itl": {
+      "mode": "host-faults",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "cpu": {
+        "marker": 42330,
+        "phase": 112,
+        "pc": 25480,
+        "cpu_usb_writes": 45909,
+        "frames": 23,
+        "save_restore": true,
+        "irq2_handler_entries": 0,
+        "explicit_unplug": true,
+        "overcurrent_recovered": true,
+        "usbtest": 0,
+        "overcurrent_input": 0,
+        "ptd_readbacks": 54
+      },
+      "status": "NATIVE_PASS",
+      "itl_banks_observed": [
+        0,
+        1
+      ]
+    },
+    "installed-dc": {
+      "mode": "device",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "disconnect_reconnect": true,
+      "upstream_packets": 38,
+      "native_ep0_echo": "4001123456780800",
+      "dma_payload": "ABCDE / XYZ / GH",
+      "hc_dc_concurrent": true,
+      "suspend_resume": true,
+      "cpu": {
+        "marker": 42330,
+        "phase": 223,
+        "pc": 15552,
+        "cpu_usb_writes": 94039,
+        "frames": 15,
+        "save_restore": false,
+        "irq2_handler_entries": 1,
+        "explicit_unplug": false,
+        "overcurrent_recovered": false,
+        "usbtest": 2,
+        "overcurrent_input": 0,
+        "ptd_readbacks": 0
+      },
+      "status": "NATIVE_PASS",
+      "itl_banks_observed": []
+    },
+    "original_alphaword": {
+      "mode": "printer",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "returncode": 0,
+      "blocked": [],
+      "print_bytes": 10409,
+      "print_sha256": "792013e870ceeba0de25c1476b0132286befcca35da05478b2acfcb4dfd8e6b8",
+      "contains_test_phrase": true,
+      "postscript_complete": true,
+      "status": "ORIGINAL_ALPHAWORD_USB_PRINT_PASS"
+    },
+    "general_regression": {
+      "status": "NATIVE_PASS",
+      "sound_ui_mute_restore": "MAME_SOUND_UI_MUTE_AND_RESTORE_PASS",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "all81": {
+        "expected": 81,
+        "seen": [
+          43,
+          122,
+          46,
+          126,
+          70,
+          109,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          18,
+          19,
+          20,
+          23,
+          24,
+          26,
+          29,
+          30,
+          36,
+          37,
+          39,
+          40,
+          41,
+          42,
+          44,
+          45,
+          51,
+          52,
+          53,
+          55,
+          56,
+          58,
+          59,
+          60,
+          61,
+          64,
+          65,
+          68,
+          69,
+          71,
+          72,
+          74,
+          75,
+          76,
+          77,
+          78,
+          83,
+          84,
+          85,
+          87,
+          88,
+          90,
+          91,
+          92,
+          93,
+          94,
+          96,
+          98,
+          101,
+          102,
+          103,
+          104,
+          105,
+          106,
+          107,
+          108,
+          110,
+          112,
+          113,
+          114,
+          115,
+          116,
+          120,
+          123
+        ],
+        "missing": [],
+        "host_missing": [],
+        "release_missing": [],
+        "chords": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "headers": 184,
+        "releases": 87
+      },
+      "robustness": {
+        "stale_modifier": false,
+        "native_codes": 208
+      },
+      "compatibility": {
+        "sd_protected": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "sd_crc": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "sd_both_write": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "sd_reopen": {
+          "status": "PASS",
+          "cpu_marker": 42330
+        },
+        "emutos": {
+          "codes": [
+            43,
+            46,
+            122
+          ],
+          "spi_reads": 609,
+          "releases": 3,
+          "pc_samples_changed": 14,
+          "pdsel": 16,
+          "irq1_pending": 0
+        },
+        "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b"
+      },
+      "host_sdl": {
+        "frames": 273,
+        "codes": [
+          5,
+          9,
+          10,
+          11,
+          13,
+          19,
+          24,
+          30,
+          43,
+          44,
+          53,
+          69,
+          83,
+          91,
+          98,
+          101,
+          105,
+          110,
+          115,
+          116,
+          122,
+          126
+        ],
+        "menu_frames": 22,
+        "paused_frames": 0,
+        "ui_active": true
+      },
+      "driver_sha256": "af5a5182a67a28b7b20e1b1aa295e7730ddfbbc09526828bccf2a7df5e9043b9"
+    },
+    "original_hotsync": {
+      "original_device_softconnect": false,
+      "mode": "device",
+      "binary_sha256": "34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b",
+      "returncode": 0,
+      "blocked": [],
+      "status": "PENDING_ORIGINAL_DEVICE",
+      "hotsync_e2e": "PENDING"
+    }
+  },
+  "local_checks": {
+    "ptd-local.log": "PASS original Philips PTD SETUP/IN, NAK, STALL, timeout, CRC, multi-PTD DWORD alignment, bounds",
+    "core-local.log": "ISP1161_PRODUCTION_PACKET_FIFO_PASS checks=88",
+    "core-sanitized.log": "ISP1161_PRODUCTION_PACKET_FIFO_PASS checks=88",
+    "dc-structural.log": "s.\n----------------------------------------------------------------------\nRan 2 tests in 0.003s\n\nOK (skipped=1)"
+  },
+  "legacy_init_entrypoint": "NATIVE_PASS: fresh installed bus and 68000 HC fixtures",
+  "manufacturer_pdf_sha256": "7d7f573be009ad16148c6f0fb007959233ea0743ea91cc069f414e6333daa9f8",
+  "reference_blobs": {
+    "linux_isp116x_hcd": "b5e9056895e4545b44180fc78ddf7671558928a6",
+    "linux_isp116x_h": "84904025fe7ff0cd85bfd44cc1b9bbaa4caef48f",
+    "qemu_usb_core": "43653c26caeac0275b2242dbbc7f16edebceeed6",
+    "qemu_usb_documentation": "dc694d23c2fdbdb9d8f07dc9920ee791aa87e091",
+    "linux_usbip_readme": "11971538f03ea0deb7e656abe680fce8f8e5c6dc"
+  },
+  "public_screenshots": {
+    "alphaword-document.png": "7d5730af7df7fbfb014ecedebaf35004544433551d7a9ca2cdb8b6c24b57d940",
+    "alphaword-print-complete.png": "5ba879857a08e443596b4f1358253dac032834b1ad90889ff715ea914c929f8b",
+    "hotsync-pending.png": "3313fabf52a05ae66fa0a3139ac896d85fdf4c2ba45f429ba543d7448bef8c08"
+  }
+}

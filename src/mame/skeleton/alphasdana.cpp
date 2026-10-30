@@ -3,6 +3,9 @@
 
 #include "emu.h"
 #include "isp1161_ptd.h"
+#include "isp1161_usb.h"
+#include "isp1161_link.h"
+#include "imagedev/printer.h"
 #include "vz328_bootstrap.h"
 #include "cpu/m68000/m68000.h"
 #include "imagedev/snapquik.h"
@@ -37,6 +40,8 @@ public:
 
 DEFINE_DEVICE_TYPE(DANA_VZ_CPU, dana_vz_cpu_device, "dana_vz_cpu", "Dana VZ 32-bit-address M68000 (DIAG)")
 
+DEFINE_DEVICE_TYPE(DANA_USB_LINK, dana_usb_link_device, "dana_usblink", "Dana explicit USB computer packet link")
+
 namespace {
 
 class alphasdana_state : public driver_device
@@ -58,6 +63,8 @@ public:
         , m_firmware(*this, "firmware")
         , m_boot_memory(*this, "boot_memory")
         , m_sd(*this, "sd%u", 0U)
+        , m_usb_printer(*this, "usbprinter%u", 0U)
+        , m_usb_link(*this, "usbcomputer")
         , m_sd_irq(*this, "SDIRQ")
         , m_nor_profile(*this, "NOR_PROFILE")
         , m_nor_factory(*this, "NOR_FACTORY")
@@ -223,19 +230,20 @@ private:
     u32 timer1_source_hz() const;
     void timer1_schedule();
     u16 timer1_tctl_r() { return m_tctl1; }
-    // VZ Timer 2 shares the documented TCTL format; disabled configuration
-    // is retained, but unsupported running-counter behavior is never faked.
+    // Original USB HCD 10301D42 uses Timer2 as its SYSCLK/EOF counter.
+    TIMER_CALLBACK_MEMBER(timer2_compare);
+    u32 timer2_source_hz() const;
+    void timer2_schedule();
     u16 timer2_tctl_r() { return m_tctl2; }
-    void timer2_tctl_w(offs_t, u16 data, u16 mem_mask)
-    {
-        u16 const next=((m_tctl2 & ~mem_mask) | (data & mem_mask)) & 0x01ff;
-        if (next & 1)
-        {
-            physical_block("TIMER2_RUNNING_UNIMPLEMENTED",0xfffff610,data);
-            return;
-        }
-        m_tctl2=next;
-    }
+    void timer2_tctl_w(offs_t,u16 data,u16 mem_mask);
+    u16 timer2_tprer_r() { return m_tprer2; }
+    void timer2_tprer_w(offs_t,u16 data,u16 mem_mask);
+    u16 timer2_tcmp_r() { return m_tcmp2; }
+    void timer2_tcmp_w(offs_t,u16 data,u16 mem_mask);
+    u16 timer2_tcr_r() { return m_tcr2; }
+    u16 timer2_tcn_r();
+    u16 timer2_tstat_r();
+    void timer2_tstat_w(offs_t,u16 data,u16 mem_mask);
     void timer1_tctl_w(offs_t, u16 data, u16 mem_mask);
     u16 timer1_tprer_r() { return m_tprer1; }
     void timer1_tprer_w(offs_t, u16 data, u16 mem_mask);
@@ -358,6 +366,7 @@ private:
     {
         COMBINE_DATA(&m_icr); m_icr &= 0xff80;
         st_irq_update(false);
+        isp1161_irq_update(false);
         pd7_irq(false); // polarity/edge mode change, no synthetic edge
         pen_irq5_update(); // ICR.POL5 can alter a real IRQ5 pad level
     }
@@ -520,6 +529,8 @@ private:
     required_device<generic_socket_device> m_firmware;
     memory_view m_boot_memory;
     required_device_array<dana_sd_image_device,2> m_sd;
+    required_device_array<printer_image_device,2> m_usb_printer;
+    required_device<dana_usb_link_device> m_usb_link;
     required_ioport m_sd_irq;
     required_ioport m_nor_profile;
     required_ioport m_nor_factory;
@@ -545,6 +556,31 @@ private:
     u16 m_dram[4]={};
     // Philips ISP1161A1 Rev03 Tables 7 and 75. HC and DC each have an
     // independent 16-bit command/data bus and independently reset registers.
+
+    // One ISP1161: independent HC packet functions and DC SRAM metadata.
+    isp1161a1::usb_function m_isp_function[2];
+    isp1161a1::dc_endpoints m_isp_dc_fifo;
+    u64 m_isp_usb_msec=0,m_isp_port_reset[2]={};
+    u16 m_isp_dc_dma_cursor=0,m_isp_dc_dma_reload=0;
+    bool m_isp_usb_vbus=false,m_isp_dc_suspended=false,m_isp_usb_clock=false;
+    u64 m_isp_dc_last_sof=0;
+    bool m_isp_irq_high[2]={true,true},m_isp_irq_condition[2]={};
+    bool m_isp_vz_last_high[2]={true,true},m_isp_vz_edge[2]={};
+    emu_timer *m_isp_usb_timer=nullptr,*m_isp_irq_timer[2]={};
+    TIMER_CALLBACK_MEMBER(isp1161_usb_service);
+    TIMER_CALLBACK_MEMBER(isp1161_irq_pulse_end);
+    void isp1161_irq_update(bool transition);
+    void isp1161_root_update();
+    void isp1161_root_write(unsigned port,u32 value);
+    void isp1161_dc_event(u32 events);
+    void isp1161_dc_bus_reset();
+    void isp1161_dc_command(u16 command);
+    u16 isp1161_dc_data_r();
+    void isp1161_dc_data_w(u16 data);
+    isp1161a1::reply isp1161_host_packet(isp1161a1::transaction const &,u8 const *,u8 *,u16);
+    isp1161a1::reply isp1161_upstream(u8,u8,u8,u8,u8 const *,u8 *,u16);
+    isp1161a1::reply isp1161_dma_packet(u8,u8,u8 const *,u8 *,u16);
+
     u8 m_isp_cmd=0, m_isp_phase=0, m_isp_hc_read_phase=0;
     u32 m_isp_hc_regs32[0x17]={};
     u16 m_isp_hc_regs16[0x42]={};
@@ -554,7 +590,7 @@ private:
     u16 m_isp_hc_fifo_cursor=0;
     u8 m_isp_hc_fifo_bank=0;
     u16 m_isp_hc_valid_bytes[3]={}; // ITL0, ITL1, ATL
-    u8 m_isp_hc_itl_cpu_bank=0;
+    u8 m_isp_hc_itl_cpu_bank=0,m_isp_hc_itl_sie_bank=0,m_isp_hc_itl_read_bank=0;
     void isp1161_hc_execute_buffers();
     emu_timer *m_isp_hc_sof_timer=nullptr;
     TIMER_CALLBACK_MEMBER(isp1161_hc_sof);
@@ -642,7 +678,9 @@ private:
     emu_timer *m_pwm1_timer=nullptr, *m_pwm1_fall_timer=nullptr;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
-    u16 m_tctl2=0;
+    u16 m_tctl2=0,m_tprer2=0,m_tcmp2=0xffff,m_tcr2=0,m_tcn2=0,m_tstat2=0,m_tstat_clear2=0;
+    emu_timer *m_timer2_timer=nullptr;
+    u32 m_timer2_compares=0;
     u16 m_tcr1=0, m_tcn1=0, m_tstat1=0, m_tstat_clear1=0;
     u32 m_timer1_compares=0, m_timer1_iacks=0;
     u16 m_ustcnt1=0, m_ubaud1=0x0002, m_urx1=0, m_utx1=0, m_umisc1=0;
@@ -700,6 +738,8 @@ void alphasdana_state::machine_start()
     m_pll_wake_timer=timer_alloc(FUNC(alphasdana_state::pll_wake_complete),this);
     save_item(NAME(m_pll_wake_pending));
     m_isp_hc_sof_timer=timer_alloc(FUNC(alphasdana_state::isp1161_hc_sof),this);
+    m_isp_usb_timer=timer_alloc(FUNC(alphasdana_state::isp1161_usb_service),this);
+    for(auto &timer:m_isp_irq_timer)timer=timer_alloc(FUNC(alphasdana_state::isp1161_irq_pulse_end),this);
     m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);
     save_item(NAME(m_calendar_store)); save_item(NAME(m_calendar_hours));
     save_item(NAME(m_calendar_phase));
@@ -713,6 +753,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_rtc_ien));
     save_item(NAME(m_rtc_isr));
     m_timer1_timer = timer_alloc(FUNC(alphasdana_state::timer1_compare), this);
+    m_timer2_timer=timer_alloc(FUNC(alphasdana_state::timer2_compare),this);
     m_pwm1_timer = timer_alloc(FUNC(alphasdana_state::pwm1_tick), this);
     m_pwm1_fall_timer = timer_alloc(FUNC(alphasdana_state::pwm1_fall), this);
     save_item(NAME(m_iodcr));
@@ -730,6 +771,13 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_icr));
     save_item(NAME(m_imr));
     save_item(NAME(m_pending));
+    save_item(NAME(m_tprer2));
+    save_item(NAME(m_tcmp2));
+    save_item(NAME(m_tcr2));
+    save_item(NAME(m_tcn2));
+    save_item(NAME(m_tstat2));
+    save_item(NAME(m_tstat_clear2));
+    save_item(NAME(m_timer2_compares));
     save_item(NAME(m_tctl1)); save_item(NAME(m_tctl2)); save_item(NAME(m_tprer1));
     save_item(NAME(m_tcmp1)); save_item(NAME(m_tcr1));
     save_item(NAME(m_tcn1)); save_item(NAME(m_tstat1));
@@ -786,6 +834,65 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_cs_upper)); save_item(NAME(m_cs_control));
     save_item(NAME(m_emucs)); save_item(NAME(m_dram));
     save_item(NAME(m_sdram_init_phase));
+    save_item(NAME(m_isp_usb_msec));
+    save_item(NAME(m_isp_port_reset));
+    save_item(NAME(m_isp_dc_dma_cursor));
+    save_item(NAME(m_isp_dc_dma_reload));
+    save_item(NAME(m_isp_usb_vbus));
+    save_item(NAME(m_isp_usb_clock));save_item(NAME(m_isp_dc_last_sof));
+    save_item(NAME(m_isp_dc_suspended));
+    save_item(NAME(m_isp_irq_high));
+    save_item(NAME(m_isp_irq_condition));
+    save_item(NAME(m_isp_vz_last_high));
+    save_item(NAME(m_isp_vz_edge));
+    for(unsigned i=0;i<2;++i)
+    {
+        save_item(NAME(m_isp_function[i].kind),i);
+        save_item(NAME(m_isp_function[i].address),i);
+        save_item(NAME(m_isp_function[i].configuration),i);
+        save_item(NAME(m_isp_function[i].pending_address),i);
+        save_item(NAME(m_isp_function[i].pending_configuration),i);
+        save_item(NAME(m_isp_function[i].control_direction),i);
+        save_item(NAME(m_isp_function[i].control_pending),i);
+        save_item(NAME(m_isp_function[i].control_stall),i);
+        save_item(NAME(m_isp_function[i].fault_status),i);
+        save_item(NAME(m_isp_function[i].fault_count),i);
+        save_item(NAME(m_isp_function[i].toggle_in),i);
+        save_item(NAME(m_isp_function[i].toggle_out),i);
+        save_item(NAME(m_isp_function[i].halt_in),i);
+        save_item(NAME(m_isp_function[i].halt_out),i);
+        save_item(NAME(m_isp_function[i].control),i);
+        save_item(NAME(m_isp_function[i].loopback),i);
+        save_item(NAME(m_isp_function[i].control_size),i);
+        save_item(NAME(m_isp_function[i].control_cursor),i);
+        save_item(NAME(m_isp_function[i].control_expected),i);
+        save_item(NAME(m_isp_function[i].loopback_size),i);
+        save_item(NAME(m_isp_function[i].accepted_bytes),i);
+        save_item(NAME(m_isp_function[i].packets),i);
+    }
+    save_item(NAME(m_isp_dc_fifo.base));
+    save_item(NAME(m_isp_dc_fifo.capacity));
+    save_item(NAME(m_isp_dc_fifo.length));
+    save_item(NAME(m_isp_dc_fifo.full));
+    save_item(NAME(m_isp_dc_fifo.cpu_bank));
+    save_item(NAME(m_isp_dc_fifo.usb_bank));
+    save_item(NAME(m_isp_dc_fifo.toggle));
+    save_item(NAME(m_isp_dc_fifo.error));
+    save_item(NAME(m_isp_dc_fifo.error_pending));save_item(NAME(m_isp_dc_fifo.event_good));
+    save_item(NAME(m_isp_dc_fifo.stalled));
+    save_item(NAME(m_isp_dc_fifo.setup_pending));
+    save_item(NAME(m_isp_dc_fifo.setup_ack));
+    save_item(NAME(m_isp_dc_fifo.overwrite));
+    save_item(NAME(m_isp_dc_fifo.active_address));
+    save_item(NAME(m_isp_dc_fifo.pending_address));
+    save_item(NAME(m_isp_dc_fifo.address_pending));
+    save_item(NAME(m_isp_dc_fifo.enabled));
+    save_item(NAME(m_isp_dc_fifo.port_mode));
+    save_item(NAME(m_isp_dc_fifo.port_ep));
+    save_item(NAME(m_isp_dc_fifo.allocation_valid));
+    save_item(NAME(m_isp_dc_fifo.port_cursor));
+    save_item(NAME(m_isp_dc_fifo.frame));
+    save_item(NAME(m_isp_dc_fifo.events));
     save_item(NAME(m_isp_cmd)); save_item(NAME(m_isp_phase));
     save_item(NAME(m_isp_hc_read_phase));
     save_item(NAME(m_isp_hc_regs32)); save_item(NAME(m_isp_hc_regs16));
@@ -794,6 +901,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_isp_hc_fifo_cursor)); save_item(NAME(m_isp_hc_fifo_bank));
     save_item(NAME(m_isp_hc_valid_bytes));
     save_item(NAME(m_isp_hc_itl_cpu_bank));
+    save_item(NAME(m_isp_hc_itl_sie_bank));save_item(NAME(m_isp_hc_itl_read_bank));
     save_item(NAME(m_isp_dc_cmd)); save_item(NAME(m_isp_dc_pending));
     save_item(NAME(m_isp_dc_unlocked)); save_item(NAME(m_isp_dc_suspend_requested));
     save_item(NAME(m_isp_dc_hw)); save_item(NAME(m_isp_dc_mode));
@@ -828,6 +936,10 @@ void alphasdana_state::machine_start()
 
 void alphasdana_state::machine_reset()
 {
+    isp1161_hc_reset();isp1161_dc_reset();
+    for(auto &timer:m_isp_irq_timer)timer->adjust(attotime::never);
+    m_isp_vz_edge[0]=m_isp_vz_edge[1]=false;
+    m_isp_usb_timer->adjust(attotime::from_msec(1),0,attotime::from_msec(1));
     m_watchdog=0x0001;
     m_watchdog_guard->adjust(attotime::never);
     // Existing peripheral implementation is shared by both boot profiles.
@@ -864,6 +976,8 @@ void alphasdana_state::machine_reset()
     m_tctl1=0; m_tctl2=0; m_tprer1=0; m_tcmp1=0xffff;
     m_tcr1=0; m_tcn1=0; m_tstat1=0; m_tstat_clear1=0;
     m_timer1_compares=0; m_timer1_iacks=0;
+    m_tprer2=m_tcr2=m_tcn2=m_tstat2=m_tstat_clear2=0;m_tcmp2=0xffff;m_timer2_compares=0;
+    m_timer2_timer->adjust(attotime::never);
     m_timer1_timer->adjust(attotime::never);
     m_ustcnt1=0; m_ubaud1=0x0002; m_urx1=0;
     m_utx1=0; m_umisc1=0; m_uart_prescaler1=0;
@@ -970,6 +1084,7 @@ void alphasdana_state::physical_reset()
     isp1161_hc_reset();
     std::fill(std::begin(m_isp_hc_ram),std::end(m_isp_hc_ram),0);
     m_isp_hc_sof_timer->adjust(attotime::never);
+    m_isp_usb_timer->adjust(attotime::from_msec(1),0,attotime::from_msec(1));
     m_isp_cmd=0; m_isp_phase=0; m_isp_low=0;
     isp1161_dc_reset();
     m_isp_up_irq=0; m_isp_itl_len=0; m_isp_atl_len=0;
@@ -1015,6 +1130,8 @@ void alphasdana_state::boot_postload()
         st_queue_snapshot();
     }
     else st_irq_update(false);
+    m_isp_usb_vbus=false; // external socket sessions cannot be rewound
+    isp1161_irq_update(false);
 }
 
 void alphasdana_state::physical_block(const char *reason, u32 address, u16 data)
@@ -1211,7 +1328,10 @@ void alphasdana_state::isp1161_hc_reset()
     m_isp_hc_fifo_bank=0; m_isp_hc_fifo_cursor=0;
     m_isp_hc_fifo_index=0; m_isp_hc_fifo_remaining=0;
     std::fill(std::begin(m_isp_hc_valid_bytes),std::end(m_isp_hc_valid_bytes),0);
-    m_isp_hc_itl_cpu_bank=0;
+    m_isp_hc_itl_cpu_bank=m_isp_hc_itl_sie_bank=m_isp_hc_itl_read_bank=0;
+    m_isp_port_reset[0]=m_isp_port_reset[1]=0;
+    m_isp_irq_high[0]=true;m_isp_irq_condition[0]=false;
+    for(unsigned i=0;i<2;++i)m_isp_hc_regs32[0x15+i]=m_isp_function[i].kind?1:0;
 }
 
 void alphasdana_state::isp1161_dc_reset()
@@ -1224,6 +1344,11 @@ void alphasdana_state::isp1161_dc_reset()
     m_isp_dc_interrupt_enable=0;
     m_isp_dc_address=0;m_isp_dc_scratch=0;m_isp_dc_mode=0;m_isp_dc_hw=0;
     m_isp_dc_dma_cfg=0;m_isp_dc_dma_count=0;
+    m_isp_dc_dma_cursor=m_isp_dc_dma_reload=0;
+    m_isp_dc_hw=0x2340; // manufacturer Table 82 silicon reset
+    m_isp_dc_fifo=isp1161a1::dc_endpoints{};
+    m_isp_dc_suspended=false;
+    m_isp_irq_high[1]=true;m_isp_irq_condition[1]=false;
     std::fill(std::begin(m_isp_dc_ep_config),std::end(m_isp_dc_ep_config),0);
     std::fill(std::begin(m_isp_dc_ep_status),std::end(m_isp_dc_ep_status),0);
     std::fill(std::begin(m_isp_dc_ram),std::end(m_isp_dc_ram),0);
@@ -1235,8 +1360,9 @@ void alphasdana_state::isp1161_hc_execute_buffers()
     // The Philips 8-byte PTD layout is entirely different from OHCI TD/ED.
     for(unsigned bank=0;bank<3;++bank)
     {
+        if(bank<2&&bank!=m_isp_hc_itl_sie_bank)continue;
         u16 const full=u16(1U<<bank);
-        if(!(m_isp_hc_regs16[0x2c]&full))
+        if(!(m_isp_hc_regs16[0x2c]&full)||(m_isp_hc_regs16[0x2c]&(full<<3)))
             continue;
         u16 const base=bank==2 ? u16(2U*m_isp_itl_len)
             : u16(bank*m_isp_itl_len);
@@ -1247,24 +1373,20 @@ void alphasdana_state::isp1161_hc_execute_buffers()
             physical_block("ISP1161_HC_PTD_FIFO_LAYOUT",0x1f000000,count);
             return;
         }
-        auto disconnected=[](isp1161a1::transaction const &,
-            u8 const *,u8 *,u16)->isp1161a1::reply
-        {
-            // No USB peripheral is configured/connected. A token receives
-            // no handshake; never fabricate an enumeration ACK or data.
-            return {isp1161a1::handshake::timeout,0};
-        };
+        auto transport=[this](isp1161a1::transaction const &tx,u8 const *out,u8 *in,u16 count)
+        {return isp1161_host_packet(tx,out,in,count);};
         isp1161a1::outcome const result=isp1161a1::execute(
-            m_isp_hc_ram+base,count,disconnected,true);
+            m_isp_hc_ram+base,count,transport,true,limit);
         if(result.malformed)
         {
-            physical_block("ISP1161_HC_PTD_MALFORMED",0x1f000000,count);
-            return;
+            m_isp_interrupt_status|=0x10;
+            logerror("DANA_USB_HC malformed PTD rejected bank=%u bytes=%u\n",bank,count);
         }
         // The HC consumed the uploaded PTDs and made their updated status
         // readable to the MCU through the same 16-bit FIFO port.
+        if(bank<2&&!(m_isp_hc_regs16[0x2c]&0x18))m_isp_hc_itl_read_bank=u8(bank);
         m_isp_hc_regs16[0x2c]=u16(
-            (m_isp_hc_regs16[0x2c]&~full)|(1U<<(bank+3)));
+            (bank==2?(m_isp_hc_regs16[0x2c]&~full):m_isp_hc_regs16[0x2c])|(1U<<(bank+3)));
         if(bank==2) m_isp_up_irq|=0x02; // ATL interrupt status
         else m_isp_up_irq|=0x01; // SOF/ITL interrupt
         logerror("DANA_ISP1161_PTD bank=%u count=%u parsed=%u complete=%u pending=%u\n",
@@ -1273,6 +1395,7 @@ void alphasdana_state::isp1161_hc_execute_buffers()
     }
     if((m_isp_hc_regs16[0x2c]&0x03)!=0x03)
         m_isp_hc_itl_cpu_bank^=1; // ITL ping-pong per millisecond
+    m_isp_hc_itl_sie_bank^=1;
 }
 
 TIMER_CALLBACK_MEMBER(alphasdana_state::isp1161_hc_sof)
@@ -1284,8 +1407,8 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::isp1161_hc_sof)
     isp1161_hc_execute_buffers();
     // Device attachment is explicit: no downstream USB device is present
     // until a configured emulated peripheral is connected to a root port.
-    if (m_isp_hc_regs16[0x25]&1)
-        m_isp_up_irq |=1;
+    m_isp_up_irq|=1;
+    isp1161_irq_update(true);
 }
 
 u32 alphasdana_state::isp1161_hc_read32(u8 code)
@@ -1305,10 +1428,8 @@ u32 alphasdana_state::isp1161_hc_read32(u8 code)
         if ((m_isp_control & 0xc0)!=0x80) return 0;
         u32 const fi=m_isp_frame_interval & 0x3fff;
         if(!fi) return 0;
-        attoseconds_t const frame=ATTOSECONDS_PER_SECOND/1000;
-        attoseconds_t const pos=machine().time().attoseconds()%frame;
-        u32 const elapsed=u32(pos/(frame/fi));
-        return elapsed<fi ? fi-elapsed : 0;
+        u64 const ticks=m_isp_hc_sof_timer->remaining().as_ticks(u64(fi)*1000);
+        return u32(std::min<u64>(ticks,fi))|(m_isp_frame_interval&0x80000000U);
     }
     default: return m_isp_hc_regs32[code];
     }
@@ -1324,7 +1445,8 @@ u16 alphasdana_state::isp1161_hc_read16(u8 code)
     case 0x2a: return m_isp_itl_len;
     case 0x2b: return m_isp_atl_len;
     case 0x2c: return m_isp_hc_regs16[0x2c];
-    case 0x2d: case 0x2e: return 0; // no PTD USB response without a target
+    case 0x2d: return m_isp_hc_valid_bytes[0];
+    case 0x2e: return m_isp_hc_valid_bytes[1];
     default: return m_isp_hc_regs16[code];
     }
 }
@@ -1351,23 +1473,20 @@ void alphasdana_state::isp1161_hc_write32(u8 code,u32 value)
     case 5: m_isp_interrupt_enable &= ~value; break;
     case 0x0d: m_isp_frame_interval=value; break;
     case 0x14:
-        // No upstream host or attached devices. RH change W1C and
-        // local-power operations are handled without claiming a connection.
-        m_isp_hc_regs32[code] &= ~(value & 0x00030000);
+        m_isp_hc_regs32[code]&=~(value&0x00030000);
+        if(value&1)for(unsigned i=0;i<2;++i)isp1161_root_write(i,0x200);
+        if(value&0x10000)for(unsigned i=0;i<2;++i)isp1161_root_write(i,0x100);
+        if(value&0x8000)m_isp_hc_regs32[code]|=0x8000;
+        if(value&0x80000000)m_isp_hc_regs32[code]&=~u32(0x8000);
         break;
-    case 0x15: case 0x16:
-        // A disconnected downstream port can be powered; it cannot become
-        // connected or enabled without an actual USB backend.
-        if(value&0x00000100) m_isp_hc_regs32[code]|=0x00000100;
-        if(value&0x00000200) m_isp_hc_regs32[code]&=~u32(0x00000100);
-        m_isp_hc_regs32[code]&=~(value & 0x001f0000);
-        break;
+    case 0x15:case 0x16:isp1161_root_write(code-0x15,value);break;
     default:
         m_isp_hc_regs32[code]=value;
         break;
     }
     if (code==1 || code==2 || code==3 || code==4 || code==5 || code==0x0d)
         m_isp_hc_regs32[code]=isp1161_hc_read32(code);
+    isp1161_irq_update(true);
 }
 
 void alphasdana_state::isp1161_hc_write16(u8 code,u16 value)
@@ -1376,7 +1495,7 @@ void alphasdana_state::isp1161_hc_write16(u8 code,u16 value)
     {
     case 0x20: m_isp_hardware=value; break;
     case 0x24: m_isp_up_irq &=~(value & 0x0077); break; // W1C
-    case 0x25: m_isp_hc_regs16[code]=value & 0x0077; return;
+    case 0x25: m_isp_hc_regs16[code]=value & 0x0077; isp1161_irq_update(true); return;
     case 0x2a: case 0x2b:
     {
         u32 const itl=code==0x2a ? value : m_isp_itl_len;
@@ -1390,6 +1509,11 @@ void alphasdana_state::isp1161_hc_write16(u8 code,u16 value)
         else m_isp_atl_len=value;
         break;
     }
+    case 0x21:
+        if((value&0x10)&&!(value&4)&&!m_isp_hc_fifo_remaining)
+            m_isp_hc_fifo_remaining=(value&2)?m_isp_atl_len:m_isp_itl_len;
+        m_isp_hc_fifo_bank=(value&2)?2:m_isp_hc_itl_cpu_bank;
+        break;
     case 0x22:
         m_isp_hc_fifo_remaining=value;
         m_isp_hc_fifo_cursor=0;
@@ -1406,6 +1530,7 @@ void alphasdana_state::isp1161_hc_write16(u8 code,u16 value)
     default: break;
     }
     if(code<0x42) m_isp_hc_regs16[code]=value;
+    isp1161_irq_update(true);
 }
 
 u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
@@ -1413,61 +1538,7 @@ u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
     u32 const address=0x1f000000U+u32(offset)*2;
     if(mem_mask!=0xffff)
     { physical_block("ISP1161_BUS_REQUIRES_WORD",address); return 0xffff; }
-    if(offset==2)
-    {
-        if(m_isp_dc_read_phase)
-        {
-            u8 const cmd=m_isp_dc_cmd;
-            if(cmd==0xc0 || cmd==0xc3)
-            {
-                u16 const v=m_isp_dc_read_phase==1 ?
-                    u16(m_isp_dc_read_snapshot) : u16(m_isp_dc_read_snapshot>>16);
-                if(m_isp_dc_read_phase==1)
-                    m_isp_dc_read_phase=2;
-                else
-                {
-                    m_isp_dc_read_phase=0;
-                    if(cmd==0xc0) m_isp_dc_interrupt &= ~u32(0x005b);
-                }
-                logerror("DANA_ISP1161_DC_INTERRUPT cmd=%02x value=%04x phase=%u\n",
-                    cmd,v,unsigned(m_isp_dc_read_phase));
-                return v;
-            }
-            m_isp_dc_read_phase=0;
-            if(cmd>=0x30 && cmd<=0x3f)
-                return m_isp_dc_ep_config[cmd-0x30];
-            if(cmd>=0x50 && cmd<=0x5f)
-            {
-                u16 const state=m_isp_dc_ep_status[cmd-0x50];
-                m_isp_dc_interrupt &=~(u32(1)<<(8+(cmd-0x50)));
-                return state;
-            }
-            if(cmd>=0xd0 && cmd<=0xdf)
-                return m_isp_dc_ep_status[cmd-0xd0]; // no side effects
-            if(cmd>=0xa0 && cmd<=0xaf) return 0; // no transfer errors
-            switch(cmd)
-            {
-            case 0xb3: return m_isp_dc_scratch;
-            case 0xb4: return 0; // no upstream SOF until a host is attached
-            case 0xb5: return 0x6123; // Rev03 Table 106
-            case 0xb7: return m_isp_dc_address;
-            case 0xb9: return m_isp_dc_mode;
-            case 0xbb: return m_isp_dc_hw;
-            case 0xf1: return m_isp_dc_dma_cfg;
-            case 0xf3: return m_isp_dc_dma_count;
-            }
-            physical_block("ISP1161_DC_READ_REGISTER_UNKNOWN",address,cmd);
-            return 0xffff;
-        }
-        if(m_isp_dc_pending)
-        {
-            // Real 68000 CLR.W read-before-write; a write command does not
-            // have a readable data result at this stage.
-            return 0xffff;
-        }
-        physical_block("ISP1161_DC_READ_WITHOUT_COMMAND",address);
-        return 0xffff;
-    }
+    if(offset==2)return isp1161_dc_data_r();
     if(offset!=0)
     { physical_block("ISP1161_BAD_READ_ADDRESS",address); return 0xffff; }
     if(m_isp_cmd&0x80)
@@ -1481,7 +1552,10 @@ u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
     {
         // Buffer RAM is inaccessible unless a transfer count was programmed.
         if(!m_isp_hc_fifo_remaining) return 0;
-        u16 const base=code==0x40 ? u16(m_isp_hc_itl_cpu_bank*m_isp_itl_len) : u16(2U*m_isp_itl_len);
+        u16 const base=m_isp_hc_fifo_bank==2?u16(2U*m_isp_itl_len):u16(m_isp_hc_fifo_bank*m_isp_itl_len);
+        unsigned const bank=m_isp_hc_fifo_bank;
+        if(!m_isp_hc_fifo_cursor&&(m_isp_hc_regs16[0x2c]&(1U<<(bank+3))))
+            m_isp_hc_regs16[0x2c]&=~u16((1U<<bank)|(1U<<(bank+3)));
         u16 const cursor=base+m_isp_hc_fifo_cursor;
         if(cursor+1>=4096)
         { physical_block("ISP1161_HC_FIFO_OOB",address); return 0xffff; }
@@ -1489,7 +1563,7 @@ u16 alphasdana_state::isp1161_r(offs_t offset, u16 mem_mask)
         m_isp_hc_fifo_cursor+=2;
         m_isp_hc_fifo_remaining=m_isp_hc_fifo_remaining>2 ?
             m_isp_hc_fifo_remaining-2 : 0;
-        if (!m_isp_hc_fifo_remaining) m_isp_up_irq|=0x04; // EOT
+        if (!m_isp_hc_fifo_remaining) {m_isp_up_irq|=0x04; isp1161_irq_update(true);} // EOT
         return value;
     }
     if (isp1161_hc_32bit(code))
@@ -1515,86 +1589,8 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
     if(mem_mask!=0xffff)
     { physical_block("ISP1161_BUS_REQUIRES_WORD",address,data); return; }
     // ISP1161A1 Device Controller: Table 75 indexed command bank.
-    if(offset==3)
-    {
-        if(data&0xff00)
-        { physical_block("ISP1161_DC_COMMAND_UPPER_BYTE",address,data);return; }
-        if(m_isp_dc_pending || m_isp_dc_read_phase)
-        { physical_block("ISP1161_DC_INCOMPLETE_TRANSFER",address,data);return; }
-        u8 const command=u8(data);
-        if(command==0xf6)
-        {
-            isp1161_dc_reset(); // DC software reset, HC is unchanged
-            return;
-        }
-        if(command==0xf4)
-        {
-            // ACK SETUP command: clear only pending EP0 setup status.
-            m_isp_dc_ep_status[0]&=~u16(0x0040);
-            return;
-        }
-        if(isp1161_dc_write_command(command))
-        {
-            m_isp_dc_cmd=command;m_isp_dc_pending=true;
-            m_isp_dc_write_phase=0;
-            return;
-        }
-        if(isp1161_dc_read_command(command))
-        {
-            m_isp_dc_cmd=command; m_isp_dc_read_phase=1;
-            m_isp_dc_read_snapshot=command==0xc0 ?
-                m_isp_dc_interrupt : m_isp_dc_interrupt_enable;
-            return;
-        }
-        physical_block("ISP1161_DC_COMMAND_UNKNOWN",address,data);
-        return;
-    }
-    if(offset==2)
-    {
-        if(!m_isp_dc_pending)
-        { physical_block("ISP1161_DC_WRITE_WITHOUT_COMMAND",address,data);return; }
-        u8 const code=m_isp_dc_cmd;
-        if(code==0xc2)
-        {
-            if(!m_isp_dc_write_phase)
-            { m_isp_dc_write_low=data;m_isp_dc_write_phase=1;return; }
-            m_isp_dc_interrupt_enable=u32(m_isp_dc_write_low)|(u32(data)<<16);
-            m_isp_dc_write_phase=0;m_isp_dc_pending=false;
-            return;
-        }
-        if(code>=0x20 && code<=0x2f)
-        {
-            if(data&0xff00)
-            { physical_block("ISP1161_DC_ENDPOINT_CONFIG_RESERVED",address,data);return; }
-            m_isp_dc_ep_config[code-0x20]=data;
-        }
-        else switch(code)
-        {
-        case 0xb0:
-            if(data!=0xaa37)
-            { physical_block("ISP1161_DC_UNLOCK_CODE",address,data);return; }
-            m_isp_dc_unlocked=true;
-            break;
-        case 0xb2: m_isp_dc_scratch=data&0x1fff;break;
-        case 0xb6: m_isp_dc_address=data&0x00ff;break;
-        case 0xb8:
-            // GOSUSP set/clear sequence is a physical power request;
-            // do not fabricate USB bus suspend or SOF packets.
-            if((m_isp_dc_mode&0x20) && !(data&0x20))
-                m_isp_dc_suspend_requested=true;
-            m_isp_dc_mode=data;
-            break;
-        case 0xba: m_isp_dc_hw=data;break;
-        case 0xf0: m_isp_dc_dma_cfg=data;break;
-        case 0xf2: m_isp_dc_dma_count=data;break;
-        default:
-            physical_block("ISP1161_DC_WRITE_UNSUPPORTED",address,data);return;
-        }
-        m_isp_dc_pending=false;
-        logerror("DANA_ISP1161_DC cmd=%02x value=%04x hw=%04x mode=%04x suspend_requested=%u\n",
-            code,data,m_isp_dc_hw,m_isp_dc_mode,unsigned(m_isp_dc_suspend_requested));
-        return;
-    }
+    if(offset==3){isp1161_dc_command(data);return;}
+    if(offset==2){isp1161_dc_data_w(data);return;}
     if(offset==1)
     {
         if(data & 0xff00)
@@ -1615,7 +1611,11 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
         if(code==0x40 || code==0x41)
         {
             m_isp_hc_fifo_cursor=0;
-            m_isp_hc_fifo_bank=code;
+            if(code==0x41)m_isp_hc_fifo_bank=2;
+            else if(write)m_isp_hc_fifo_bank=m_isp_hc_itl_cpu_bank;
+            else if(m_isp_hc_regs16[0x2c]&(1U<<(m_isp_hc_itl_read_bank+3)))m_isp_hc_fifo_bank=m_isp_hc_itl_read_bank;
+            else if(m_isp_hc_regs16[0x2c]&0x18)m_isp_hc_fifo_bank=m_isp_hc_itl_read_bank^1;
+            else m_isp_hc_fifo_bank=m_isp_hc_itl_cpu_bank;
         }
         return;
     }
@@ -1628,7 +1628,7 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
     {
         if(m_isp_hc_fifo_remaining==0)
         { physical_block("ISP1161_HC_FIFO_COUNT_REQUIRED",address,data); return; }
-        u16 const base=code==0x40 ? u16(m_isp_hc_itl_cpu_bank*m_isp_itl_len) : u16(2U*m_isp_itl_len);
+        u16 const base=m_isp_hc_fifo_bank==2?u16(2U*m_isp_itl_len):u16(m_isp_hc_fifo_bank*m_isp_itl_len);
         u16 const cursor=base+m_isp_hc_fifo_cursor;
         if(cursor+1>=4096)
         { physical_block("ISP1161_HC_FIFO_OOB",address,data); return; }
@@ -1639,9 +1639,10 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
         if(!m_isp_hc_fifo_remaining)
         {
             m_isp_up_irq|=0x04; // End of host-buffer PIO transfer
-            unsigned const bank=code==0x40 ? m_isp_hc_itl_cpu_bank : 2;
+            unsigned const bank=m_isp_hc_fifo_bank;
             m_isp_hc_valid_bytes[bank]=m_isp_hc_fifo_cursor;
-            m_isp_hc_regs16[0x2c] |= u16(1U<<bank);
+            m_isp_hc_regs16[0x2c] = u16((m_isp_hc_regs16[0x2c]&~(1U<<(bank+3)))|(1U<<bank));
+            isp1161_irq_update(true);
         }
         return;
     }
@@ -1657,6 +1658,8 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
     else
         physical_block("ISP1161_HC_BAD_WRITE_COMMAND",address,data);
 }
+
+#include "isp1161_dana.h"
 
 void alphasdana_state::physical_mmio_w(offs_t offset, u16 data, u16 mem_mask)
 {
@@ -2167,6 +2170,8 @@ u8 alphasdana_state::pd_r(offs_t reg)
         // not conflate the DATA output latch with board input voltage.
         u8 const pd4_input=~m_gpio[4] & 0x10;
         result=(result & ~pd4_input)|(m_st_irq_high ? pd4_input : 0);
+        u8 const usb_inputs=~m_gpio[4] & 0x60;
+        result=(result & ~usb_inputs)|(((m_isp_irq_high[0]?0x40:0)|(m_isp_irq_high[1]?0x20:0))&usb_inputs);
         u8 const pd7_input=~m_gpio[4] & 0x80;
         result=(result & ~pd7_input)|(pd7_line() & pd7_input);
     }
@@ -2179,6 +2184,7 @@ void alphasdana_state::pd_w(offs_t reg,u8 value)
     if (reg==1) m_sd_edges&=~(value & m_pd_extra[3]);
     sd_gpio_irq();
     st_irq_update(false);
+    isp1161_irq_update(false);
     pd7_irq(false); // PDDIR/PDSEL may change IRQ6 eligibility
 }
 void alphasdana_state::sd_gpio_irq()
@@ -2746,11 +2752,13 @@ void alphasdana_state::pllcr_w(offs_t, u16 data, u16 mem_mask)
     { physical_block("PLL_WAKE_DELAY_UNIMPLEMENTED",0xfffff200,next); return; }
     if (m_physical_boot && (changed & 0x07a0) && (m_tctl1 & 1))
         m_tcn1=timer1_tcn_r(); // Snapshot before changing virtual SYSCLK.
+    if (m_physical_boot && (changed & 0x07a0) && (m_tctl2 & 1))m_tcn2=timer2_tcn_r();
     m_pllcr=next;
     if (m_physical_boot && (changed & 0x07a0))
     {
         m_maincpu->set_unscaled_clock(physical_system_clock_hz());
         if (m_tctl1 & 1) timer1_schedule();
+        if (m_tctl2 & 1) timer2_schedule();
     }
     if (changed & 0x0008)
         logerror("DANA_PLL_SLEEP requested=%u pllcr=%04x wake_delay_sel=%u\n",
@@ -2837,6 +2845,9 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
         m_pending &= ~(u32(data & mem_mask & edges) << 16);
         if ((m_icr & 0x0800) && (data & mem_mask & 0x0001))
         { m_st_irq_edge=false; st_irq_update(false); }
+        if((m_icr&0x0400)&&(data&mem_mask&2))m_isp_vz_edge[1]=false;
+        if((m_icr&0x0200)&&(data&mem_mask&4))m_isp_vz_edge[0]=false;
+        isp1161_irq_update(false);
         if ((m_icr & 0x0100) && (data & mem_mask & 0x0008))
         {
             m_pd7_edge_pending=false;
@@ -2891,16 +2902,18 @@ void alphasdana_state::update_irq_lines()
         logerror("DANA_PCM_WAKE pcen=0 pctlr=%02x irq=%08x\n",m_pctlr,active);
     }
     unsigned const spi_level=(m_ilcr>>12)&7;
+    unsigned const timer2_level=m_ilcr&7;
     for (unsigned level=1;level<=6;++level)
     {
-        bool const spi=(spi_level==level) && (active & 0x00200000);
+        bool const spi=((spi_level==level) && (active & 0x00200000))||((timer2_level==level)&&(active&0x20));
         bool const external1=(level==1) && (active & 0x00010000);
+        bool const usb=((level==2)&&(active&0x00020000))||((level==3)&&(active&0x00040000));
         bool const external5=(level==5) && (active & 0x00100000);
         if (level!=4 && level!=6)
-            m_maincpu->set_input_line(level,(spi || external1 || external5) ? ASSERT_LINE : CLEAR_LINE);
+            m_maincpu->set_input_line(level,(spi || external1 || external5 || usb) ? ASSERT_LINE : CLEAR_LINE);
     }
-    m_maincpu->set_input_line(6,((active & 0x00080082) || (spi_level==6 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
-    m_maincpu->set_input_line(4,((active & 0x00000c14) || (spi_level==4 && (active & 0x00200000))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(6,((active & 0x00080082) || ((spi_level==6 && (active & 0x00200000))||(timer2_level==6&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(4,((active & 0x00000c14) || ((spi_level==4 && (active & 0x00200000))||(timer2_level==4&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 u8 alphasdana_state::irq_vector_r(offs_t offset)
@@ -3022,6 +3035,93 @@ void alphasdana_state::timer1_tstat_w(offs_t, u16, u16 mem_mask)
     m_tstat1 &= ~(m_tstat_clear1 & mem_mask);
     m_tstat_clear1 &= ~mem_mask;
     if (!(m_tstat1 & 1)) m_pending &= ~u32(0x00000002);
+    update_irq_lines();
+}
+// Reuse the qualified Timer1 scheduling/counter algorithm for channel 2.
+u32 alphasdana_state::timer2_source_hz() const
+{
+    // CPU and SYSCLK-sourced Timer2 must advance in the SAME guest time.
+    u32 const guest_hz=m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz();
+    switch(m_tctl2 & 0x000e)
+    {
+    case 0x0002: return guest_hz;
+    case 0x0004: return guest_hz/16;
+    case 0x0008: case 0x000a: case 0x000c: case 0x000e:
+        return 32768;
+    default: return 0; // STOP or external TIN; no invented clock.
+    }
+}
+void alphasdana_state::timer2_schedule()
+{
+    u32 const hz=timer2_source_hz();
+    if (!(m_tctl2 & 1) || !hz)
+    {
+        m_timer2_timer->adjust(attotime::never);
+        return;
+    }
+    // MAME's MC68328 timer has restart (FRR=0) and free-run (FRR=1)
+    // modes. Schedule the NEXT compare from the current counter position,
+    // never restart an entire period on a mid-cycle register write.
+    // Both free-run and restart reach the comparator through a wrapping
+    // 16-bit counter. They differ only in the post-match counter value:
+    // restart resets it to zero; free-run retains the comparator position.
+    u32 remaining=(u32(m_tcmp2)-u32(m_tcn2)) & 0xffff;
+    if (!remaining) remaining=65536;
+    m_timer2_timer->adjust(attotime::from_ticks(
+        u64(m_tprer2+1)*remaining,hz));
+}
+TIMER_CALLBACK_MEMBER(alphasdana_state::timer2_compare)
+{
+    // One virtual-time callback per actual comparator match. FRR=0 resets
+    // counter; FRR=1 retains comparator position and wraps at 16 bits.
+    m_tstat2 |= 1;
+    m_tcn2=(m_tctl2 & 0x0100) ? m_tcmp2 : 0;
+    ++m_timer2_compares;
+    if (m_tctl2 & 0x0010) m_pending |= 0x00000020;
+    if (m_timer2_compares<=16)
+        logerror("DANA_VZ_TIMER2_COMPARE count=%u tctl=%04x tprer=%04x tcmp=%04x pending=%08x\n",
+            unsigned(m_timer2_compares),m_tctl2,m_tprer2,m_tcmp2,m_pending);
+    update_irq_lines();
+    timer2_schedule();
+}
+void alphasdana_state::timer2_tctl_w(offs_t, u16 data, u16 mem_mask)
+{
+    bool const enabled=bool(m_tctl2 & 1);
+    if (enabled) m_tcn2=timer2_tcn_r();
+    COMBINE_DATA(&m_tctl2);
+    if (!enabled && (m_tctl2 & 1)) m_tcn2=0;
+    timer2_schedule();
+}
+void alphasdana_state::timer2_tprer_w(offs_t, u16 data, u16 mem_mask)
+{
+    if (m_tctl2 & 1) m_tcn2=timer2_tcn_r();
+    COMBINE_DATA(&m_tprer2);
+    timer2_schedule();
+}
+void alphasdana_state::timer2_tcmp_w(offs_t, u16 data, u16 mem_mask)
+{
+    if (m_tctl2 & 1) m_tcn2=timer2_tcn_r();
+    COMBINE_DATA(&m_tcmp2);
+    timer2_schedule();
+}
+u16 alphasdana_state::timer2_tcn_r()
+{
+    u32 const hz=timer2_source_hz();
+    if (!(m_tctl2 & 1) || !hz) return m_tcn2;
+    u64 const delta=m_timer2_timer->elapsed().as_ticks(hz)/u64(m_tprer2+1);
+    return u16((u64(m_tcn2)+delta)&0xffff);
+}
+u16 alphasdana_state::timer2_tstat_r()
+{
+    // Reuse MAME mc68328::tstat_r read-then-write clearing semantics.
+    m_tstat_clear2 |= m_tstat2;
+    return m_tstat2;
+}
+void alphasdana_state::timer2_tstat_w(offs_t, u16, u16 mem_mask)
+{
+    m_tstat2 &= ~(m_tstat_clear2 & mem_mask);
+    m_tstat_clear2 &= ~mem_mask;
+    if (!(m_tstat2 & 1)) m_pending &= ~u32(0x00000020);
     update_irq_lines();
 }
 void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
@@ -3197,6 +3297,8 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xffffff00,0xffffff01).r(FUNC(alphasdana_state::bootstrap_wait_r));
     // Dana's external Philips ISP1161: HC (A1=0) and DC (A1=1),
     // each a 16-bit data/command pair, with distinct command state.
+    // Same physical USB chip in the existing post-bootstrap diagnostic profile.
+    m_boot_memory[0](0x1f000000,0x1f000007).rw(FUNC(alphasdana_state::isp1161_r),FUNC(alphasdana_state::isp1161_w));
     m_boot_memory[1](0x1f000000,0x1f000007).rw(FUNC(alphasdana_state::isp1161_r),FUNC(alphasdana_state::isp1161_w));
     m_boot_memory[1](0xfffff000,0xffffffff).rw(FUNC(alphasdana_state::physical_mmio_r),FUNC(alphasdana_state::physical_mmio_w));
     // The genuine UK1.5 ROM accesses the LCD cursor from physical mode.
@@ -3221,7 +3323,18 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff504,0xfffff505).rw(FUNC(alphasdana_state::pwm1_period_count_r),FUNC(alphasdana_state::pwm1_period_count_w));
     m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
     // Native UK1.5 cold-start also writes TCTL2=0000 after TCTL1=0000.
+    m_boot_memory[0](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
     m_boot_memory[1](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
+    m_boot_memory[0](0xfffff612,0xfffff613).rw(FUNC(alphasdana_state::timer2_tprer_r),FUNC(alphasdana_state::timer2_tprer_w));
+    m_boot_memory[1](0xfffff612,0xfffff613).rw(FUNC(alphasdana_state::timer2_tprer_r),FUNC(alphasdana_state::timer2_tprer_w));
+    m_boot_memory[0](0xfffff614,0xfffff615).rw(FUNC(alphasdana_state::timer2_tcmp_r),FUNC(alphasdana_state::timer2_tcmp_w));
+    m_boot_memory[1](0xfffff614,0xfffff615).rw(FUNC(alphasdana_state::timer2_tcmp_r),FUNC(alphasdana_state::timer2_tcmp_w));
+    m_boot_memory[0](0xfffff616,0xfffff617).r(FUNC(alphasdana_state::timer2_tcr_r));
+    m_boot_memory[1](0xfffff616,0xfffff617).r(FUNC(alphasdana_state::timer2_tcr_r));
+    m_boot_memory[0](0xfffff618,0xfffff619).r(FUNC(alphasdana_state::timer2_tcn_r));
+    m_boot_memory[1](0xfffff618,0xfffff619).r(FUNC(alphasdana_state::timer2_tcn_r));
+    m_boot_memory[0](0xfffff61a,0xfffff61b).rw(FUNC(alphasdana_state::timer2_tstat_r),FUNC(alphasdana_state::timer2_tstat_w));
+    m_boot_memory[1](0xfffff61a,0xfffff61b).rw(FUNC(alphasdana_state::timer2_tstat_r),FUNC(alphasdana_state::timer2_tstat_w));
     m_boot_memory[1](0xfffff411,0xfffff411).rw(FUNC(alphasdana_state::pcdata_r),FUNC(alphasdana_state::pcdata_w)).umask16(0x00ff);
     m_boot_memory[1](0xfffffb00,0xfffffb03).rw(FUNC(alphasdana_state::rtc_time_r),FUNC(alphasdana_state::rtc_time_w));
     m_boot_memory[1](0xfffffb04,0xfffffb07).rw(FUNC(alphasdana_state::rtc_alarm_r),FUNC(alphasdana_state::rtc_alarm_w));
@@ -3315,6 +3428,9 @@ void alphasdana_state::program_map(address_map &map)
 
 void alphasdana_state::alphasdana(machine_config &config)
 {
+    PRINTER(config,m_usb_printer[0]);
+    PRINTER(config,m_usb_printer[1]);
+    DANA_USB_LINK(config,m_usb_link);
     DANA_SD_IMAGE(config,m_sd[0]).set_slot(0);
     DANA_SD_IMAGE(config,m_sd[1]).set_slot(1);
     GENERIC_SOCKET(config,m_firmware,generic_plain_slot,"dana_flash","bin,rom");
@@ -3336,6 +3452,20 @@ void alphasdana_state::alphasdana(machine_config &config)
 }
 
 static INPUT_PORTS_START(alphasdana)
+    PORT_START("USBTEST")
+    PORT_CONFNAME(0x01,0x00,"USB downstream 1 diagnostic loopback")
+    PORT_CONFSETTING(0x00,"Disconnected unless printer image mounted")
+    PORT_CONFSETTING(0x01,"Explicit USB packet test function")
+    PORT_CONFNAME(0x02,0x00,"USB downstream 2 diagnostic loopback")
+    PORT_CONFSETTING(0x00,"Disconnected unless printer image mounted")
+    PORT_CONFSETTING(0x02,"Explicit USB packet test function")
+    PORT_START("USBOC")
+    PORT_CONFNAME(0x01,0x00,"USB downstream 1 overcurrent input")
+    PORT_CONFSETTING(0x00,"Normal")
+    PORT_CONFSETTING(0x01,"Asserted")
+    PORT_CONFNAME(0x02,0x00,"USB downstream 2 overcurrent input")
+    PORT_CONFSETTING(0x00,"Normal")
+    PORT_CONFSETTING(0x02,"Asserted")
     PORT_START("EMUBRK")
     PORT_CONFNAME(0x01,0x01,"MC68VZ328 EMUBRK at RESET")
     PORT_CONFSETTING(0x01,"High - Normal Dana boot")

@@ -4,7 +4,7 @@
 
 Structural tests run anywhere. With ISP1161_TEST_MAME and ISP1161_TEST_ROM,
 also executes the genuine mapped 16-bit HC/DC command/data ports using the
-persisted tests/isp1161_hc_dc_bus.lua (19 actual bus assertions). No firmware
+persisted tests/isp1161_hc_dc_bus.lua (33 actual bus assertions). No firmware
 or USB peripherals are generated and the installed binary is never replaced.
 """
 from pathlib import Path
@@ -21,7 +21,7 @@ LUA = ROOT / "tests/isp1161_hc_dc_bus.lua"
 
 class ISP1161NativeModelTest(unittest.TestCase):
     def test_control_register_tables_and_isolated_state(self):
-        source = SOURCE.read_text()
+        source = SOURCE.read_text() + (SOURCE.parent / "isp1161_dana.h").read_text()
         for code in (
             "0x6123",                    # HC and DC ChipID, Rev03
             "m_isp_hc_regs32[0x17]",
@@ -42,7 +42,7 @@ class ISP1161NativeModelTest(unittest.TestCase):
             self.assertIn(code, source, code)
         self.assertEqual(source.count("0x6123"), 3)  # HC reset, HC read, DC read
         self.assertIn("if(code==0x40 || code==0x41)", source)
-        self.assertIn("m_isp_dc_interrupt_enable=u32(m_isp_dc_write_low)", source)
+        self.assertRegex(source, r"m_isp_dc_interrupt_enable=.*m_isp_dc_write_low")
         self.assertIn("m_isp_dc_read_phase=0;", source)
         self.assertIn("m_isp_hc_sof_timer->adjust", source)
         self.assertIn("if (value!=0xf6)", source)

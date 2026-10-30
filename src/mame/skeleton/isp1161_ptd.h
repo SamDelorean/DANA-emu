@@ -10,7 +10,8 @@
 namespace isp1161a1 {
 
 enum class handshake : std::uint8_t {
-    ack, nak, stall, timeout, crc, bitstuff, toggle_mismatch, pid_error
+    ack, nak, stall, timeout, crc, bitstuff, toggle_mismatch, pid_error,
+    unexpected_pid, data_overrun, data_underrun, buffer_overrun, buffer_underrun
 };
 enum class pid : std::uint8_t { setup=0, out=1, in=2 };
 
@@ -34,9 +35,11 @@ struct outcome {
 // Transport(request, OUT/source, IN/destination, packet length) -> reply.
 template<typename Transport>
 outcome execute(std::uint8_t *ram, std::size_t length, Transport&& transport,
-                bool interrupt_one_packet=false)
+                bool interrupt_one_packet=false, std::size_t capacity=0)
 {
     outcome result{};
+    if(!capacity)capacity=length;
+    if(capacity<length){result.malformed=true;return result;}
     std::size_t offset=0;
     while(offset<length) {
         if(length-offset<8) {result.malformed=true;break;}
@@ -45,7 +48,8 @@ outcome execute(std::uint8_t *ram, std::size_t length, Transport&& transport,
         std::uint16_t const total=std::uint16_t(d[4] | ((d[5]&3)<<8));
         std::uint16_t const maximum=std::uint16_t(d[2] | ((d[3]&3)<<8));
         std::size_t const next=(offset+8+total+3)&~std::size_t(3);
-        if(total>1023 || maximum>1023 || !maximum || next>length) {
+        if(total>1023 || maximum>1023 || !maximum || next>capacity ||
+           (next>length&&(!last||((d[5]>>2)&3)!=2))) {
             result.malformed=true;break;
         }
         ++result.descriptors;
@@ -73,14 +77,16 @@ outcome execute(std::uint8_t *ram, std::size_t length, Transport&& transport,
                 ++packets;
                 if(rx.status==handshake::nak) {wait=true;break;}
                 if(rx.status!=handshake::ack) {error=rx.status;break;}
-                if(rx.size>requested) {error=handshake::pid_error;break;}
+                if(rx.size>requested) {error=handshake::data_overrun;break;}
                 done+=rx.size;
-                if(rx.size)tx.toggle=!tx.toggle;
+                if(!tx.isochronous)tx.toggle=!tx.toggle;
                 // A short IN packet terminates a successful transfer.
-                if(tx.direction==pid::in && rx.size<requested)break;
+                if(tx.direction==pid::in && rx.size<requested)
+                { if(done<total)error=handshake::data_underrun; break; }
                 if(rx.size<requested && requested) {wait=true;break;}
                 if(tx.isochronous ||
-                    (interrupt_one_packet && (d[5]&0x20)))break;
+                    (interrupt_one_packet && (d[5]&0x20)))
+                { if(done<total)wait=true; break; }
                 if(done==total)break;
             }
             d[0]=std::uint8_t(done);
@@ -96,6 +102,11 @@ outcome execute(std::uint8_t *ram, std::size_t length, Transport&& transport,
                 case handshake::bitstuff:cc=2;break;
                 case handshake::toggle_mismatch:cc=3;break;
                 case handshake::pid_error:cc=6;break;
+                case handshake::unexpected_pid:cc=7;break;
+                case handshake::data_overrun:cc=8;break;
+                case handshake::data_underrun:cc=9;break;
+                case handshake::buffer_overrun:cc=12;break;
+                case handshake::buffer_underrun:cc=13;break;
                 case handshake::nak:break;
                 }
                 d[1]=std::uint8_t((d[1]&0x07)|(cc<<4)); // Active=0

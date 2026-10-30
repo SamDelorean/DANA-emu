@@ -1,5 +1,12 @@
 # DANA-emu — contrato único para emulación funcional del ISP1161A1
 
+## Current USB execution status — 2026-10-30
+
+The single canonical Dana emulator now has explicit downstream USB printers and a packet-level upstream link, retaining the existing Philips PTD/SRAM implementation. Original UK1.5 AlphaWord printing produced a complete 10409-byte PostScript job containing the test document. Diagnostic 68000 HC/DC endpoint, FIFO, IRQ, DMA and robustness tests passed. The original-Palm USB Computer/HotSync path has not enabled SoftConnect in the tested Cable workflow; original enumeration and end-to-end synchronization remain pending. **The full ISP1161 contract is OPEN, not CLOSED/PASS integral.**
+
+See [USB integration and native qualification](ISP1161_USB_INTEGRATION_20261030.md) for the command matrix, Ghidra paths, evidence, limitations and installed artifact. The sole installed executable is `runtime/diag/bin/dana-diag`, SHA-256 `34c0ddd062c15427b5485d7d99b1a9ab8b17da8873af51ed2d32cca000d7142b`. The previous operative is retained compressed for rollback. Older build/install locations and continuation cursors below are historical. The later LCD grayscale and physical audio queues remain deferred and unchanged.
+
+
 **Fecha:** 26/oct/2026. **Proyecto:** `SamDelorean/DANA-emu`, rama **`main`**, único DIAG en T. **Prioridad:** producto **emulador Dana con Palm OS original**, no simuladores, instrumentación ni tareas paralelas.
 
 ## Decisión de hardware: UN circuito integrado, no dos
