@@ -422,6 +422,7 @@ private:
         if (reg==1 && (value & 0x04))
         {
             m_pen_command=0;
+            m_pen_command_7bit=false;
             m_pen_sample=0;
         }
     }
@@ -643,6 +644,7 @@ private:
     u16 m_spi2_data = 0, m_spi2_ctrl = 0;
     // The pen ADC reply is staged within one PG2 selection.
     u8 m_pen_command = 0;
+    bool m_pen_command_7bit = false;
     u16 m_pen_sample = 0;
     bool m_st_ready = false, m_st_hello = false, m_st_reset_held = false;
     u32 m_st_old_keys[4]={}, m_st_pending_keys[4]={};
@@ -714,6 +716,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_spi2_data));
     save_item(NAME(m_spi2_ctrl));
     save_item(NAME(m_pen_command));
+    save_item(NAME(m_pen_command_7bit));
     save_item(NAME(m_pen_sample));
     save_item(NAME(m_st_ready));
     save_item(NAME(m_st_hello));
@@ -836,7 +839,7 @@ void alphasdana_state::machine_reset()
     m_st_power_pressed=false; m_pd7_edge_pending=false;
     m_pd7_last_high=bool(pd7_line() & 0x80);
     pd7_irq(false);
-    m_pen_command=0; m_pen_sample=0;
+    m_pen_command=0; m_pen_command_7bit=false; m_pen_sample=0;
     lcd_bootstrap_reset();
     spi1_reset();
     m_bootstrap_mode=!(m_emubrk_pin->read()&1);
@@ -1845,24 +1848,41 @@ u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
     // Ghidra UK1.5 at 0x1007B126 and 0x1007F4C2 additionally proves
     // a 7-clock command (command >> 1), a 1-clock suffix and a 16-clock
     // ADC read. These are actual SPI2 clock phases, not Palm OS hooks.
-    // The guest consumes (received >> 4) as an unsigned 12-bit sample.
+    // Palm 7+1-bit command/16-bit read uses (received >> 3);
+    // EmuTOS 8+16 uses (received >> 4). Keep these protocols distinct.
     // No claimed factory calibration: these bounded endpoints are a
     // provisional emulator digitizer mapping, separate from the LCD pixels.
     if (!(m_pen_contact->read() & 1))
+    {
+        m_pen_command=0;
+        m_pen_command_7bit=false;
+        m_pen_sample=0;
         return 0xffff;
+    }
     if (width==8 || width==7)
     {
+        m_pen_command_7bit=(width==7);
         u16 const command=width==7 ? u16((outgoing & 0x7f)<<1) : outgoing;
-        m_pen_command=(command==0x90 || command==0xd0 || command==0xd8)
+        // UK1.5 Ghidra 0x1007B650/0x1007B65A also references A4/E4
+        // during its early ADC probe. The live setup taps use 90/D8.
+        m_pen_command=(command==0x90 || command==0xd0 || command==0xd8 ||
+                       command==0xa4 || command==0xe4)
             ? u8(command) : 0;
         if (!m_pen_command)
         {
+            m_pen_command_7bit=false;
             m_pen_sample=0;
             return 0xff;
         }
-        unsigned const coord=(m_pen_command==0x90) ? (m_pen_x->read() & 0xffff) : (m_pen_y->read() & 0xffff);
-        unsigned const minimum=(m_pen_command==0x90) ? 290 : 200;
-        unsigned const span=(m_pen_command==0x90) ? 3470 : 3450;
+        bool const x_axis=(m_pen_command==0x90 || m_pen_command==0xa4);
+        unsigned const host_coord=x_axis ? (m_pen_x->read() & 0xffff) : (m_pen_y->read() & 0xffff);
+        // Both physical Palm ADC axes are inverted relative to screen
+        // coordinates. Three-point calibration of the unchanged UK1.5 ROM
+        // rejects noninverted/swapped signals. Retain EmuTOS's previously
+        // qualified 8-bit-command mapping without reversal.
+        unsigned const coord=m_pen_command_7bit ? 65535U-host_coord : host_coord;
+        unsigned const minimum=x_axis ? 290 : 200;
+        unsigned const span=x_axis ? 3470 : 3450;
         m_pen_sample=u16(minimum+(coord*span)/65535U);
         return 0xff; // command phase clocks out idle data
     }
@@ -1870,8 +1890,12 @@ u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
         return 0xffff; // second command clock; ADC sample remains pending
     if (width==16 && m_pen_command)
     {
-        u16 const sample=u16(m_pen_sample<<4);
+        // The 68000 Palm UK1.5 ROM shifts SPIDATA2 >>3 and masks 0xfff.
+        // The 7+1-clock serial command therefore leaves 3 padding bits.
+        // EmuTOS issues an 8-clock command and expects >>4: preserve it.
+        u16 const sample=u16(m_pen_sample << (m_pen_command_7bit ? 3 : 4));
         m_pen_command=0;
+        m_pen_command_7bit=false;
         m_pen_sample=0;
         return sample;
     }

@@ -62,7 +62,7 @@ public class DanaPalmUK15TouchReverse extends GhidraScript {
       }
       out.printf("PTR_TOTAL %08X %d\n",target,count);
     }
-    long[] sites={0x1007f320L,0x1007f3c0L,0x1007f400L,0x1007b5e0L,0x1007b070L,0x1007b0b8L,0x1007b10cL,0x10079710L};
+    long[] sites={0x1007b300L,0x1007b31eL,0x1007b5d0L,0x1007b640L,0x1007b700L,0x1007f460L,0x1007f4b8L,0x1007f4c2L,0x1007f530L};
     for(long site:sites){
       out.printf("CODE_START=%08X\n",site);
       long pc=site;

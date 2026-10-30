@@ -44,3 +44,7 @@ The exact graphical input flags (`-lightgun -lightgun_device lightgun -lightgunp
 ## 2026-10-29 touchscreen native qualification
 
 Ghidra original ROM evidence confirms PG1 input contact, SPI2 7+1+16 ADC transfers and external IRQ5 (IPR bit 20). These paths were implemented in the only emulator `runtime/diag/bin/dana-diag`. A real M68000-original-ROM native test received one hardware-level `:PEN` event and successfully advanced `Setup 1 of 4` to `Setup 2 of 4` (frame 2000, FNV `66009CA8`; same at frame 2400). Installed executable SHA256 `edbda9209b960a6855c1911dcc00b9870400f2b75fab5292893401dcb4d54852`. The established command remains `/home/spc/Projects/alphasmart/DANA-emu/tools/run-palm-uk15.sh`. Manual real GUI click acceptance and later calibration screens still require separate observation; no additional emulator versions allowed.
+
+## 2026-10-29 calibration correction
+
+The original Palm UK1.5 3-crosshair calibration now reaches Setup 3 of 4 in native CPU/ROM tests on the installed single dana-diag. Corrected both ADC axes polarity and 7+1+16-bit SPI2 alignment; EmuTOS 8+16-bit mapping retained. Evidence: PALM_UK15_CALIBRATION_20261029.md. Manual GUI input confirmation is still pending.

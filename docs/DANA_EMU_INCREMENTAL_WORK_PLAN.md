@@ -172,7 +172,7 @@ Dana-stable and Dana-diag have **separate compiled products from D1.1**. D5 vali
 
 | ID | Scope | Activation condition |
 |---|---|---|
-| **D8.1** | SPI2 ADC/touchscreen | **2026-10-29: Palm UK1.5 original CPU-nativo Setup 1→2 CLOSED/PASS; entrada de mouse en GUI y calibración posterior pendientes**. PG1 + IRQ5 + protocolo SPI2 sustentados por Ghidra. |
+| **D8.1** | SPI2 ADC/touchscreen | **2026-10-29: Palm UK1.5 CPU-nativo Setup 1->2->3/4, calibración de tres puntos CLOSED/PASS**. Ghidra: PG1/IRQ5, fase SPI2 ADC 3 bits, inversión X/Y; prueba manual del mouse SDL pendiente. |
 | **D8.2** | Real VZ RTC + retained date/time for OS3K-Dana timestamped full-memory backup, plus power management and virtual suspend | Guest reads/writes real `RTCTIME 0xFFFFFB00` and 9-bit `DAYR 0xFFFFFB1A` hardware counters; true virtual-time advancement, rollover, alarms and sleep tested; OS3K holds calendar epoch/time zone persistently and labels unset dates, never fakes a full calendar in the hardware RTC |
 | **D8.3** | Second independent SD slot with its own host-selected image, actual slot-specific CS/detect hardware and separate media state; USB/IR remain optional subfeatures | **Second SD required by future D8.5**, not by current GUI milestone; validate physical wiring and independently addressable guest sector I/O |
 | **D8.4** | Expanded RAM and full chip-select configuration | Documented physical model; do not assume 8/16 MiB from rumor |
