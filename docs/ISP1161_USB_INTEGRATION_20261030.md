@@ -162,3 +162,7 @@ Private decompiles are not redistributed. Linux ISP116x driver and QEMU USB core
 The HC packet path and AlphaWord printer capability are functional. DC diagnostic packet/FIFO/IRQ/DMA capability is functional. **Neither result proves original-Palm USB Computer or HotSync.** The original firmware's USB port-selection/connection notification must be followed from the actual HotSync path; the tested UI path has not yet opened that driver. The precise board attach/VBUS notification and DMA continuity are not established by this work, and no fictitious GPIO event was added. A genuine desktop HotSync peer and original firmware data exchange must then be demonstrated.
 
 The current contract and hardware audit retain an OPEN/PARTIAL integral state. Deferred LCD/audio work is preserved without implementation. The existing Drive workbook is updated in place, retaining its file ID, sheets and historical records; no second master workbook is created.
+
+## HotSync simplificado: investigación posterior 2026-10-31
+
+El [contrato HotSync MAME](DANA_HOTSYNC_SIMPLE_HOST_DESIGN_20261031.md) identifica el host original HotSync Manager y la alternativa abierta pilot-link, menú de instalación PRC/PDB y respaldo a carpeta, y prioriza la ruta original USB DC antes de construir la sesión DLP. **Investigación documentada, sin cambios de código ni nueva prueba HotSync.**
