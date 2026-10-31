@@ -1,4 +1,4 @@
-# Dana HotSync: gestor sencillo de instalación y respaldo en MAME
+> **SUSTITUIDO / HISTORICO (2026-10-31):** el usuario descarto el menu HotSync/PRC/PDB y el protocolo Palm DLP como objetivo del proyecto. La directriz vigente es acreditar USB Computer para la futura suite NEO Manager con OS3K-Dana. Consultar [alcance USB Computer](USB_COMPUTER_OS3K_PC_VALIDATION_20261031.md). Esta propuesta se conserva solo por valor historico, no es trabajo activo.\n\n# Dana HotSync: gestor sencillo de instalación y respaldo en MAME
 
 **Corte 2026-10-31. Investigación y contrato de integración. NO IMPLEMENTADO; NO HOTSYNC PASS.**
 Repositorio único DANA-emu/main; único ejecutable runtime/diag/bin/dana-diag. No cambiar la ROM original, no ramas, no segundo emulador.
