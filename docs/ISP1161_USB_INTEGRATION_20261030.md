@@ -165,4 +165,8 @@ The current contract and hardware audit retain an OPEN/PARTIAL integral state. D
 
 ## HotSync simplificado: investigación posterior 2026-10-31
 
-El [contrato HotSync MAME](DANA_HOTSYNC_SIMPLE_HOST_DESIGN_20261031.md) identifica el host original HotSync Manager y la alternativa abierta pilot-link, menú de instalación PRC/PDB y respaldo a carpeta, y prioriza la ruta original USB DC antes de construir la sesión DLP. **Investigación documentada, sin cambios de código ni nueva prueba HotSync.**\n\n## 2026-10-31: cambio posterior de objetivo de proyecto\n\nSe conserva este informe como evidencia de la prueba USB. La directriz vigente es [validar USB Computer para OS3K/NEO Manager](USB_COMPUTER_OS3K_PC_VALIDATION_20261031.md), no desarrollar Palm Desktop/HotSync DLP ni un menu PRC/PDB. El contrato del menu HotSync anterior es historico. La prueba DC diagnostica de paquetes es PASS; la enumeracion como USB fisico ante SO PC no esta demostrada y la compatibilidad NEO Manager corresponde al trabajo futuro de OS3K-Dana.\n
+El [contrato HotSync MAME](DANA_HOTSYNC_SIMPLE_HOST_DESIGN_20261031.md) identifica el host original HotSync Manager y la alternativa abierta pilot-link, menú de instalación PRC/PDB y respaldo a carpeta, y prioriza la ruta original USB DC antes de construir la sesión DLP. **Investigación documentada, sin cambios de código ni nueva prueba HotSync.**
+
+## 2026-10-31: cambio posterior de objetivo de proyecto
+
+Se conserva este informe como evidencia de la prueba USB. La directriz vigente es [validar USB Computer para OS3K/NEO Manager](USB_COMPUTER_OS3K_PC_VALIDATION_20261031.md), no desarrollar Palm Desktop/HotSync DLP ni un menu PRC/PDB. El contrato del menu HotSync anterior es historico. La prueba DC diagnostica de paquetes es PASS; la enumeracion como USB fisico ante SO PC no esta demostrada y la compatibilidad NEO Manager corresponde al trabajo futuro de OS3K-Dana.
