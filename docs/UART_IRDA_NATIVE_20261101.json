@@ -668,7 +668,7 @@
     "binary_sha256": "f1002968c67dd2f6ebaf9ae107f6f120321986b94fb495eb4b9826414d36cdcc"
   },
   "qualification_limits": [
-    "No completed original Palm Beam discovery/session/OBEX file transfer; screen reports no receiving handheld.",
+    "The release transport test does not establish Palm Beam discovery acceptance, an IrLAP session or an OBEX file transfer.",
     "No measured PCB continuity, IR transceiver identity/shutdown wiring, electrical or optical qualification.",
     "Factory BAUDTEST nibble-counter waveform not reproduced; normal clocks are inhibited in that mode.",
     "PCR PWM/timer signal combinations remain explicitly unsupported.",
@@ -686,5 +686,10 @@
       "unchanged_method_sha256": "e1d45a5dea3193fb3fda6ab5dd8ac9a441693e4f05cfa643f29deb8912af6b7b"
     }
   ],
-  "control_workbook_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l"
+  "control_workbook_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+  "exploratory_application_observation": {
+    "binary_sha256": "732bb8c9505ebae4c75124bf7e287598779ef69eb8b0b76a06f423831a63ce63",
+    "screen": "Could not find a receiving handheld computer",
+    "scope": "Earlier exploratory single-response workflow; not an assertion about the final release screen."
+  }
 }

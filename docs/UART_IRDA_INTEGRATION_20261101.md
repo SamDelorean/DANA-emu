@@ -21,8 +21,8 @@ optical/electrical accuracy or manufacturer factory-test qualification.
   `792013e870ceeba0de25c1476b0132286befcca35da05478b2acfcb4dfd8e6b8`.
 - Original Palm emitted 112 XID frames with valid FCS in the bounded
   single-response run. All **44 returned wire bytes** were read exactly by
-  its UART2 driver, with **zero character errors**. Its UI did not accept a
-  receiving handheld; no file transfer is claimed.
+  its UART2 driver, with **zero character errors**. Application acceptance
+  is not established by that transport test; no file transfer is claimed.
 - Installed executable SHA-256:
   `f1002968c67dd2f6ebaf9ae107f6f120321986b94fb495eb4b9826414d36cdcc`.
 - Driver SHA-256:
@@ -189,8 +189,8 @@ The authentic AlphaWord workflow names a document and selects **Beam Doc**
 using the physical ST keyboard and pen. Outgoing IrLAP XID frames traverse
 UART2 and the SIR peer with valid FCS. An independent discovery-only peer
 returns an XID response, and the original firmware reads the returned
-bytes from URX2. The screen ultimately reports that no receiving handheld
-was found. **Peer discovery acceptance, IrLAP session establishment and
+bytes from URX2. An exploratory run reported no receiving handheld;
+the release transport test does not establish application acceptance. **Peer discovery acceptance, IrLAP session establishment and
 OBEX document delivery are not PASS.** The test peer intentionally does
 not implement a complete receiving Palm/OBEX stack; no successful result
 is inserted into the guest. The JSON distinguishes transport evidence
