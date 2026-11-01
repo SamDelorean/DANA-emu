@@ -38,6 +38,41 @@
         {
           "path": "src/mame/palm/palm.cpp",
           "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/mame/palm/palm.cpp"
+        },
+        {
+          "path": "src/emu/diserial.h",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/emu/diserial.h",
+          "blob_sha": "21b9afeb8d02b22e97de0ef28b835ccb375d299b",
+          "license": "BSD-3-Clause",
+          "uart_role": "Reused MAME framing/transport; null_modem examined as reference only."
+        },
+        {
+          "path": "src/emu/diserial.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/emu/diserial.cpp",
+          "blob_sha": "97794b0f993a75c77c859df10958fc9572b9d5dd",
+          "license": "BSD-3-Clause",
+          "uart_role": "Reused MAME framing/transport; null_modem examined as reference only."
+        },
+        {
+          "path": "src/devices/imagedev/bitbngr.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/imagedev/bitbngr.cpp",
+          "blob_sha": "ae207c814986d0dd3f18160478690edfdbab1b30",
+          "license": "BSD-3-Clause",
+          "uart_role": "Reused MAME framing/transport; null_modem examined as reference only."
+        },
+        {
+          "path": "src/devices/imagedev/bitbngr.h",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/imagedev/bitbngr.h",
+          "blob_sha": "9c7a00dd4160cabb7c3e738224e0ead09399038c",
+          "license": "BSD-3-Clause",
+          "uart_role": "Reused MAME framing/transport; null_modem examined as reference only."
+        },
+        {
+          "path": "src/devices/bus/rs232/null_modem.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/bus/rs232/null_modem.cpp",
+          "blob_sha": "1dc2927a393640fa53f1b626de91e35dbaabaca9",
+          "license": "BSD-3-Clause",
+          "uart_role": "Reused MAME framing/transport; null_modem examined as reference only."
         }
       ]
     },
@@ -387,6 +422,11 @@
       "name": "Dana US/UK 1.2/1.5 Flash updater",
       "url": "https://drive.google.com/file/d/1LY_Ykm3RysWe4vutxWeFRnwSTCxlIcFg/view",
       "scope": "proprietary stock firmware, separate from the emulator and NOT versioned"
+    },
+    {
+      "name": "Motorola MC68VZ328UM Addendum Rev.7 October 2001",
+      "url": "https://www.nxp.com/docs/en/user-guide/MC68VZ328UMAD.pdf",
+      "scope": "UART reset, status mutability, RTS2TRIG and divide-by-one corrections, section 1.8; manufacturer specification, not copied implementation."
     }
   ],
   "primary_source_for_dana_board": "retro68_pose_dana",

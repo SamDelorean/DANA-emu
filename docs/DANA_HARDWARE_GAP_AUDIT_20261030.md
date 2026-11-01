@@ -1,5 +1,7 @@
 # DANA-emu — auditoría de cobertura de hardware
 
+> **UART/IrDA execution update — 2026-11-01.** The existing VZ model now has real UART1/UART2 TX/RX, FIFOs, IRQs, flow control and an independent MAME byte-stream/SIR peer. UART2 routes IPR bit 12 through ILCR[10:8]. The 24-case 68000 qualification passed. Original UK1.5 uses UART2 for IR and sends valid XID frames; returned bytes reach its driver. Palm Beam file transfer remains **not accredited** (receiving-handheld discovery did not complete with the discovery-only test peer). See [implementation, boundaries and reproduction](UART_IRDA_INTEGRATION_20261101.md) and [native release record](UART_IRDA_NATIVE_20261101.json). This integral user-authorized serial delivery supersedes earlier serial-stub descriptions; other peripheral queues and the open USB Computer/HotSync contract are unchanged.
+
 ## Current USB execution status — 2026-10-30
 
 The single canonical Dana emulator now has explicit downstream USB printers and a packet-level upstream link, retaining the existing Philips PTD/SRAM implementation. Original UK1.5 AlphaWord printing produced a complete 10409-byte PostScript job containing the test document. Diagnostic 68000 HC/DC endpoint, FIFO, IRQ, DMA and robustness tests passed. The original-Palm USB Computer/HotSync path has not enabled SoftConnect in the tested Cable workflow; original enumeration and end-to-end synchronization remain pending. **The full ISP1161 contract is OPEN, not CLOSED/PASS integral.**

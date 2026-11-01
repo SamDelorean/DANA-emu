@@ -2,6 +2,7 @@
 // copyright-holders:DANA-emu contributors
 
 #include "emu.h"
+#include "dana_vz_uart.h"
 #include "isp1161_ptd.h"
 #include "isp1161_usb.h"
 #include "isp1161_link.h"
@@ -42,6 +43,9 @@ DEFINE_DEVICE_TYPE(DANA_VZ_CPU, dana_vz_cpu_device, "dana_vz_cpu", "Dana VZ 32-b
 
 DEFINE_DEVICE_TYPE(DANA_USB_LINK, dana_usb_link_device, "dana_usblink", "Dana explicit USB computer packet link")
 
+DEFINE_DEVICE_TYPE(DANA_VZ_UART,dana_vz_uart_device,"dana_vz_uart","MC68VZ328 UART")
+DEFINE_DEVICE_TYPE(DANA_SERIAL_PEER,dana_serial_peer_device,"dana_serial_peer","Dana independent serial/optical peer")
+
 namespace {
 
 class alphasdana_state : public driver_device
@@ -49,6 +53,8 @@ class alphasdana_state : public driver_device
 public:
     alphasdana_state(const machine_config &mconfig, device_type type, const char *tag)
         : driver_device(mconfig, type, tag)
+        , m_uart(*this,"uart%u",0U)
+        , m_serial_peer(*this,"serial%u",0U)
         , m_maincpu(*this, "maincpu")
         , m_guest(*this, "guest")
         , m_guest_ready(*this, "dana_guest_loaded")
@@ -71,10 +77,12 @@ public:
         , m_pd7_pin(*this, "PDPIN7")
         , m_sdram_profile(*this, "PHYSRAM")
         , m_emubrk_pin(*this, "EMUBRK")
+        , m_uclk(*this,"UCLK")
     {
     }
 
     void alphasdana(machine_config &config);
+    DECLARE_INPUT_CHANGED_MEMBER(uclk_changed);
     DECLARE_INPUT_CHANGED_MEMBER(sd_irq_changed);
     DECLARE_INPUT_CHANGED_MEMBER(pd7_pin_changed);
     DECLARE_INPUT_CHANGED_MEMBER(pen_changed);
@@ -253,49 +261,25 @@ private:
     u16 timer1_tcn_r();
     u16 timer1_tstat_r();
     void timer1_tstat_w(offs_t, u16 data, u16 mem_mask);
-    u16 uart1_ustcnt_r() { return m_ustcnt1; }
-    void uart1_ustcnt_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_ustcnt1); }
-    u16 uart1_ubaud_r() { return m_ubaud1; }
-    void uart1_ubaud_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_ubaud1); }
-    u16 uart1_urx_r() { return m_urx1; }
-    u16 uart1_utx_r() { return (m_utx1 & 0x1fff) | 0xe000; }
-    void uart1_utx_w(offs_t, u16 data, u16 mem_mask);
-    u16 uart1_umisc_r() { return m_umisc1; }
-    void uart1_umisc_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_umisc1); }
-    // VZ UART2 register bank (0xfffff910–0xfffff91d).  A register-level
-    // implementation only; external UART2 TX/RX and FIFO are not yet qualified.
-    u16 uart2_r(offs_t offset) {
-        return m_uart2_regs[offset];
-    }
-    void uart2_w(offs_t offset, u16 data, u16 mem_mask)
+    void serial_irq(unsigned n,int state)
     {
-        if (offset==2) // URX2 is read-only on the VZ.
-        { physical_block("UART2_RX_REGISTER_READONLY",0xfffff914,data); return; }
-        if (offset==3)
-        {
-            // VZ UTX2 bits 11/12/8 are writable control/status: NOCTS,
-            // SEND_BREAK, CTS_DELTA. Data bits are a separate TX FIFO path.
-            // A word write 0800 by UK1.5 only sets NOCTS (bit 11), it
-            // is not a request to send character 0x00 with UART disabled.
-            if ((m_uart2_regs[0] & 0xa000)==0xa000 && (mem_mask & 0x00ff))
-            { physical_block("UART2_TX_FIFO_UNIMPLEMENTED",0xfffff916,data); return; }
-            if ((data & mem_mask & 0x1000) && (m_uart2_regs[0] & 0x8000))
-            { physical_block("UART2_SEND_BREAK_UNIMPLEMENTED",0xfffff916,data); return; }
-            // bit8 CTS_DELTA: writable, but no actual cable CTS events yet.
-            u16 const mask=mem_mask & 0x1900;
-            m_uart2_regs[3]=(m_uart2_regs[3] & ~mask)|(data & mask);
-            logerror("DANA_UART2_UTX_CONTROL value=%04x mask=%04x\n",
-                m_uart2_regs[3],mem_mask);
-            return;
-        }
-        u16 const value=(m_uart2_regs[offset] & ~mem_mask) | (data & mem_mask);
-        // UMISC2 bit8 RTS2TRIG confirmed by VZ addendum; 9,1,0 reserved.
-        if (offset==4 && (value & 0x0203))
-        { physical_block("UART2_UMISC_RESERVED_BITS",0xfffff918,value); return; }
-        m_uart2_regs[offset]=value;
+        u32 const bit=n ? 0x1000 : 4;
+        m_pending=(m_pending & ~bit) | (state ? bit : 0); update_irq_lines();
     }
-    u16 uart1_prescaler_r() { return m_uart_prescaler1; }
-    void uart1_prescaler_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_uart_prescaler1); }
+    void serial_tx(unsigned n,int state);
+    void serial_rts(unsigned n,int state);
+    void serial_rx(unsigned n,int state);
+    void serial_cts(unsigned n,int state);
+    void serial_pins();
+    void serial_clock();
+    u8 serial_gpio(unsigned n,offs_t reg);
+    u8 pcr_r() {return m_pcr;}
+    void pcr_w(u8 data)
+    {
+        // PCR's PWM/timer signal combinations remain outside this UART change.
+        if(data&0x0f) {physical_block("PCR_PWM_TIMER_COMBINATION_UNIMPLEMENTED",0xfffff003,data);return;}
+        m_pcr=data&0x10; serial_clock();
+    }
     // VZ UM 5.2.4: pad drive strength only (0=2 mA, 1=4 mA).
     // Stored configuration has no effect on logical GPIO, bus or clocks.
     u16 iodcr_r() { return m_iodcr & 0x1fff; }
@@ -415,7 +399,8 @@ private:
     // Port B and K observe the ST controller reset/ready handshake.
     u8 pb_r(offs_t reg) { return m_gpio[reg]; }
     void pb_w(offs_t reg, u8 value);
-    DANA_GPIO_PORT(pe, 2)
+    u8 pe_r(offs_t reg);
+    void pe_w(offs_t reg,u8 value) { m_gpio[8+reg]=value; serial_pins(); }
     // PF1 is the active-low pen IRQ input. Only override its DATA bit while
     // configured as GPIO input; software-driven PF1 retains its own latch.
     u8 pf_r(offs_t reg)
@@ -448,8 +433,8 @@ private:
             m_pen_sample=0;
         }
     }
-    u8 pj_r(offs_t reg) { return m_gpio[5*4+reg]; }
-    void pj_w(offs_t reg,u8 value) { m_gpio[5*4+reg]=value; sd_lines(); }
+    u8 pj_r(offs_t reg);
+    void pj_w(offs_t reg,u8 value) { m_gpio[5*4+reg]=value; sd_lines(); serial_pins(); }
     u8 pk_r(offs_t reg);
     void pk_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pm, 7)
@@ -515,6 +500,8 @@ private:
     void lcd_bootstrap_reset();
 
     DECLARE_QUICKLOAD_LOAD_MEMBER(guest_load);
+    required_device_array<dana_vz_uart_device,2> m_uart;
+    required_device_array<dana_serial_peer_device,2> m_serial_peer;
     required_device<dana_vz_cpu_device> m_maincpu;
     required_device<quickload_image_device> m_guest;
     output_finder<> m_guest_ready;
@@ -537,6 +524,8 @@ private:
     required_ioport m_pd7_pin;
     required_ioport m_sdram_profile;
     required_ioport m_emubrk_pin;
+    required_ioport m_uclk;
+    u8 m_pcr=0;
     dana_sd::controller m_spi1;
     emu_timer *m_spi1_timer=nullptr;
     u16 m_spi1_word=0,m_spi1_control=0,m_spi1_received=0,m_ilcr=0x6533;
@@ -683,9 +672,7 @@ private:
     u32 m_timer2_compares=0;
     u16 m_tcr1=0, m_tcn1=0, m_tstat1=0, m_tstat_clear1=0;
     u32 m_timer1_compares=0, m_timer1_iacks=0;
-    u16 m_ustcnt1=0, m_ubaud1=0x0002, m_urx1=0, m_utx1=0, m_umisc1=0;
-    u16 m_uart2_regs[7]={0,0x0002,0,0,0,0,0x0102};
-    u16 m_uart_prescaler1=0;
+    int m_serial_rx[2]={1,1},m_serial_cts[2]={1,1};
     u16 m_iodcr=0x1fff;
     u16 m_icemcr=0, m_icemsr=0;
     u16 m_pllcr = 0x24b3;
@@ -756,6 +743,7 @@ void alphasdana_state::machine_start()
     m_timer2_timer=timer_alloc(FUNC(alphasdana_state::timer2_compare),this);
     m_pwm1_timer = timer_alloc(FUNC(alphasdana_state::pwm1_tick), this);
     m_pwm1_fall_timer = timer_alloc(FUNC(alphasdana_state::pwm1_fall), this);
+    save_item(NAME(m_pcr));
     save_item(NAME(m_iodcr));
     save_item(NAME(m_icemcr)); save_item(NAME(m_icemsr));
     save_item(NAME(m_pllcr));
@@ -784,10 +772,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_tstat_clear1));
     save_item(NAME(m_timer1_compares));
     save_item(NAME(m_timer1_iacks));
-    save_item(NAME(m_ustcnt1)); save_item(NAME(m_ubaud1));
-    save_item(NAME(m_urx1)); save_item(NAME(m_utx1));
-    save_item(NAME(m_umisc1)); save_item(NAME(m_uart_prescaler1));
-    save_item(NAME(m_uart2_regs));
+    save_item(NAME(m_serial_rx)); save_item(NAME(m_serial_cts));
     save_item(NAME(m_pcdir));
     save_item(NAME(m_pcdata));
     save_item(NAME(m_pcpden));
@@ -947,6 +932,7 @@ void alphasdana_state::machine_reset()
     m_iodcr=0x1fff;
     m_icemcr=0; m_icemsr=0;
     m_pllcr = 0x24b3;
+    m_pcr=0;
     m_pllfsr = 0x0347;
     m_pll_wake_pending=false;
     m_pll_wake_timer->adjust(attotime::never);
@@ -979,10 +965,6 @@ void alphasdana_state::machine_reset()
     m_tprer2=m_tcr2=m_tcn2=m_tstat2=m_tstat_clear2=0;m_tcmp2=0xffff;m_timer2_compares=0;
     m_timer2_timer->adjust(attotime::never);
     m_timer1_timer->adjust(attotime::never);
-    m_ustcnt1=0; m_ubaud1=0x0002; m_urx1=0;
-    m_utx1=0; m_umisc1=0; m_uart_prescaler1=0;
-    std::fill(std::begin(m_uart2_regs),std::end(m_uart2_regs),0);
-    m_uart2_regs[1]=0x0002; m_uart2_regs[6]=0x0102;
     update_irq_lines();
     // dbztool@d327023 danainit.sh configures PCPDEN=PCSEL=0 before RAM
     // entry. This machine implements that synthetic post-bootstrap profile.
@@ -990,6 +972,7 @@ void alphasdana_state::machine_reset()
     portc_reset();
     pfsel_reset();
     gpio_bootstrap_reset();
+    serial_clock(); serial_pins();
     st_input_reset();
     m_st_power_pressed=false; m_pd7_edge_pending=false;
     m_pd7_last_high=bool(pd7_line() & 0x80);
@@ -1130,6 +1113,7 @@ void alphasdana_state::boot_postload()
         st_queue_snapshot();
     }
     else st_irq_update(false);
+    serial_clock(); serial_pins();
     m_isp_usb_vbus=false; // external socket sessions cannot be rewound
     isp1161_irq_update(false);
 }
@@ -2754,6 +2738,7 @@ void alphasdana_state::pllcr_w(offs_t, u16 data, u16 mem_mask)
         m_tcn1=timer1_tcn_r(); // Snapshot before changing virtual SYSCLK.
     if (m_physical_boot && (changed & 0x07a0) && (m_tctl2 & 1))m_tcn2=timer2_tcn_r();
     m_pllcr=next;
+    serial_clock();
     if (m_physical_boot && (changed & 0x07a0))
     {
         m_maincpu->set_unscaled_clock(physical_system_clock_hz());
@@ -2780,6 +2765,7 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::pll_wake_complete)
     m_pllcr&=~u16(0x0008);
     logerror("DANA_PLL_WAKE_COMPLETE pllcr=%04x pending=%08x imr=%08x\n",
         m_pllcr,m_pending,m_imr);
+    serial_clock();
     update_irq_lines(); // IRQ is the actual source, never invented.
 }
 
@@ -2805,6 +2791,7 @@ void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
         m_maincpu->set_unscaled_clock(m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
     if (m_tctl1 & 1)
         timer1_schedule();
+    serial_clock();
 }
 
 u8 alphasdana_state::ivr_r()
@@ -2901,19 +2888,20 @@ void alphasdana_state::update_irq_lines()
         m_pctlr &= ~u8(0x80);
         logerror("DANA_PCM_WAKE pcen=0 pctlr=%02x irq=%08x\n",m_pctlr,active);
     }
+    unsigned const uart2_level=(m_ilcr>>8)&7;
     unsigned const spi_level=(m_ilcr>>12)&7;
     unsigned const timer2_level=m_ilcr&7;
     for (unsigned level=1;level<=6;++level)
     {
-        bool const spi=((spi_level==level) && (active & 0x00200000))||((timer2_level==level)&&(active&0x20));
+        bool const spi=((uart2_level==level) && (active&0x1000)) || ((spi_level==level) && (active & 0x00200000))||((timer2_level==level)&&(active&0x20));
         bool const external1=(level==1) && (active & 0x00010000);
         bool const usb=((level==2)&&(active&0x00020000))||((level==3)&&(active&0x00040000));
         bool const external5=(level==5) && (active & 0x00100000);
         if (level!=4 && level!=6)
             m_maincpu->set_input_line(level,(spi || external1 || external5 || usb) ? ASSERT_LINE : CLEAR_LINE);
     }
-    m_maincpu->set_input_line(6,((active & 0x00080082) || ((spi_level==6 && (active & 0x00200000))||(timer2_level==6&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
-    m_maincpu->set_input_line(4,((active & 0x00000c14) || ((spi_level==4 && (active & 0x00200000))||(timer2_level==4&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(6,((active & 0x00080082) || (uart2_level==6 && (active&0x1000)) || ((spi_level==6 && (active & 0x00200000))||(timer2_level==6&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(4,((active & 0x00000c14) || (uart2_level==4 && (active&0x1000)) || ((spi_level==4 && (active & 0x00200000))||(timer2_level==4&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 u8 alphasdana_state::irq_vector_r(offs_t offset)
@@ -3124,16 +3112,70 @@ void alphasdana_state::timer2_tstat_w(offs_t, u16, u16 mem_mask)
     if (!(m_tstat2 & 1)) m_pending &= ~u32(0x00000020);
     update_irq_lines();
 }
-void alphasdana_state::uart1_utx_w(offs_t, u16 data, u16 mem_mask)
+void alphasdana_state::serial_clock()
 {
-    // Source-backed ready/empty UART transmitter. No unsolicited RX IRQ.
-    m_utx1=(m_utx1 & ~mem_mask) | (data & mem_mask & 0x1fff);
-    if (mem_mask & 0x00ff)
-        logerror("DANA_VZ_UART1_TX data=%02x char=%c\n",
-            unsigned(data & 0xff),
-            (data & 0xff)>=32 && (data & 0xff)<=126
-                ? char(data & 0xff) : '.');
+    u32 const hz=(m_physical_boot && (m_pllcr&8)) ? 0 : (m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
+    for(auto &uart:m_uart) uart->sysclk(hz);
+    unsigned const selected=(m_pcr>>4)&1;
+    u32 const pin_clock=(m_gpio[11]&8) ? 0 : (m_uart[selected]->uclk_output() ? m_uart[selected]->uclk_hz() : m_uclk->read());
+    for(auto &uart:m_uart) uart->external_clock(pin_clock);
 }
+void alphasdana_state::serial_tx(unsigned n,int state)
+{
+    unsigned const base=n?20:8;
+    if(m_gpio[base+3]&0x20) state=(m_gpio[base]&0x20) ? bool(m_gpio[base+1]&0x20) : 1;
+    // Optical transceiver: TX active high -> peer RX active low. This
+    // connector setting is independent of the guest's IRDAEN setting.
+    m_serial_peer[n]->pin_w(state ^ m_serial_peer[n]->optical_mode());
+}
+void alphasdana_state::serial_rts(unsigned n,int state)
+{
+    unsigned const base=n?20:8;
+    if(m_gpio[base+3]&0x40) state=(m_gpio[base]&0x40) ? bool(m_gpio[base+1]&0x40) : 1;
+    m_serial_peer[n]->rts_w(state);
+}
+void alphasdana_state::serial_rx(unsigned n,int state)
+{
+    m_serial_rx[n]=state ^ m_serial_peer[n]->optical_mode();
+    unsigned const base=n?20:8;
+    m_uart[n]->rxpin_w((m_gpio[base+3]&0x10) ? 1 : m_serial_rx[n]);
+}
+void alphasdana_state::serial_cts(unsigned n,int state)
+{
+    m_serial_cts[n]=state;
+    unsigned const base=n?20:8;
+    m_uart[n]->cts_w((m_gpio[base+3]&0x80) ? 1 : state);
+}
+void alphasdana_state::serial_pins()
+{
+    serial_clock();
+    for(unsigned n=0;n<2;++n)
+    {
+        serial_tx(n,m_uart[n]->tx_r()); serial_rts(n,m_uart[n]->rts_r());
+        serial_cts(n,m_serial_cts[n]);
+        unsigned const base=n?20:8;
+        m_uart[n]->rxpin_w((m_gpio[base+3]&0x10) ? 1 : m_serial_rx[n]);
+    }
+}
+u8 alphasdana_state::serial_gpio(unsigned n,offs_t reg)
+{
+    unsigned const base=n?20:8; u8 value=m_gpio[base+reg];
+    if(reg!=1) return value;
+    u8 const inputs=~m_gpio[base] | ~m_gpio[base+3];
+    value=(value & ~u8(0x90 & inputs)) | ((m_serial_rx[n]?0x10:0)&inputs) | ((m_serial_cts[n]?0x80:0)&inputs);
+    if(!(m_gpio[base+3]&0x20)) value=(value&~0x20) | (m_uart[n]->tx_r()?0x20:0);
+    if(!(m_gpio[base+3]&0x40)) value=(value&~0x40) | (m_uart[n]->rts_r()?0x40:0);
+    if(!n && !(m_gpio[11]&8))
+    {
+        unsigned const selected=(m_pcr>>4)&1;
+        u32 const rate=m_uart[selected]->uclk_output()?m_uart[selected]->uclk_hz():m_uclk->read();
+        bool const high=rate && (machine().time().as_ticks(u64(rate)*2)&1);
+        value=(value&~8) | (high?8:0);
+    }
+    return value;
+}
+u8 alphasdana_state::pe_r(offs_t reg) {return serial_gpio(0,reg);}
+u8 alphasdana_state::pj_r(offs_t reg) {return serial_gpio(1,reg);}
 
 QUICKLOAD_LOAD_MEMBER(alphasdana_state::guest_load)
 {
@@ -3355,6 +3397,7 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff302, 0xfffff303).rw(FUNC(alphasdana_state::icr_r), FUNC(alphasdana_state::icr_w));
     map(0xfffff304, 0xfffff307).rw(FUNC(alphasdana_state::imr_r), FUNC(alphasdana_state::imr_w));
     map(0xfffff30c, 0xfffff30f).rw(FUNC(alphasdana_state::isr_r), FUNC(alphasdana_state::isr_w));
+    map(0xfffff003,0xfffff003).rw(FUNC(alphasdana_state::pcr_r),FUNC(alphasdana_state::pcr_w)).umask16(0x00ff);
     map(0xfffff310, 0xfffff313).r(FUNC(alphasdana_state::ipr_r));
     map(0xfffff314,0xfffff315).rw(FUNC(alphasdana_state::ilcr_r),FUNC(alphasdana_state::ilcr_w));
     // Timer1 / UART1 complete register groups (individual, true VZ lanes).
@@ -3364,15 +3407,8 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffff606,0xfffff607).r(FUNC(alphasdana_state::timer1_tcr_r));
     map(0xfffff608,0xfffff609).r(FUNC(alphasdana_state::timer1_tcn_r));
     map(0xfffff60a,0xfffff60b).rw(FUNC(alphasdana_state::timer1_tstat_r),FUNC(alphasdana_state::timer1_tstat_w));
-    map(0xfffff900,0xfffff901).rw(FUNC(alphasdana_state::uart1_ustcnt_r),FUNC(alphasdana_state::uart1_ustcnt_w));
-    map(0xfffff902,0xfffff903).rw(FUNC(alphasdana_state::uart1_ubaud_r),FUNC(alphasdana_state::uart1_ubaud_w));
-    map(0xfffff904,0xfffff905).r(FUNC(alphasdana_state::uart1_urx_r));
-    map(0xfffff906,0xfffff907).rw(FUNC(alphasdana_state::uart1_utx_r),FUNC(alphasdana_state::uart1_utx_w));
-    map(0xfffff908,0xfffff909).rw(FUNC(alphasdana_state::uart1_umisc_r),FUNC(alphasdana_state::uart1_umisc_w));
-    map(0xfffff90a,0xfffff90b).rw(FUNC(alphasdana_state::uart1_prescaler_r),FUNC(alphasdana_state::uart1_prescaler_w));
-    // Full 7-word UART2 register address decode: USTCNT2, UBAUD2,
-    // URX2, UTX2, UMISC2, NIPR2 and HMARK2.  No fictitious serial I/O.
-    map(0xfffff910,0xfffff91d).rw(FUNC(alphasdana_state::uart2_r),FUNC(alphasdana_state::uart2_w));
+    map(0xfffff900,0xfffff90b).rw(m_uart[0],FUNC(dana_vz_uart_device::read),FUNC(dana_vz_uart_device::write));
+    map(0xfffff910,0xfffff91d).rw(m_uart[1],FUNC(dana_vz_uart_device::read),FUNC(dana_vz_uart_device::write));
 
     // VZ Port C: eight pulldown enables and eight GPIO/function selects.
     // Native u8 handlers preserve the M68000 high/even and low/odd lanes,
@@ -3428,6 +3464,17 @@ void alphasdana_state::program_map(address_map &map)
 
 void alphasdana_state::alphasdana(machine_config &config)
 {
+    for(unsigned n=0;n<2;++n)
+    {
+        DANA_VZ_UART(config,m_uart[n]); m_uart[n]->channel(n+1);
+        DANA_SERIAL_PEER(config,m_serial_peer[n]); m_serial_peer[n]->optical(n==1);
+        m_uart[n]->clock_changed().set([this](int state){serial_clock();});
+        m_uart[n]->irq().set([this,n](int state){serial_irq(n,state);});
+        m_uart[n]->output().set([this,n](int state){serial_tx(n,state);});
+        m_uart[n]->rts().set([this,n](int state){serial_rts(n,state);});
+        m_serial_peer[n]->output().set([this,n](int state){serial_rx(n,state);});
+        m_serial_peer[n]->cts().set([this,n](int state){serial_cts(n,state);});
+    }
     PRINTER(config,m_usb_printer[0]);
     PRINTER(config,m_usb_printer[1]);
     DANA_USB_LINK(config,m_usb_link);
@@ -3451,7 +3498,12 @@ void alphasdana_state::alphasdana(machine_config &config)
     SPEAKER_SOUND(config, m_pwm1_speaker).add_route(ALL_OUTPUTS, "mono", 0.30);
 }
 
+INPUT_CHANGED_MEMBER(alphasdana_state::uclk_changed) {serial_clock();}
+
 static INPUT_PORTS_START(alphasdana)
+    PORT_START("UCLK")
+    PORT_CONFNAME(0x03ffffff,0,"External UCLK input (PE3 peripheral mode)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::uclk_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(1843200,"1.8432 MHz") PORT_CONFSETTING(33161216,"33.161216 MHz")
     PORT_START("USBTEST")
     PORT_CONFNAME(0x01,0x00,"USB downstream 1 diagnostic loopback")
     PORT_CONFSETTING(0x00,"Disconnected unless printer image mounted")
