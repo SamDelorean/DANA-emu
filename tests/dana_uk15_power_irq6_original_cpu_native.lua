@@ -13,6 +13,7 @@ local virgin=assert(m.ioport.ports[":NOR_FACTORY"])
 local f=assert(io.open(assert(os.getenv("DANA_TRACE_FILE")),"w"))
 local frames=0
 local saw_stop=false
+local saw_doze=false
 local saw_post_stop_execution=false
 local checkpoints={ [240]=true,[300]=true,[900]=true,[1380]=true,[1400]=true,
  [1590]=true,[1601]=true,[1625]=true,[1800]=true,[2400]=true,[3500]=true }
@@ -25,7 +26,8 @@ emu.register_frame_done(function()
  if frames==1600 then key:set_value(1);f:write("ORIGINAL_GUEST_POWER_PRESS frame=1600\n") end
  if frames==1624 then key:set_value(0);key:clear_value();f:write("ORIGINAL_GUEST_POWER_RELEASE frame=1624\n") end
  if frames>=1290 and frames<=1590 and cpu.state["CURPC"].value==0x10079776 then saw_stop=true end
- if frames>=1601 and frames<=1800 and cpu.state["CURPC"].value~=0x10079776 then saw_post_stop_execution=true end
+ if frames>=1290 and frames<=1590 and cpu.state["CURPC"].value==0x1007976c and mem:read_u8(0xfffff207)==0x80 then saw_doze=true end
+ if frames>=1601 and frames<=1800 and cpu.state["CURPC"].value~=0x10079776 and cpu.state["CURPC"].value~=0x1007976c and (mem:read_u8(0xfffff207)&0x80)==0 then saw_post_stop_execution=true end
  if checkpoints[frames] then
   local pc=cpu.state["CURPC"].value
   local lssa=(mem:read_u16(0xfffffa00)<<16)|mem:read_u16(0xfffffa02)
@@ -39,9 +41,10 @@ emu.register_frame_done(function()
  end
  if frames>=3500 then
   key:clear_value()
-  assert(saw_stop,"Original UK1.5 never entered first STOP")
+  assert(saw_stop or saw_doze,"Original UK1.5 never entered STOP or native PCTLR doze")
   assert(saw_post_stop_execution,"Original UK1.5 did not execute after the physical power press")
-  f:write("ORIGINAL_CPU_STOP_TO_WAKE_IRQ6_PASS; PALM_DESKTOP_NOT_ATTESTED\n")
+  if saw_stop then f:write("ORIGINAL_CPU_STOP_TO_WAKE_IRQ6_PASS; PALM_DESKTOP_NOT_ATTESTED\n")
+  else f:write("ORIGINAL_CPU_PCTLR_DOZE_TO_WAKE_IRQ6_PASS; PALM_DESKTOP_NOT_ATTESTED\n")end
   f:write("END_FRAMES=3500\n")
   f:close();m:exit()
  end

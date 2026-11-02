@@ -78,10 +78,17 @@ public:
         , m_sdram_profile(*this, "PHYSRAM")
         , m_emubrk_pin(*this, "EMUBRK")
         , m_uclk(*this,"UCLK")
+        , m_xtal(*this,"XTAL")
+        , m_gpio_drive(*this,"GPIO%uDRIVE",0U)
+        , m_gpio_value(*this,"GPIO%uVALUE",0U)
+        , m_pc_drive(*this,"PCDRIVE")
+        , m_pc_value(*this,"PCVALUE")
     {
     }
 
     void alphasdana(machine_config &config);
+    DECLARE_INPUT_CHANGED_MEMBER(h2_gpio_changed);
+    DECLARE_INPUT_CHANGED_MEMBER(h2_xtal_changed);
     DECLARE_INPUT_CHANGED_MEMBER(uclk_changed);
     DECLARE_INPUT_CHANGED_MEMBER(sd_irq_changed);
     DECLARE_INPUT_CHANGED_MEMBER(pd7_pin_changed);
@@ -102,7 +109,7 @@ private:
     void spi1_schedule();
     TIMER_CALLBACK_MEMBER(spi1_complete);
     void sd_lines();
-    void sd_gpio_irq();
+    void sd_gpio_irq(bool transition=false);
     // Original UK1.5 tests PD7/IRQ6 in its power/standby path. The
     // AlphaSmart physical On/off key pulls this dedicated pin low while
     // still reporting the original ST scan event to the keyboard bus.
@@ -368,15 +375,7 @@ private:
     void pcdir_w(u8 data) { m_pcdir = data; }
     // VZ UM 10.4.3.2: writes always update the GPIO latch, even for input
     // or LCD-selected pins. A read reports actual pin levels, not the latch.
-    u8 pcdata_r()
-    {
-        if ((m_pcsel & m_pcdir) != 0xff)
-        {
-            physical_block("PCDATA_PIN_LEVEL_UNQUALIFIED",0xfffff411);
-            return 0xff;
-        }
-        return m_pcdata;
-    }
+    u8 pcdata_r();
     void pcdata_w(u8 data) { m_pcdata = data; }
     u8 pcpden_r() { return m_pcpden; }
     void pcpden_w(u8 data) { m_pcpden = data; }
@@ -394,10 +393,10 @@ private:
     // Port order B, D, E, F, G, J, K, M; DIR/DATA/PUEN/SEL columns.
     void gpio_bootstrap_reset();
 #define DANA_GPIO_PORT(NAME, INDEX) \
-    u8 NAME##_r(offs_t reg) { return m_gpio[(INDEX)*4 + reg]; } \
+    u8 NAME##_r(offs_t reg) { return h2_gpio_r(INDEX,reg); } \
     void NAME##_w(offs_t reg, u8 value) { m_gpio[(INDEX)*4 + reg] = value; }
     // Port B and K observe the ST controller reset/ready handshake.
-    u8 pb_r(offs_t reg) { return m_gpio[reg]; }
+    u8 pb_r(offs_t reg) { return h2_gpio_r(0,reg); }
     void pb_w(offs_t reg, u8 value);
     u8 pe_r(offs_t reg);
     void pe_w(offs_t reg,u8 value) { m_gpio[8+reg]=value; serial_pins(); }
@@ -405,7 +404,7 @@ private:
     // configured as GPIO input; software-driven PF1 retains its own latch.
     u8 pf_r(offs_t reg)
     {
-        u8 value=m_gpio[3*4+reg];
+        u8 value=h2_gpio_r(3,reg);
         if (reg==1 && !(m_gpio[3*4] & 0x02) && !(m_pfsel & 0x02))
             value=(value & ~u8(0x02)) | ((m_pen_contact->read() & 1) ? 0 : 0x02);
         return value;
@@ -414,7 +413,7 @@ private:
     // PG2 selects the external pen ADC, distinct from PE3 selecting the ST.
     u8 pg_r(offs_t reg)
     {
-        u8 value=m_gpio[4*4+reg];
+        u8 value=h2_gpio_r(4,reg);
         // UK1.5 Palm ROM 0x1007B5F8..0x1007B628 (Ghidra): release PG1
         // as an input, then sample P G DATA bit 1 for physical stylus.
         // Reflect the external pin only as an input; never drive an output
@@ -525,6 +524,33 @@ private:
     required_ioport m_sdram_profile;
     required_ioport m_emubrk_pin;
     required_ioport m_uclk;
+    required_ioport m_xtal;
+    required_ioport_array<8> m_gpio_drive,m_gpio_value;
+    required_ioport m_pc_drive,m_pc_value;
+    u8 m_gpio_sample[8]={},m_pc_sample=0;
+    u32 h2_pll_hz() const;
+    u32 h2_dma_hz() const;
+    u32 h2_sysclk() const;
+    u32 h2_lcd_hz() const;
+    void h2_clock_capture();
+    void h2_clock_apply(u32 old_hz);
+    void h2_retime(emu_timer *timer,u32 old_hz,u32 new_hz,double &remaining);
+    void h2_cpu_gate();
+    unsigned h2_wake_ticks() const {static constexpr unsigned ticks[4]={32,48,64,96};return ticks[m_pllcr&3];}
+    TIMER_CALLBACK_MEMBER(h2_pcm_edge);
+    TIMER_CALLBACK_MEMBER(h2_pll_off);
+    void h2_clk32_cycle();
+    u8 h2_gpio_input(unsigned n) const;
+    u8 h2_gpio_r(unsigned n,offs_t reg);
+    u8 h2_lcd_pins() const;
+    void h2_stopwatch_w(offs_t,u16 data,u16 mem_mask);
+    u16 h2_stopwatch_r(){return m_stopwatch;}
+    emu_timer *m_pcm_timer=nullptr,*m_pll_off_timer=nullptr;
+    bool m_pll_stopped=false,m_pcm_on=true,m_rtc_initialized=false,m_watchdog_reset=false;
+    u32 m_watchdog_resets=0;
+    u16 m_rtc_prescaler=0,m_rti_prescaler=0,m_stopwatch=63;
+    bool m_stopwatch_active=false;
+    double m_spi_clock_remaining=-1,m_pwm_clock_remaining=-1,m_pwm_fall_remaining=-1;
     u8 m_pcr=0;
     dana_sd::controller m_spi1;
     emu_timer *m_spi1_timer=nullptr;
@@ -652,7 +678,6 @@ private:
     emu_timer *m_clk32_timer = nullptr;
     emu_timer *m_pll_wake_timer = nullptr;
     bool m_pll_wake_pending=false;
-    emu_timer *m_rtc_timer = nullptr;
     // MAME's current_datetime is seeded from the host RTC at machine start,
     // then advances with guest time. Guest RTCTIME writes use local offset.
     u32 m_rtc_time=0, m_rtc_last_tick=0, m_rtc_alarm=0;
@@ -714,6 +739,8 @@ private:
     u16 m_lrra = 0x00ff, m_pwmr = 0;
 };
 
+#include "alphasdana_h2.h"
+
 void alphasdana_state::machine_start()
 {
     // Allocate only physical-mode upper RAM; R-direct map remains 4 MiB.
@@ -727,7 +754,12 @@ void alphasdana_state::machine_start()
     m_isp_hc_sof_timer=timer_alloc(FUNC(alphasdana_state::isp1161_hc_sof),this);
     m_isp_usb_timer=timer_alloc(FUNC(alphasdana_state::isp1161_usb_service),this);
     for(auto &timer:m_isp_irq_timer)timer=timer_alloc(FUNC(alphasdana_state::isp1161_irq_pulse_end),this);
-    m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);
+    m_pcm_timer=timer_alloc(FUNC(alphasdana_state::h2_pcm_edge),this);
+    m_pll_off_timer=timer_alloc(FUNC(alphasdana_state::h2_pll_off),this);
+    save_item(NAME(m_pll_stopped));save_item(NAME(m_pcm_on));save_item(NAME(m_rtc_initialized));
+    save_item(NAME(m_rtc_prescaler));save_item(NAME(m_rti_prescaler));save_item(NAME(m_stopwatch));save_item(NAME(m_stopwatch_active));
+    save_item(NAME(m_gpio_sample));save_item(NAME(m_pc_sample));save_item(NAME(m_watchdog_resets));
+    save_item(NAME(m_spi_clock_remaining));save_item(NAME(m_pwm_clock_remaining));save_item(NAME(m_pwm_fall_remaining));
     save_item(NAME(m_calendar_store)); save_item(NAME(m_calendar_hours));
     save_item(NAME(m_calendar_phase));
     save_item(NAME(m_rtc_time));
@@ -921,17 +953,26 @@ void alphasdana_state::machine_start()
 
 void alphasdana_state::machine_reset()
 {
-    isp1161_hc_reset();isp1161_dc_reset();
-    for(auto &timer:m_isp_irq_timer)timer->adjust(attotime::never);
+    u32 const old_hz=h2_sysclk();
+    m_physical_boot=m_firmware->exists() || !(m_emubrk_pin->read()&1);
+    if(!m_watchdog_reset)
+    {
+        isp1161_hc_reset();isp1161_dc_reset();
+        for(auto &timer:m_isp_irq_timer)timer->adjust(attotime::never);
+        m_isp_usb_timer->adjust(attotime::from_msec(1),0,attotime::from_msec(1));
+    }
     m_isp_vz_edge[0]=m_isp_vz_edge[1]=false;
-    m_isp_usb_timer->adjust(attotime::from_msec(1),0,attotime::from_msec(1));
-    m_watchdog=0x0001;
+    m_watchdog=(m_physical_boot || m_watchdog_reset)?0x0001:0;
     m_watchdog_guard->adjust(attotime::never);
     // Existing peripheral implementation is shared by both boot profiles.
     // Motorola MC68VZ328UM 4.4.2: actual VZ reset, not MAME EZ/POSE 0x0123.
     m_iodcr=0x1fff;
     m_icemcr=0; m_icemsr=0;
-    m_pllcr = 0x24b3;
+    // Synthetic R-direct bootstrap runs at the qualified 33.161216 MHz by
+    // setting PRESC2=/1, rather than lying about a /2 reset register value.
+    m_pllcr = (m_physical_boot || m_watchdog_reset)?0x24b3:0x2493;
+    m_pll_stopped=false;m_pcm_on=true;
+    m_pll_off_timer->adjust(attotime::never);m_pcm_timer->adjust(attotime::never);
     m_pcr=0;
     m_pllfsr = 0x0347;
     m_pll_wake_pending=false;
@@ -944,17 +985,19 @@ void alphasdana_state::machine_reset()
     m_pwm1_timer->adjust(attotime::never);
     m_pwm1_fall_timer->adjust(attotime::never);
     m_pwm1_speaker->level_w(0);
-    m_clk32_high = false;
+    if(!m_rtc_initialized)m_clk32_high = false;
     // VZ UM 4.3.1/4.4.2: CLK32 is a 32768 Hz square wave, and
     // PLLFSR[15] reports HIGH/LOW phase. Both clock edges count:
     // a phase change is required every half period (65536 per second).
-    m_clk32_timer->adjust(attotime::from_hz(65536), 0, attotime::from_hz(65536));
+    // A seeded RTC is independent of the oscillator timer lifetime.
+    // Retain TOD/prescalers and re-arm the crystal only when needed.
+    if(!m_clk32_timer->enabled())m_clk32_timer->adjust(attotime::from_hz(u32(m_xtal->read())*2),0,attotime::from_hz(u32(m_xtal->read())*2));
     // The host-seeded RTC persists across a soft hardware reset.
     m_rtc_control=0x0080; m_rtc_ien=0; m_rtc_isr=0; m_rtc_alarm=0;
     m_rtc_day_alarm=0;
     rtc_sync_from_host();
     m_rtc_last_tick=m_rtc_time;
-    m_rtc_timer->adjust(attotime::from_seconds(1), 0, attotime::from_seconds(1));
+    m_stopwatch=63;m_stopwatch_active=false;
     m_ivr = 0x00;
     m_icr = 0;
     m_imr = 0x00ffffff;
@@ -996,10 +1039,7 @@ void alphasdana_state::machine_reset()
             m_maincpu->suspend(SUSPEND_REASON_DISABLE,true);
             logerror("DANA_VZ_BOOTSTRAP_ENTER emubrk=0 reset=1 uart=19200-8N1 ibuff=00ffffc0\n");
         }
-        // Register-only guarded subset: stop before returning an unmodelled
-        // enabled counter after a one-second observation interval. This is a
-        // diagnostic deadline, NOT an emulated watchdog expiry or RTC phase.
-        m_watchdog_guard->adjust(attotime::from_seconds(1));
+        h2_clock_apply(old_hz);
         sd_lines();
         return; // CPU device reset fetches the firmware vectors through AS_PROGRAM.
     }
@@ -1008,6 +1048,7 @@ void alphasdana_state::machine_reset()
     // their independently qualified native reset path unchanged.
     if (m_guest->exists() && !m_guest_loaded)
         m_maincpu->suspend(SUSPEND_REASON_DISABLE, true);
+    h2_clock_apply(old_hz);
 }
 
 
@@ -1064,6 +1105,8 @@ void alphasdana_state::physical_reset()
     m_emucs=0x0060;
     m_dram[0]=0; m_dram[1]=0; m_dram[2]=0x003c; m_dram[3]=0;
     m_sdram_init_phase=0;
+    if(!m_watchdog_reset)
+    {
     isp1161_hc_reset();
     std::fill(std::begin(m_isp_hc_ram),std::end(m_isp_hc_ram),0);
     m_isp_hc_sof_timer->adjust(attotime::never);
@@ -1074,6 +1117,7 @@ void alphasdana_state::physical_reset()
     m_isp_hardware=0x0028; m_isp_control=0;
     m_isp_interrupt_status=0; m_isp_interrupt_enable=0;
     m_isp_frame_interval=0x27782edf;
+    }
     m_pcpden=0xff; m_pcsel=0xff; m_pfsel=0x87;
     // Open VZ reference pin-latch reset, not a measured Dana electrical state.
     static constexpr u8 reset_gpio[32]={
@@ -1113,7 +1157,7 @@ void alphasdana_state::boot_postload()
         st_queue_snapshot();
     }
     else st_irq_update(false);
-    serial_clock(); serial_pins();
+    serial_clock(); serial_pins();h2_cpu_gate();rtc_update_irq();
     m_isp_usb_vbus=false; // external socket sessions cannot be rewound
     isp1161_irq_update(false);
 }
@@ -1655,21 +1699,9 @@ void alphasdana_state::physical_mmio_w(offs_t offset, u16 data, u16 mem_mask)
 // VZ UM 11.2.5: any actual lane write clears CNTR[9:8]; INTF[7]
 // is W1C, ISEL[1]/EN[0] are writable and all other bits read zero.
 // Enabled counting/IRQ/reset timing is deliberately guarded, not fabricated.
-void alphasdana_state::watchdog_w(offs_t, u16 data, u16 mem_mask)
-{
-    if (!mem_mask) return;
-    u16 const controls=((m_watchdog & ~mem_mask) | (data & mem_mask)) & 0x0003;
-    m_watchdog=(m_watchdog & 0x0080 & ~(data & mem_mask)) | controls;
-    m_watchdog_guard->adjust(attotime::never);
-    if (m_watchdog & 1)
-        physical_block("WATCHDOG_ENABLED_CLOCK_UNIMPLEMENTED",0xfffffb0a,m_watchdog);
-}
 
-TIMER_CALLBACK_MEMBER(alphasdana_state::watchdog_guard)
-{
-    if (m_physical_boot && (m_watchdog & 1))
-        physical_block("WATCHDOG_ENABLED_CLOCK_UNIMPLEMENTED",0xfffffb0a,m_watchdog);
-}
+
+
 
 void alphasdana_state::scr_w(u8 data)
 {
@@ -1760,7 +1792,7 @@ void alphasdana_state::st_irq_update(bool transition)
     bool const pin=!(m_gpio[4]&0x10) && !(m_gpio[7]&0x10);
     bool const pending=pin && ((m_icr&0x0800) ? m_st_irq_edge : active);
     m_pending=(m_pending&~0x00010000U)|(pending?0x00010000U:0);
-    update_irq_lines();
+    sd_gpio_irq();
 }
 
 u8 alphasdana_state::st_version_exchange(u8 command)
@@ -1829,7 +1861,7 @@ void alphasdana_state::pb_w(offs_t reg, u8 value)
 
 u8 alphasdana_state::pk_r(offs_t reg)
 {
-    u8 result=m_gpio[6*4+reg];
+    u8 result=h2_gpio_r(6,reg);
     if (reg==1 && !(m_gpio[6*4] & 0x04))
     {
         // PK2 reads the ST ready INPUT while configured as GPIO input.
@@ -2104,7 +2136,7 @@ void alphasdana_state::spi1_schedule()
     m_spi1_word=m_spi1.pop_tx(); m_spi1_control=m_spi1.control;
     m_spi1_bits_left=m_spi1.bits(); m_spi1_received=0; m_spi1_busy=true;
     m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),
-        m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz()));
+        h2_sysclk()));
     spi1_irq();
 }
 
@@ -2130,7 +2162,7 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::spi1_complete)
     m_spi1_received=(m_spi1_received<<1)|(external_input ? (a && b) : true);
     if (--m_spi1_bits_left)
     { m_spi1_timer->adjust(attotime::from_ticks(4U<<((m_spi1_control>>13)&7),
-        m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz())); return; }
+        h2_sysclk())); return; }
     if (!m_spi1.push_rx(m_spi1_received))
     { logerror("DANA_SPI1_BLOCKED RX_FIFO_OVERFLOW\n"); m_spi1_busy=false; m_spi1_timer->adjust(attotime::never); m_maincpu->suspend(SUSPEND_REASON_DISABLE,true); return; }
     spi1_irq();
@@ -2142,7 +2174,7 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::spi1_complete)
 // identify the pins but do not establish their external board circuitry.
 u8 alphasdana_state::pd_r(offs_t reg)
 {
-    u8 result=m_gpio[4+reg];
+    u8 result=h2_gpio_r(1,reg);
     // VZ UM 10.4.5.5: PDSEL[3:0] are reserved, always read zero.
     if (reg==3) return result & 0xf0;
     if (reg==1)
@@ -2159,6 +2191,7 @@ u8 alphasdana_state::pd_r(offs_t reg)
         u8 const pd7_input=~m_gpio[4] & 0x80;
         result=(result & ~pd7_input)|(pd7_line() & pd7_input);
     }
+    if(reg==1){u8 const mask=m_gpio_drive[1]->read()&~m_gpio[4];result=(result&~mask)|(m_gpio_value[1]->read()&mask);}
     return result;
 }
 void alphasdana_state::pd_w(offs_t reg,u8 value)
@@ -2171,23 +2204,24 @@ void alphasdana_state::pd_w(offs_t reg,u8 value)
     isp1161_irq_update(false);
     pd7_irq(false); // PDDIR/PDSEL may change IRQ6 eligibility
 }
-void alphasdana_state::sd_gpio_irq()
+void alphasdana_state::sd_gpio_irq(bool transition)
 {
-    u8 const pins=m_sd_irq->read() & 0x0c;
+    u8 const pins=pd_r(1);
     u8 const changed=pins ^ m_sd_last_pins;
     // MC68VZ328UM 10.4.5.6: POL=0 selects rising/active-high,
     // POL=1 selects falling/active-low. Latch only transitions INTO active.
-    m_sd_edges |= changed & (pins ^ m_pd_extra[0]);
+    if(transition)m_sd_edges |= changed & (pins ^ m_pd_extra[0]) & ~m_gpio[4] & 15;
     m_sd_last_pins=pins;
     // Previous implementation inverted the silicon's documented POL.
     // Level INT2/3 must clear as soon as the physical input deasserts.
     u8 const levels=(pins ^ m_pd_extra[0]) & ~m_pd_extra[3];
     u8 const edges=m_sd_edges & m_pd_extra[3];
-    u8 const active=(levels|edges) & m_pd_extra[1] & ~m_gpio[4] & 0x0c;
-    m_pending=(m_pending & ~0x00000c00U)|(u32(active)<<8);
+    u8 const active=(levels|edges) & m_pd_extra[1] & ~m_gpio[4] & 0x0f;
+    m_pending=(m_pending & ~0x00000f40U)|(u32(active)<<8);
+    if((~pins)&m_pd_extra[2]&~m_gpio[4])m_pending|=0x40;
     update_irq_lines();
 }
-INPUT_CHANGED_MEMBER(alphasdana_state::sd_irq_changed) { sd_gpio_irq(); }
+INPUT_CHANGED_MEMBER(alphasdana_state::sd_irq_changed) { sd_gpio_irq(true); }
 INPUT_CHANGED_MEMBER(alphasdana_state::pd7_pin_changed) { pd7_irq(true); }
 INPUT_CHANGED_MEMBER(alphasdana_state::pen_changed)
 {
@@ -2220,7 +2254,7 @@ void alphasdana_state::pd7_irq(bool physical_transition)
     m_pd7_last_high=high;
     bool const pending=irq_pin && ((m_icr & 0x0100) ? m_pd7_edge_pending : active);
     m_pending=(m_pending & ~0x00080000U) | (pending ? 0x00080000U : 0);
-    update_irq_lines();
+    sd_gpio_irq();
 }
 
 void alphasdana_state::st_queue_snapshot()
@@ -2315,17 +2349,10 @@ u32 alphasdana_state::screen_update(screen_device &, bitmap_rgb32 &bitmap, const
 TIMER_CALLBACK_MEMBER(alphasdana_state::clk32_tick)
 {
     m_clk32_high = !m_clk32_high;
+    if(!m_clk32_high)h2_clk32_cycle();
 }
 
-void alphasdana_state::rtc_update_irq()
-{
-    // MC68VZ328 RTC is bit 4 in interrupt pending LOW, level 4.
-    if ((m_rtc_control & 0x0080) && (m_rtc_isr & m_rtc_ien))
-        m_pending |= 0x00000010;
-    else
-        m_pending &= ~u32(0x00000010);
-    update_irq_lines();
-}
+
 
 
 // Palm UK1.5 keeps the calendar in SysNVParams.rtcHours, not VZ DAYR.
@@ -2403,136 +2430,23 @@ u32 alphasdana_state::rtc_host_seconds()
     return u32(now.hour)*3600U+u32(now.minute)*60U+now.second;
 }
 
-void alphasdana_state::rtc_sync_from_host()
-{
-    if (!(m_rtc_control & 0x0080))
-        return; // RTCEN=0: hold programmed time
-    s32 const raw=s32(rtc_host_seconds())+m_rtc_offset_seconds;
-    s32 const seconds=(raw%86400+86400)%86400;
-    m_rtc_time=(u32(seconds/3600)<<24)
-        | (u32((seconds/60)%60)<<16) | u32(seconds%60);
-}
 
-TIMER_CALLBACK_MEMBER(alphasdana_state::rtc_tick)
-{
-    if (!(m_rtc_control & 0x0080)) return;
-    u32 const previous=m_rtc_last_tick;
-    rtc_sync_from_host();
-    u32 const current=m_rtc_time;
-    if (current!=previous)
-    {
-        m_rtc_isr |= 0x0010;  // 1Hz event, not generated on plain read
-        if (((current>>16)&0x3f)!=((previous>>16)&0x3f))
-            m_rtc_isr |= 0x0002; // minute
-        if (((current>>24)&0x1f)!=((previous>>24)&0x1f))
-            m_rtc_isr |= 0x0020; // hour
-        if (((previous>>24)&0x1f)==23 && ((current>>24)&0x1f)==0)
-        {
-            m_rtc_day=(m_rtc_day+1)&0x01ff;
-            m_rtc_isr |= 0x0008; // midnight
-        }
-        // VZ RTCALRM matches programmed hours/minutes/seconds on a
-        // real 1 Hz tick, not when a host observer merely reads RTCTIME.
-        if ((m_rtc_ien & 0x0004) && current==m_rtc_alarm
-            && m_rtc_day==m_rtc_day_alarm)
-            m_rtc_isr |= 0x0004; // Alarm: RTCISR.ALM
-        m_rtc_last_tick=current;
-    }
-    rtc_update_irq();
-}
 
-void alphasdana_state::rtc_time_w(offs_t offset, u16 data, u16 mem_mask)
-{
-    rtc_sync_from_host();
-    u32 const shift=offset ? 0 : 16;
-    u32 const mask=u32(mem_mask)<<shift;
-    u32 const value=(m_rtc_time & ~mask)|(u32(data & mem_mask)<<shift);
-    if (!rtc_time_valid(value))
-    { physical_block("RTC_TIME_INVALID",0xfffffb00+(offset*2),data); return; }
-    m_rtc_time=value;
-    m_rtc_last_tick=value;
-    s32 const wanted=s32(((value>>24)&0x1f)*3600
-        +((value>>16)&0x3f)*60+(value&0x3f));
-    m_rtc_offset_seconds=wanted-s32(rtc_host_seconds());
-    logerror("DANA_RTC_TIME_WRITE time=%08x offset=%u mask=%04x host_offset_s=%d\n",
-        m_rtc_time,unsigned(offset),mem_mask,m_rtc_offset_seconds);
-}
 
-void alphasdana_state::rtc_alarm_w(offs_t offset, u16 data, u16 mem_mask)
-{
-    u32 const shift=offset ? 0 : 16;
-    u32 const mask=u32(mem_mask)<<shift;
-    u32 const value=(m_rtc_alarm & ~mask)|(u32(data & mem_mask)<<shift);
-    // RTCALRM uses exactly the documented RTCTIME hour/minute/second bit map.
-    if (!rtc_time_valid(value))
-    { physical_block("RTC_ALARM_INVALID",0xfffffb04+(offset*2),data); return; }
-    m_rtc_alarm=value;
-    logerror("DANA_RTC_ALARM time=%08x half=%u mask=%04x\n",
-        m_rtc_alarm,unsigned(offset),mem_mask);
-}
 
-void alphasdana_state::rtc_day_w(offs_t, u16 data, u16 mem_mask)
-{
-    u16 const value=(m_rtc_day & ~mem_mask) | (data & mem_mask);
-    if (value & ~0x01ff)
-    { physical_block("RTC_DAY_RESERVED_BITS",0xfffffb1a,value); return; }
-    m_rtc_day=value;
-    logerror("DANA_RTC_DAY value=%03x\n",m_rtc_day);
-}
 
-void alphasdana_state::rtc_day_alarm_w(offs_t, u16 data, u16 mem_mask)
-{
-    u16 const value=(m_rtc_day_alarm & ~mem_mask) | (data & mem_mask);
-    if (value & ~0x01ff)
-    { physical_block("RTC_DAY_ALARM_RESERVED_BITS",0xfffffb1c,value); return; }
-    m_rtc_day_alarm=value;
-    logerror("DANA_RTC_DAY_ALARM value=%03x\n",m_rtc_day_alarm);
-}
 
-void alphasdana_state::rtc_control_w(offs_t, u16 data, u16 mem_mask)
-{
-    u16 const next=(m_rtc_control & ~mem_mask)|(data & mem_mask);
-    // VZ UM 11.2.6: RTCEN bit7, REFREQ bit5; other bits reserved.
-    if (next & ~0x00a0)
-    { physical_block("RTC_CONTROL_RESERVED_BITS",0xfffffb0c,next); return; }
-    // Freeze clock on disable; on re-enable keep the stopped time as
-    // origin by recalculating only this device's host offset.
-    bool const was_enabled=bool(m_rtc_control & 0x0080);
-    if (was_enabled && !(next & 0x0080))
-        rtc_sync_from_host();
-    m_rtc_control=next;
-    if (!was_enabled && (next & 0x0080))
-    {
-        u32 const t=m_rtc_time;
-        s32 const seconds=s32(((t>>24)&0x1f)*3600
-            + ((t>>16)&0x3f)*60+(t&0x3f));
-        m_rtc_offset_seconds=seconds-s32(rtc_host_seconds());
-        m_rtc_last_tick=t;
-    }
-    rtc_update_irq();
-    logerror("DANA_RTC_CONTROL value=%04x rtcen=%u refreq=%u\n",
-        m_rtc_control,unsigned(bool(m_rtc_control&0x80)),
-        unsigned(bool(m_rtc_control&0x20)));
-}
 
-void alphasdana_state::rtc_ien_w(offs_t, u16 data, u16 mem_mask)
-{
-    u16 const next=(m_rtc_ien & ~mem_mask)|(data & mem_mask);
-    // 1Hz, minute, hour and 24h are generated by the 1Hz timer.
-    // Subsecond and stopwatch require independent timers; alarm is
-    // generated on the RTC second tick by the real RTCALRM comparator.
-    if (next & ~0x003e)
-    { physical_block("RTC_INTERRUPT_RATE_UNIMPLEMENTED",0xfffffb10,next); return; }
-    m_rtc_ien=next; rtc_update_irq();
-    logerror("DANA_RTC_IEN value=%04x\n",m_rtc_ien);
-}
 
-void alphasdana_state::rtc_isr_w(offs_t, u16 data, u16 mem_mask)
-{
-    // Manufacturer VZ RTCISR is write-one-to-clear.
-    m_rtc_isr &= ~(data & mem_mask);
-    rtc_update_irq();
-}
+
+
+
+
+
+
+
+
+
 
 // VZ UM 16.2.3/16.2.4: normal-mode ICE setup only. HMDIS does not
 // remap ordinary memory. Other ICE controls require unimplemented machinery.
@@ -2573,8 +2487,8 @@ void alphasdana_state::pwm1_schedule()
         m_pwm1_speaker->level_w(0);
         return;
     }
-    u32 const src=(m_pwm1_control & 0x8000) ? 32768
-        : (m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
+    u32 const src=(m_pwm1_control & 0x8000) ? m_xtal->read() : h2_sysclk();
+    if(!src){m_pwm1_timer->adjust(attotime::never);return;}
     u32 const prescale=((m_pwm1_control>>8)&0x7f)+1;
     u32 const divider=2U<<(m_pwm1_control&3);
     m_pwm1_timer->adjust(attotime::from_ticks(
@@ -2601,8 +2515,8 @@ TIMER_CALLBACK_MEMBER(alphasdana_state::pwm1_tick)
     // PWMS1 determines how long the output is high during that period.
     // This generates a real audible digital pulse train, not a sampled
     // notification or a host-generated beep unrelated to the 68000.
-    u32 const clock=(m_pwm1_control & 0x8000) ? 32768
-        : (m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
+    u32 const clock=(m_pwm1_control & 0x8000) ? m_xtal->read() : h2_sysclk();
+    if(!clock)return;
     u64 const clocks_per_step=u64(((m_pwm1_control>>8)&0x7f)+1)
         * (2U<<(m_pwm1_control&3));
     unsigned const total=u32(m_pwm1_period)+2;
@@ -2691,108 +2605,13 @@ void alphasdana_state::pwm1_period_count_w(offs_t, u16 data, u16 mem_mask)
     if (mem_mask & 0xff00)
     { m_pwm1_period=u8(data>>8); pwm1_schedule(); }
 }
-void alphasdana_state::pctlr_w(u8 data)
-{
-    // Only valid hardware bits; the two reserved bits read back zero.
-    u8 const next=data & 0x9f;
-    // PCM burst gating affects the CPU instruction clock, not SYSCLK. Do not
-    // accept a partial-duty or completely disabled CPU clock as fully running.
-    // WIDTH=0 / PCEN=1 is VZ doze. The UK1.5 power routine follows
-    // immediately with native M68000 STOP #2000. Keep SYSCLK peripherals
-    // running, let the CPU STOP model wait for actual IRQ6/timer sources.
-    // Partial clock-burst widths require separate cycle-accurate support.
-    if ((next & 0x80) && (next & 0x1f)!=0x1f && (next & 0x1f)!=0)
-    {
-        physical_block("PCTLR_CPU_BURST_UNIMPLEMENTED",0xfffff207,data);
-        return;
-    }
-    m_pctlr=next;
-    logerror("DANA_PCTLR value=%02x pcen=%u width=%u pcm_doze=%u\n",
-        m_pctlr,unsigned(bool(m_pctlr & 0x80)),unsigned(m_pctlr & 0x1f),
-        unsigned((m_pctlr & 0x9f)==0x80));
-}
 
-void alphasdana_state::pllcr_w(offs_t, u16 data, u16 mem_mask)
-{
-    u16 const next=((m_pllcr & ~mem_mask) | (data & mem_mask)) & 0x3fbb;
-    u16 const changed=next ^ m_pllcr;
-    if ((changed & 0x0008) && !m_physical_boot)
-    { physical_block("PLL_SLEEP_MODE_UNIMPLEMENTED_R_DIRECT",0xfffff200,next); return; }
-    // Motorola VZ CGM §4.5.2: after DISPLL=1 the guest must execute
-    // STOP before the PLL shuts down (30 SYSCLK cycles later).
-    // The M68000 native STOP handles the core halt; external wake sources
-    // are still delivered through real IRQ pending/mask logic.
-    if ((changed & 0x0008) && !(next & 0x0008))
-    {
-        m_pll_wake_timer->adjust(attotime::never);
-        m_pll_wake_pending=false;
-    }
-    // Physical VZ SYSCLK and prescaler changes are documented in UM 4.4.1.
-    // R-direct retains its previously qualified clock contract; LCD timing
-    // selection is separately unmodelled and must not silently succeed.
-    if ((changed & 0x3fa0) && (!m_physical_boot || (changed & 0x3800)))
-    { physical_block("PLL_CLOCK_MODE_UNIMPLEMENTED",0xfffff200,next); return; }
-    if (changed & 0x0003)
-    { physical_block("PLL_WAKE_DELAY_UNIMPLEMENTED",0xfffff200,next); return; }
-    if (m_physical_boot && (changed & 0x07a0) && (m_tctl1 & 1))
-        m_tcn1=timer1_tcn_r(); // Snapshot before changing virtual SYSCLK.
-    if (m_physical_boot && (changed & 0x07a0) && (m_tctl2 & 1))m_tcn2=timer2_tcn_r();
-    m_pllcr=next;
-    serial_clock();
-    if (m_physical_boot && (changed & 0x07a0))
-    {
-        m_maincpu->set_unscaled_clock(physical_system_clock_hz());
-        if (m_tctl1 & 1) timer1_schedule();
-        if (m_tctl2 & 1) timer2_schedule();
-    }
-    if (changed & 0x0008)
-        logerror("DANA_PLL_SLEEP requested=%u pllcr=%04x wake_delay_sel=%u\n",
-            unsigned(bool(next & 0x0008)),m_pllcr,unsigned(next&3));
-    // If DISPLL is set while a hardware request is pending, the CLK32
-    // wake timer handles the oscillator restart. No fabricated IRQ occurs.
-    if (changed & 0x0008) update_irq_lines();
-    if (changed)
-        logerror("DANA_PLLCR value=%04x clko_enabled=%u pfsel=%02x sysclk_hz=%u physical_clock_change=%u\n",
-            m_pllcr,unsigned(pllcr_clko_enabled()),m_pfsel,
-            m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz(),
-            unsigned(m_physical_boot && bool(changed & 0x07a0)));
-}
 
-TIMER_CALLBACK_MEMBER(alphasdana_state::pll_wake_complete)
-{
-    if (!(m_pllcr & 0x0008) || !m_pll_wake_pending) return;
-    m_pll_wake_pending=false;
-    m_pllcr&=~u16(0x0008);
-    logerror("DANA_PLL_WAKE_COMPLETE pllcr=%04x pending=%08x imr=%08x\n",
-        m_pllcr,m_pending,m_imr);
-    serial_clock();
-    update_irq_lines(); // IRQ is the actual source, never invented.
-}
 
-void alphasdana_state::pllfsr_w(offs_t, u16 data, u16 mem_mask)
-{
-    // Motorola MC68VZ328UM 4.4.2: CLK32 read-only; reserved bits stay 0.
-    // PC[7:0] and QC[11:8] permit 16-bit or lane-selected accesses before
-    // sticky PROT[14] is set; PROT can only be cleared by machine reset.
-    // One write may set the counters and PROT together. Subsequent writes
-    // cannot alter the counters, even when they attempt to clear PROT.
-    // Snapshot elapsed ticks against the OLD source frequency before any
-    // permitted PLL retune. Otherwise the new schedule loses partial ticks.
-    if (m_tctl1 & 1) m_tcn1=timer1_tcn_r();
-    u16 const counter_mask = mem_mask & 0x0fff;
-    if (!(m_pllfsr & 0x4000))
-        m_pllfsr = (m_pllfsr & ~counter_mask) | (data & counter_mask);
-    if (data & mem_mask & 0x4000)
-        m_pllfsr |= 0x4000;
-    // Preserve the 1 MHz no-guest diagnostic clock, which the R2.1 and
-    // register-only fixtures already qualified. Authentic RAM guest runs
-    // instead use the VZ PLL-derived M68000 clock, matching their Timer1.
-    if (m_guest_loaded || m_physical_boot)
-        m_maincpu->set_unscaled_clock(m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
-    if (m_tctl1 & 1)
-        timer1_schedule();
-    serial_clock();
-}
+
+
+
+
 
 u8 alphasdana_state::ivr_r()
 {
@@ -2846,7 +2665,7 @@ void alphasdana_state::isr_w(offs_t offset, u16 data, u16 mem_mask)
         // INT2/3 are sourced by actual independent SD socket pins.
         // A write-one to the LOW ISR word acknowledges only enabled
         // edge-triggered INT[3:2], never level-triggered requests.
-        u8 const ack = u8((data & mem_mask & 0x0c00) >> 8) & m_pd_extra[3];
+        u8 const ack = u8((data & mem_mask & 0x0f00) >> 8) & m_pd_extra[3];
         if (ack)
         {
             m_sd_edges &= ~ack;
@@ -2862,32 +2681,22 @@ void alphasdana_state::update_irq_lines()
     // VZ IPR/IMR masks proven by pinned EmuTOS: bit1 Timer1 -> level6,
     // bit2 UART1 and INT2/3 -> level4; SPI1 bit21 uses ILCR[14:12].
     u32 const active=m_pending & ~m_imr;
-    if (m_physical_boot && (m_pllcr & 0x0008))
+    // Edge-mode INT[3:0] are not wake sources (VZ UM 10.4.5.9).
+    u32 const wake=active & ~(u32(m_pd_extra[3]&15)<<8);
+    // PCM exits on ANY unmasked interrupt; only PLL sleep excludes edge INTs.
+    if(active && (m_pctlr&0x80))
+    {m_pctlr&=~u8(0x80);m_pcm_on=true;m_pcm_timer->adjust(attotime::never);}
+    if(m_pllcr&8)
     {
-        // VZ sleep retains CLK32 for RTC and the wake-up clock counter.
-        // Hold CPU IRQ until the PLL reacquires lock for WKSEL cycles.
-        if (active && !m_pll_wake_pending)
+        if(wake && !m_pll_wake_pending)
         {
-            static constexpr int wake_cycles[4]={32,48,64,96};
-            m_pll_wake_pending=true;
-            m_pll_wake_timer->adjust(attotime::from_ticks(wake_cycles[m_pllcr & 3],32768));
-            logerror("DANA_PLL_WAKE_REQUEST active=%08x cycles=%d\n",
-                active,wake_cycles[m_pllcr&3]);
+            if(!m_pll_stopped){m_pll_off_timer->adjust(attotime::never);m_pllcr&=~u16(8);}
+            else {m_pll_wake_pending=true;m_pll_wake_timer->adjust(attotime::from_ticks(h2_wake_ticks(),m_xtal->read()));}
         }
-        for (unsigned level=1;level<=6;++level)
-            m_maincpu->set_input_line(level,CLEAR_LINE);
-        return;
     }
-    // MC68VZ328UM 4.5.3/4.5.4: a qualifying wake event
-    // disables PCM (PCEN) and restores full CPUCLK, preserving WIDTH.
-    // This is not a synthetic interrupt; only an existing unmasked
-    // peripheral IRQ can invoke it. An unmasked IRQ during DISPLL=1
-    // must first pass the PLL-reacquisition timer above.
-    if (m_physical_boot && (m_pctlr & 0x80) && active)
-    {
-        m_pctlr &= ~u8(0x80);
-        logerror("DANA_PCM_WAKE pcen=0 pctlr=%02x irq=%08x\n",m_pctlr,active);
-    }
+    h2_cpu_gate();
+    if(m_pll_stopped)
+    {for(unsigned level=1;level<=6;++level)m_maincpu->set_input_line(level,CLEAR_LINE);return;}
     unsigned const uart2_level=(m_ilcr>>8)&7;
     unsigned const spi_level=(m_ilcr>>12)&7;
     unsigned const timer2_level=m_ilcr&7;
@@ -2901,7 +2710,7 @@ void alphasdana_state::update_irq_lines()
             m_maincpu->set_input_line(level,(spi || external1 || external5 || usb) ? ASSERT_LINE : CLEAR_LINE);
     }
     m_maincpu->set_input_line(6,((active & 0x00080082) || (uart2_level==6 && (active&0x1000)) || ((spi_level==6 && (active & 0x00200000))||(timer2_level==6&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
-    m_maincpu->set_input_line(4,((active & 0x00000c14) || (uart2_level==4 && (active&0x1000)) || ((spi_level==4 && (active & 0x00200000))||(timer2_level==4&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
+    m_maincpu->set_input_line(4,((active & 0x00400f5d) || (uart2_level==4 && (active&0x1000)) || ((spi_level==4 && (active & 0x00200000))||(timer2_level==4&&(active&0x20)))) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 u8 alphasdana_state::irq_vector_r(offs_t offset)
@@ -2920,35 +2729,18 @@ u8 alphasdana_state::irq_vector_r(offs_t offset)
     return vector;
 }
 
-u32 alphasdana_state::guest_system_clock_hz() const
-{
-    // Preserve the qualified EmuTOS-Dana/R-direct base clock formula.
-    // This is HALF the manufacturer PLLCLK formula, before physical dividers.
-    return (u32(m_pllfsr & 0xff)*14
-        + u32((m_pllfsr >> 8) & 0x3f)+15)*32768;
-}
-u32 alphasdana_state::physical_system_clock_hz() const
-{
-    // Motorola MC68VZ328UM 4.3.2.2: PLLCLK =
-    // 2 * (14*(PC+1) + QC+1) * CLK32. Then PRESC1, PRESC2,
-    // and SYSCLKSEL: 000=/2, 001=/4, 010=/8, 011=/16, 1xx=/1.
-    u32 const pll_hz=guest_system_clock_hz()*2;
-    u32 const presc1=(m_pllcr & 0x0080) ? 2 : 1;
-    u32 const presc2=(m_pllcr & 0x0020) ? 2 : 1;
-    u32 const select=(m_pllcr >> 8) & 7;
-    u32 const sys_div=select>=4 ? 1 : (2U << select);
-    return pll_hz/(presc1*presc2*sys_div);
-}
+
+
 u32 alphasdana_state::timer1_source_hz() const
 {
     // CPU and SYSCLK-sourced Timer1 must advance in the SAME guest time.
-    u32 const guest_hz=m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz();
+    u32 const guest_hz=h2_sysclk();
     switch(m_tctl1 & 0x000e)
     {
     case 0x0002: return guest_hz;
     case 0x0004: return guest_hz/16;
     case 0x0008: case 0x000a: case 0x000c: case 0x000e:
-        return 32768;
+        return m_xtal->read();
     default: return 0; // STOP or external TIN; no invented clock.
     }
 }
@@ -2992,6 +2784,9 @@ void alphasdana_state::timer1_tctl_w(offs_t, u16 data, u16 mem_mask)
     COMBINE_DATA(&m_tctl1);
     if (!enabled && (m_tctl1 & 1)) m_tcn1=0;
     timer1_schedule();
+    if((m_tstat1&1) && (m_tctl1&0x10))m_pending|=2;
+    else m_pending&=~u32(2);
+    update_irq_lines();
 }
 void alphasdana_state::timer1_tprer_w(offs_t, u16 data, u16 mem_mask)
 {
@@ -3029,13 +2824,13 @@ void alphasdana_state::timer1_tstat_w(offs_t, u16, u16 mem_mask)
 u32 alphasdana_state::timer2_source_hz() const
 {
     // CPU and SYSCLK-sourced Timer2 must advance in the SAME guest time.
-    u32 const guest_hz=m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz();
+    u32 const guest_hz=h2_sysclk();
     switch(m_tctl2 & 0x000e)
     {
     case 0x0002: return guest_hz;
     case 0x0004: return guest_hz/16;
     case 0x0008: case 0x000a: case 0x000c: case 0x000e:
-        return 32768;
+        return m_xtal->read();
     default: return 0; // STOP or external TIN; no invented clock.
     }
 }
@@ -3079,6 +2874,9 @@ void alphasdana_state::timer2_tctl_w(offs_t, u16 data, u16 mem_mask)
     COMBINE_DATA(&m_tctl2);
     if (!enabled && (m_tctl2 & 1)) m_tcn2=0;
     timer2_schedule();
+    if((m_tstat2&1) && (m_tctl2&0x10))m_pending|=32;
+    else m_pending&=~u32(32);
+    update_irq_lines();
 }
 void alphasdana_state::timer2_tprer_w(offs_t, u16 data, u16 mem_mask)
 {
@@ -3114,7 +2912,7 @@ void alphasdana_state::timer2_tstat_w(offs_t, u16, u16 mem_mask)
 }
 void alphasdana_state::serial_clock()
 {
-    u32 const hz=(m_physical_boot && (m_pllcr&8)) ? 0 : (m_physical_boot ? physical_system_clock_hz() : guest_system_clock_hz());
+    u32 const hz=h2_sysclk();
     for(auto &uart:m_uart) uart->sysclk(hz);
     unsigned const selected=(m_pcr>>4)&1;
     u32 const pin_clock=(m_gpio[11]&8) ? 0 : (m_uart[selected]->uclk_output() ? m_uart[selected]->uclk_hz() : m_uclk->read());
@@ -3159,7 +2957,7 @@ void alphasdana_state::serial_pins()
 }
 u8 alphasdana_state::serial_gpio(unsigned n,offs_t reg)
 {
-    unsigned const base=n?20:8; u8 value=m_gpio[base+reg];
+    unsigned const base=n?20:8; u8 value=h2_gpio_r(n?5:2,reg);
     if(reg!=1) return value;
     u8 const inputs=~m_gpio[base] | ~m_gpio[base+3];
     value=(value & ~u8(0x90 & inputs)) | ((m_serial_rx[n]?0x10:0)&inputs) | ((m_serial_cts[n]?0x80:0)&inputs);
@@ -3358,34 +3156,35 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff110,0xfffff117).rw(FUNC(alphasdana_state::cs_select_r),FUNC(alphasdana_state::cs_select_w));
     m_boot_memory[1](0xfffff118,0xfffff119).rw(FUNC(alphasdana_state::emucs_r),FUNC(alphasdana_state::emucs_w));
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
-    m_boot_memory[1](0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
-    m_boot_memory[1](0xfffff207,0xfffff207).rw(FUNC(alphasdana_state::pctlr_r),FUNC(alphasdana_state::pctlr_w)).umask16(0x00ff);
+    map(0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
+    map(0xfffff207,0xfffff207).rw(FUNC(alphasdana_state::pctlr_r),FUNC(alphasdana_state::pctlr_w)).umask16(0x00ff);
     m_boot_memory[1](0xfffff500,0xfffff501).rw(FUNC(alphasdana_state::pwm1_control_r),FUNC(alphasdana_state::pwm1_control_w));
     m_boot_memory[1](0xfffff502,0xfffff503).rw(FUNC(alphasdana_state::pwm1_sample_r),FUNC(alphasdana_state::pwm1_sample_w));
     m_boot_memory[1](0xfffff504,0xfffff505).rw(FUNC(alphasdana_state::pwm1_period_count_r),FUNC(alphasdana_state::pwm1_period_count_w));
-    m_boot_memory[1](0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
+    map(0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
     // Native UK1.5 cold-start also writes TCTL2=0000 after TCTL1=0000.
     m_boot_memory[0](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
-    m_boot_memory[1](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
+    map(0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
     m_boot_memory[0](0xfffff612,0xfffff613).rw(FUNC(alphasdana_state::timer2_tprer_r),FUNC(alphasdana_state::timer2_tprer_w));
-    m_boot_memory[1](0xfffff612,0xfffff613).rw(FUNC(alphasdana_state::timer2_tprer_r),FUNC(alphasdana_state::timer2_tprer_w));
+    map(0xfffff612,0xfffff613).rw(FUNC(alphasdana_state::timer2_tprer_r),FUNC(alphasdana_state::timer2_tprer_w));
     m_boot_memory[0](0xfffff614,0xfffff615).rw(FUNC(alphasdana_state::timer2_tcmp_r),FUNC(alphasdana_state::timer2_tcmp_w));
-    m_boot_memory[1](0xfffff614,0xfffff615).rw(FUNC(alphasdana_state::timer2_tcmp_r),FUNC(alphasdana_state::timer2_tcmp_w));
+    map(0xfffff614,0xfffff615).rw(FUNC(alphasdana_state::timer2_tcmp_r),FUNC(alphasdana_state::timer2_tcmp_w));
     m_boot_memory[0](0xfffff616,0xfffff617).r(FUNC(alphasdana_state::timer2_tcr_r));
-    m_boot_memory[1](0xfffff616,0xfffff617).r(FUNC(alphasdana_state::timer2_tcr_r));
+    map(0xfffff616,0xfffff617).r(FUNC(alphasdana_state::timer2_tcr_r));
     m_boot_memory[0](0xfffff618,0xfffff619).r(FUNC(alphasdana_state::timer2_tcn_r));
-    m_boot_memory[1](0xfffff618,0xfffff619).r(FUNC(alphasdana_state::timer2_tcn_r));
+    map(0xfffff618,0xfffff619).r(FUNC(alphasdana_state::timer2_tcn_r));
     m_boot_memory[0](0xfffff61a,0xfffff61b).rw(FUNC(alphasdana_state::timer2_tstat_r),FUNC(alphasdana_state::timer2_tstat_w));
-    m_boot_memory[1](0xfffff61a,0xfffff61b).rw(FUNC(alphasdana_state::timer2_tstat_r),FUNC(alphasdana_state::timer2_tstat_w));
-    m_boot_memory[1](0xfffff411,0xfffff411).rw(FUNC(alphasdana_state::pcdata_r),FUNC(alphasdana_state::pcdata_w)).umask16(0x00ff);
-    m_boot_memory[1](0xfffffb00,0xfffffb03).rw(FUNC(alphasdana_state::rtc_time_r),FUNC(alphasdana_state::rtc_time_w));
-    m_boot_memory[1](0xfffffb04,0xfffffb07).rw(FUNC(alphasdana_state::rtc_alarm_r),FUNC(alphasdana_state::rtc_alarm_w));
-    m_boot_memory[1](0xfffffb0c,0xfffffb0d).rw(FUNC(alphasdana_state::rtc_control_r),FUNC(alphasdana_state::rtc_control_w));
-    m_boot_memory[1](0xfffffb0e,0xfffffb0f).rw(FUNC(alphasdana_state::rtc_isr_r),FUNC(alphasdana_state::rtc_isr_w));
-    m_boot_memory[1](0xfffffb10,0xfffffb11).rw(FUNC(alphasdana_state::rtc_ien_r),FUNC(alphasdana_state::rtc_ien_w));
-    m_boot_memory[1](0xfffffb1a,0xfffffb1b).rw(FUNC(alphasdana_state::rtc_day_r),FUNC(alphasdana_state::rtc_day_w));
-    m_boot_memory[1](0xfffffb1c,0xfffffb1d).rw(FUNC(alphasdana_state::rtc_day_alarm_r),FUNC(alphasdana_state::rtc_day_alarm_w));
-    m_boot_memory[1](0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
+    map(0xfffff61a,0xfffff61b).rw(FUNC(alphasdana_state::timer2_tstat_r),FUNC(alphasdana_state::timer2_tstat_w));
+    map(0xfffff411,0xfffff411).rw(FUNC(alphasdana_state::pcdata_r),FUNC(alphasdana_state::pcdata_w)).umask16(0x00ff);
+    map(0xfffffb00,0xfffffb03).rw(FUNC(alphasdana_state::rtc_time_r),FUNC(alphasdana_state::rtc_time_w));
+    map(0xfffffb04,0xfffffb07).rw(FUNC(alphasdana_state::rtc_alarm_r),FUNC(alphasdana_state::rtc_alarm_w));
+    map(0xfffffb0c,0xfffffb0d).rw(FUNC(alphasdana_state::rtc_control_r),FUNC(alphasdana_state::rtc_control_w));
+    map(0xfffffb0e,0xfffffb0f).rw(FUNC(alphasdana_state::rtc_isr_r),FUNC(alphasdana_state::rtc_isr_w));
+    map(0xfffffb12,0xfffffb13).rw(FUNC(alphasdana_state::h2_stopwatch_r),FUNC(alphasdana_state::h2_stopwatch_w));
+    map(0xfffffb10,0xfffffb11).rw(FUNC(alphasdana_state::rtc_ien_r),FUNC(alphasdana_state::rtc_ien_w));
+    map(0xfffffb1a,0xfffffb1b).rw(FUNC(alphasdana_state::rtc_day_r),FUNC(alphasdana_state::rtc_day_w));
+    map(0xfffffb1c,0xfffffb1d).rw(FUNC(alphasdana_state::rtc_day_alarm_r),FUNC(alphasdana_state::rtc_day_alarm_w));
+    map(0xfffffb0a,0xfffffb0b).rw(FUNC(alphasdana_state::watchdog_r),FUNC(alphasdana_state::watchdog_w));
     m_boot_memory[1](0xfffffc00,0xfffffc07).rw(FUNC(alphasdana_state::dram_r),FUNC(alphasdana_state::dram_w));
     m_boot_memory[1](0xfffffd0c,0xfffffd0d).rw(FUNC(alphasdana_state::icemcr_r),FUNC(alphasdana_state::icemcr_w));
     m_boot_memory[1](0xfffffd0e,0xfffffd0f).rw(FUNC(alphasdana_state::icemsr_r),FUNC(alphasdana_state::icemsr_w));
@@ -3485,7 +3284,7 @@ void alphasdana_state::alphasdana(machine_config &config)
     m_firmware->set_device_unload(FUNC(alphasdana_state::firmware_unload));
     QUICKLOAD(config, m_guest, "dana,b", attotime::zero).set_load_callback(FUNC(alphasdana_state::guest_load));
     // Placeholder CPU frequency, not a calibrated VZ PLL.
-    DANA_VZ_CPU(config, m_maincpu, 1'000'000);
+    DANA_VZ_CPU(config, m_maincpu, 16'580'608);
     m_maincpu->set_addrmap(AS_PROGRAM, &alphasdana_state::program_map);
     m_maincpu->set_addrmap(m68000_base_device::AS_CPU_SPACE, &alphasdana_state::cpu_space_map);
     // Reuse MAME's LCD screen infrastructure; the only pixel source is guest RAM.
@@ -3501,6 +3300,63 @@ void alphasdana_state::alphasdana(machine_config &config)
 INPUT_CHANGED_MEMBER(alphasdana_state::uclk_changed) {serial_clock();}
 
 static INPUT_PORTS_START(alphasdana)
+    PORT_START("XTAL")
+    PORT_CONFNAME(0x0000ffff,32768,"VZ crystal input") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_xtal_changed),0)
+    PORT_CONFSETTING(32768,"32.768 kHz (Dana)") PORT_CONFSETTING(38400,"38.4 kHz (MCU test fixture)")
+    PORT_START("PCDRIVE")
+    PORT_CONFNAME(0xff,0,"Port C external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("PCVALUE")
+    PORT_CONFNAME(0xff,0,"Port C external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO0DRIVE")
+    PORT_CONFNAME(0xff,0,"Port B external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO0VALUE")
+    PORT_CONFNAME(0xff,0,"Port B external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO1DRIVE")
+    PORT_CONFNAME(0xff,0,"Port D external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO1VALUE")
+    PORT_CONFNAME(0xff,0,"Port D external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO2DRIVE")
+    PORT_CONFNAME(0xff,0,"Port E external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO2VALUE")
+    PORT_CONFNAME(0xff,0,"Port E external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO3DRIVE")
+    PORT_CONFNAME(0xff,0,"Port F external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO3VALUE")
+    PORT_CONFNAME(0xff,0,"Port F external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO4DRIVE")
+    PORT_CONFNAME(0xff,0,"Port G external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO4VALUE")
+    PORT_CONFNAME(0xff,0,"Port G external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO5DRIVE")
+    PORT_CONFNAME(0xff,0,"Port J external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO5VALUE")
+    PORT_CONFNAME(0xff,0,"Port J external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO6DRIVE")
+    PORT_CONFNAME(0xff,0,"Port K external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO6VALUE")
+    PORT_CONFNAME(0xff,0,"Port K external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
+    PORT_START("GPIO7DRIVE")
+    PORT_CONFNAME(0xff,0,"Port M external drive mask (0 = disconnected)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(15,"Lower four pins driven") PORT_CONFSETTING(255,"All pins driven")
+    PORT_START("GPIO7VALUE")
+    PORT_CONFNAME(0xff,0,"Port M external input levels") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::h2_gpio_changed),0)
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(255,"High")
     PORT_START("UCLK")
     PORT_CONFNAME(0x03ffffff,0,"External UCLK input (PE3 peripheral mode)") PORT_CHANGED_MEMBER(DEVICE_SELF,FUNC(alphasdana_state::uclk_changed),0)
     PORT_CONFSETTING(0,"Disconnected") PORT_CONFSETTING(1843200,"1.8432 MHz") PORT_CONFSETTING(33161216,"33.161216 MHz")

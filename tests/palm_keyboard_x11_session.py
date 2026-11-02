@@ -17,7 +17,7 @@ def main():
   result=subprocess.run(["xauth","-f",str(auth),"add",display,".",secrets.token_hex(16)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
   assert result.returncode==0,"Cannot create private test display authorization"
   env=os.environ.copy()
-  env.update(XDG_RUNTIME_DIR=f"/run/user/{os.getuid()}",WAYLAND_DISPLAY="wayland-0",TMPDIR=tmp)
+  env.update(XDG_RUNTIME_DIR=os.environ.get("XDG_RUNTIME_DIR",f"/run/user/{os.getuid()}"),WAYLAND_DISPLAY=os.environ.get("WAYLAND_DISPLAY","wayland-0"),TMPDIR=tmp)
   with(evidence/"test-xwayland.log").open("w")as log:
    # Xserver -displayfd is the standard unprivileged compositor startup
    # protocol. Keep its notification pipe scoped to this test session.

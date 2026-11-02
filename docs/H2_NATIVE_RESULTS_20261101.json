@@ -1,0 +1,730 @@
+{
+  "status": "H2_DIGITAL_NATIVE_PASS_WITH_EXPLICIT_PHYSICAL_BOUNDARIES",
+  "initial_head": "beb9516348ae13d33bea388eb4a582b8ae9b5b74",
+  "canonical_binary": "runtime/diag/bin/dana-diag",
+  "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+  "driver_sha256": "031360bf2f690a3c0615891ce5093ffc7c9361d30055184d0cc9a210b4c01dd3",
+  "h2_companion_sha256": "c2f02d76cc1ad4db22fb6decae847d4008e07eb398ebffa11b2ab0db35e85d6d",
+  "unchanged_uart_sha256": "bf9eddcc21c359f1b7735b5739bc97de5dbfd6769a328755a4321d5cf2585803",
+  "compiler": "Clang 21.1.8, existing incremental MAME target",
+  "native_h2_cases": [
+    {
+      "marker": 42330,
+      "stage": 20,
+      "failure_d0": 0,
+      "frames": 6,
+      "restored": false,
+      "mode": "clock",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 94,
+      "failure_d0": 0,
+      "frames": 16,
+      "restored": false,
+      "mode": "clock-cross",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 80,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "doze",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 92,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "gpio",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 99,
+      "failure_d0": 0,
+      "frames": 2,
+      "restored": false,
+      "mode": "gpio-doze",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 98,
+      "failure_d0": 0,
+      "frames": 3,
+      "restored": false,
+      "mode": "gpio-wake",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 97,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "irq-mixed",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 70,
+      "failure_d0": 0,
+      "frames": 28,
+      "restored": false,
+      "mode": "pcm",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 121,
+      "restored": false,
+      "mode": "rtc-calendar",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 46,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.249999638126
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 23,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 1,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.12499963812849998
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 12,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 2,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.06249963813
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 6,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 3,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.0312496381305
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 3,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 4,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.015624638130999999
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 2,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 5,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.0078121381315
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 6,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.0039058881315000003
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "rtc-rate",
+      "rate": 7,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "irq_period_s": 0.0019527631309999998
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 71,
+      "restored": false,
+      "mode": "rtc-ref",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 93,
+      "failure_d0": 0,
+      "frames": 181,
+      "restored": true,
+      "mode": "save",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 80,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "sleep",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "wake_elapsed_ticks": 160.144268754944
+    },
+    {
+      "marker": 42330,
+      "stage": 80,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "sleep",
+      "rate": 1,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "wake_elapsed_ticks": 176.144268754944
+    },
+    {
+      "marker": 42330,
+      "stage": 80,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "sleep",
+      "rate": 2,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "wake_elapsed_ticks": 192.144268754944
+    },
+    {
+      "marker": 42330,
+      "stage": 80,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "sleep",
+      "rate": 3,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true,
+      "wake_elapsed_ticks": 224.144268754944
+    },
+    {
+      "marker": 42330,
+      "stage": 80,
+      "failure_d0": 0,
+      "frames": 31,
+      "restored": true,
+      "mode": "sleep-save",
+      "rate": 2,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 96,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "timer-mask",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 96,
+      "failure_d0": 0,
+      "frames": 1,
+      "restored": false,
+      "mode": "timer-mask",
+      "rate": 1,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 1,
+      "failure_d0": 0,
+      "frames": 121,
+      "restored": false,
+      "mode": "watchdog-irq",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 90,
+      "failure_d0": 0,
+      "frames": 121,
+      "restored": false,
+      "mode": "watchdog-reset",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    },
+    {
+      "marker": 42330,
+      "stage": 91,
+      "failure_d0": 0,
+      "frames": 181,
+      "restored": false,
+      "mode": "watchdog-service",
+      "rate": 0,
+      "returncode": 0,
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e",
+      "pass": true
+    }
+  ],
+  "candidate_functional_checks": [
+    {
+      "name": "qualified-clock-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-clock-cross-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-pcm-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-doze-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-sleep-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-sleep-1",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-sleep-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-sleep-3",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-1",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-3",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-4",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-5",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-6",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-rate-7",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-ref-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-watchdog-irq-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-watchdog-reset-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-watchdog-service-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-rtc-calendar-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-gpio-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-save-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-irq-mixed-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-gpio-wake-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-gpio-doze-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-timer-mask-0",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-timer-mask-1",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-sleep-save-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-backend-1",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-backend-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-irda-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-dual-1",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-saveir-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-clock-1",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-clock-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-irq-1",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-uart-irq-2",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-usb-host-printer",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-usb-device",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-usb-host-faults",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-usb-ptd-bus",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-usb-palm-printer",
+      "returncode": 0
+    },
+    {
+      "name": "qualified-palm-power",
+      "returncode": 0
+    }
+  ],
+  "installed_checks": [
+    {
+      "name": "final-installed-sleep",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-watchdog-reset",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-rtc-rate",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-gpio-wake",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-gpio-doze",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-sleep-save",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-uart-backend-1",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-uart-backend-2",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-uart-irda-2",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-uart-saveir-2",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-uart-clock-1",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-uart-clock-2",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-usb-host-printer",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-usb-device",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-application",
+      "returncode": 0
+    },
+    {
+      "name": "final-installed-sdl",
+      "returncode": 0
+    }
+  ],
+  "original_system_campaign": {
+    "status": "NATIVE_PASS",
+    "keys": 81,
+    "chords": 5,
+    "robustness": {
+      "stale_modifier": false,
+      "native_codes": 208
+    },
+    "compatibility": {
+      "sd_protected": {
+        "status": "PASS",
+        "cpu_marker": 42330
+      },
+      "sd_crc": {
+        "status": "PASS",
+        "cpu_marker": 42330
+      },
+      "sd_both_write": {
+        "status": "PASS",
+        "cpu_marker": 42330
+      },
+      "sd_reopen": {
+        "status": "PASS",
+        "cpu_marker": 42330
+      },
+      "emutos": {
+        "codes": [
+          43,
+          46,
+          122
+        ],
+        "spi_reads": 609,
+        "releases": 3,
+        "pc_samples_changed": 3,
+        "pdsel": 16,
+        "irq1_pending": 0
+      },
+      "binary_sha256": "81da0ba414382caecced5f85728fa74705729716a4c7243d28fd3f3969c68b5e"
+    },
+    "sound_ui": "MAME_SOUND_UI_MUTE_AND_RESTORE_PASS",
+    "candidate_sdl": {
+      "frames": 272,
+      "codes": [
+        5,
+        9,
+        10,
+        11,
+        13,
+        19,
+        24,
+        30,
+        43,
+        44,
+        53,
+        69,
+        70,
+        83,
+        91,
+        98,
+        101,
+        105,
+        110,
+        115,
+        116,
+        122,
+        123,
+        126
+      ],
+      "menu_frames": 21,
+      "paused_frames": 0,
+      "ui_active": true
+    }
+  },
+  "original_audio": {
+    "sample_rate": 48000,
+    "sample_count": 7200001,
+    "nonzero_samples": 6833,
+    "peak": 5978
+  },
+  "original_power": {
+    "status": "ORIGINAL_CPU_PCTLR_DOZE_TO_WAKE_IRQ6_PASS",
+    "idle_pc": "1007976c",
+    "pctlr": 128,
+    "frames": 3500
+  },
+  "original_usb_print": {
+    "status": "PASS",
+    "bytes": 10409,
+    "sha256": "792013e870ceeba0de25c1476b0132286befcca35da05478b2acfcb4dfd8e6b8"
+  },
+  "qualified_boot_fixture": {
+    "NOR_PROFILE": 1,
+    "NOR_FACTORY": 1,
+    "SDIRQ_PD2_PD3": "LOW",
+    "explicit_gpio_PD0_PD1": "LOW; diagnostic stimuli, not measured PCB wiring"
+  },
+  "private_evidence_root": "local-evidence/runtime-compare/h2-20261101",
+  "unverified": [
+    "Physical GPIO continuity and external pin circuitry",
+    "Analog crystal/PLL acquisition, jitter, voltage and consumption",
+    "Unused alternate-pad/LCD bus and factory ICE/BAUDTEST modes",
+    "Earlier-build MAME save-state compatibility",
+    "H3 NOR programming/erase; not started",
+    "Full Palm Beam file transfer and USB Computer/HotSync; existing limits retained"
+  ],
+  "drive_master": {
+    "id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "sheets": 14,
+    "history_rows": 52,
+    "sha256": "3a93f6ab9aebf9fb27a5753f9aa97311396f4a9473a48d6d68df57ca98bab85e",
+    "readback_verified": true,
+    "formulas_retained": 1020,
+    "prior_cell_values_and_styles_retained": 10264
+  }
+}

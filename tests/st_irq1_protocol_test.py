@@ -20,6 +20,7 @@ struct Model {
  u32 m_st_pending_keys[4]={},m_pending=0;u16 m_icr=0;
  unsigned updates=0;
  void update_irq_lines(){++updates;}
+ void sd_gpio_irq(){} // Other GPIO producer is exercised by h2_native.py.
  void st_irq_update(bool);
  u8 st_version_exchange(u8);
 };

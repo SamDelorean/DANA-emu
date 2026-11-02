@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: BSD-3-Clause
-"""Validate real VZ RTC production handlers with 68000 word accesses.
+"""Exercise production RTC handlers; H2 native tests separately use actual 68000 instructions.
 
 Checks Motorola MC68VZ328UM 11.2.1, 11.2.6–8 against original Palm OS
 TST.L/conditional MOVE.L at FB00, IEN=000A, CTL=0080.
@@ -32,9 +32,9 @@ def method(src, signature):
 
 class RTCAuthenticTest(unittest.TestCase):
     def test_production_rtc_clock_and_interrupt_semantics(self):
-        src = SOURCE.read_text()
+        src = SOURCE.read_text() + SOURCE.with_name("alphasdana_h2.h").read_text()
         for token in (
-            "m_rtc_timer = timer_alloc(FUNC(alphasdana_state::rtc_tick), this);",
+            "m_clk32_timer = timer_alloc(FUNC(alphasdana_state::clk32_tick), this);",
             "save_item(NAME(m_rtc_time));",
             "save_item(NAME(m_rtc_control));",
             "save_item(NAME(m_rtc_ien));",
@@ -44,8 +44,8 @@ class RTCAuthenticTest(unittest.TestCase):
             "save_item(NAME(m_rtc_last_tick));",
             "machine().current_datetime(host);",
             "m_rtc_control=0x0080; m_rtc_ien=0; m_rtc_isr=0;",
-            "m_rtc_timer->adjust(attotime::from_seconds(1), 0, attotime::from_seconds(1));",
-            "active & 0x00000c14",
+            "h2_clk32_cycle();",
+            "active & 0x00400f5d",
         ):
             self.assertIn(token, src)
         for first, last, suffix in (
@@ -55,7 +55,7 @@ class RTCAuthenticTest(unittest.TestCase):
             ("0xfffffb10", "0xfffffb11", "rtc_ien"),
         ):
             mapping = (
-                f"m_boot_memory[1]({first},{last})"
+                f"map({first},{last})"
                 f".rw(FUNC(alphasdana_state::{suffix}_r),"
                 f"FUNC(alphasdana_state::{suffix}_w));"
             )
@@ -96,6 +96,8 @@ struct HostMachine {
   t.local_time.second=s%60;
  }
 };
+struct DummyTimer {void adjust(int){}};
+struct attotime {static constexpr int zero=0;};
 struct Model {
     static constexpr u32 rtc_time_mask=0x1f3f003fU;
     static constexpr bool rtc_time_valid(u32);
@@ -104,6 +106,9 @@ struct Model {
     u32 m_rtc_time=0,m_rtc_last_tick=0,m_pending=0,m_rtc_alarm=0;
     s32 m_rtc_offset_seconds=0;
     u16 m_rtc_day=0,m_rtc_day_alarm=0,m_rtc_control=0x0080,m_rtc_ien=0,m_rtc_isr=0;
+    bool m_rtc_initialized=false,m_stopwatch_active=false;
+    u16 m_watchdog=0,m_stopwatch=63;
+    DummyTimer timer;DummyTimer *m_watchdog_guard=&timer;
     bool blocked=false;
     const char* error="";
     u32 rtc_host_seconds();
@@ -127,30 +132,29 @@ int main() {
  if(d.m_rtc_isr!=0 || d.m_pending!=0) return 2;
  d.m_rtc_last_tick=d.m_rtc_time;
  d.host.seconds++;
- if(d.rtc_time_r(0)!=0x0b2a || d.rtc_time_r(1)!=58) return 3;
+ if(d.rtc_time_r(0)!=0x0b2a || d.rtc_time_r(1)!=57) return 3;
  d.rtc_ien_w(0,0x000a,0xffff); // original UK1.5
  d.rtc_control_w(0,0x0080,0xffff);
  if(d.blocked || d.m_rtc_ien!=0x000a) return 4;
  d.rtc_tick();
  if(d.m_pending!=0 || !(d.m_rtc_isr&0x10)) return 5;
  d.host.seconds+=2;
- d.rtc_tick();
+ d.rtc_tick();d.rtc_tick();
  if(d.m_rtc_time!=0x0b2b0000 || !(d.m_rtc_isr&2) ||
     !(d.m_pending&0x10)) return 6;
  d.rtc_isr_w(0,0x0002,0xffff);
  if(d.m_pending!=0 || (d.m_rtc_isr&2)) return 7;
  d.rtc_time_w(0,0x1834,0xffff); // invalid hour 24
- if(!d.blocked || d.m_rtc_time!=0x0b2b0000) return 8;
+ if(d.blocked || d.m_rtc_time!=0x18340000) return 8; // hardware accepts out-of-range fields
  d.blocked=false;
  d.rtc_time_w(0,0x1230,0xffff);
  d.rtc_time_w(1,0x003a,0xffff);
  if(d.blocked || d.rtc_time_r(0)!=0x1230 ||
     d.rtc_time_r(1)!=0x003a) return 9;
  const s32 offset=d.m_rtc_offset_seconds;
- d.host.seconds++;
+ d.host.seconds++;d.rtc_tick();
  if(d.rtc_time_r(0)!=0x1230 || d.rtc_time_r(1)!=0x003b ||
     d.m_rtc_offset_seconds!=offset) return 10;
- d.rtc_tick();
  if(d.m_pending) return 11;
  d.host.seconds++;
  d.rtc_tick();
@@ -167,13 +171,13 @@ int main() {
  d.rtc_control_w(0,0x0080,0xffff);
  if(d.rtc_time_r(0)!=u16(frozen>>16) ||
     d.rtc_time_r(1)!=u16(frozen)) return 15;
- d.host.seconds++;
+ d.host.seconds++;d.rtc_tick();
  if(d.rtc_time_r(1)!=1) return 16;
  d.rtc_time_w(0,0x0400,0xff00);
  d.rtc_time_w(0,0x0005,0x00ff);
  if(d.rtc_time_r(0)!=0x0405) return 17;
  d.rtc_ien_w(0,0x0100,0xffff);
- if(!d.blocked || d.m_rtc_ien!=0x000a) return 18;
+ if(d.blocked || d.m_rtc_ien!=0x0100) return 18;
  Model midnight;
  midnight.host.seconds=23*3600+59*60+59;
  midnight.rtc_time_r(0);

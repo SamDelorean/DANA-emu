@@ -1,5 +1,8 @@
 # V04 — Conteo óptico de terminales U7 y U1 (26/10/2026)
 
+> **H2 observation — 2026-11-01.** Native UK1.5 PrvSpiSetPol0/1 samples PD0/PD1 as inputs (PDDIR=00 in the observed wait). Earlier output-direction inferences do not establish board continuity. The diagnostic profile explicitly supplies LOW on PD0/PD1; this is a bench stimulus, **not a PCB-net identification**. See [H2 GPIO boundary and native evidence](H2_VZ_INTEGRATION_20261101.md).
+
+
 ## UART/IrDA software routing evidence — 2026-11-01
 
 Original UK1.5 native execution selects **UART2** (`FFFFF910–FFFFF91D`) for its infrared driver, sets IRDAEN and NIPR2=`0320`, emits valid IrLAP XID frames, and reads returned SIR bytes. Motorola defines UART2 RX/TX/RTS/CTS on PJ4–PJ7 and shared UCLK on PE3. These are **silicon and firmware observations**, not measured Dana PCB continuity. The IR transceiver part number, shutdown/control wiring, optical timing and exact package-pin-to-pad nets remain unmeasured. UART1 SIR tests exercise silicon capability only; they do not establish a second board IR port. See [the serial integration evidence](UART_IRDA_INTEGRATION_20261101.md). No existing photographed connection is relabelled as measured.
