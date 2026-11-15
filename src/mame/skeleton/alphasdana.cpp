@@ -319,7 +319,13 @@ private:
     u16 pwm1_period_count_r();
     void pwm1_period_count_w(offs_t, u16 data, u16 mem_mask);
     TIMER_CALLBACK_MEMBER(pwm1_tick);
-    void pwm1_schedule();
+    void pwm1_schedule(double phase=0);
+    void pwm1_clock_changed();
+    void pwm1_irq();
+    void pwm1_begin_period();
+    double pwm1_phase() const;
+    void pwm1_level(bool high);
+    void pwm1_save();
     TIMER_CALLBACK_MEMBER(pwm1_fall);
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
     u16 pllfsr_r() { return (m_pllfsr & 0x4fff) | (m_clk32_high ? 0x8000 : 0); }
@@ -422,12 +428,11 @@ private:
     u8 pg_r(offs_t reg)
     {
         u8 value=h2_gpio_r(4,reg);
-        // UK1.5 Palm ROM 0x1007B5F8..0x1007B628 (Ghidra): release PG1
-        // as an input, then sample P G DATA bit 1 for physical stylus.
-        // Reflect the external pin only as an input; never drive an output
-        // latch, modify the guest's direction register or spoof an IRQ.
-        if (reg==1 && !(m_gpio[4*4] & 0x02))
-            value=(value & ~u8(0x02)) | ((m_pen_contact->read() & 1) ? 0x02 : 0);
+        // UK1.5 HwrBatMasterRead drives PG1 low, releases it, then samples
+        // the input for charge detection. It is not a stylus-contact input.
+        // Supply a raw digital bench level; the physical RC circuit is unknown.
+        if (reg==1 && !(m_gpio[4*4] & 0x02) && (m_gpio[4*4+3]&0x02))
+            value=(value & ~u8(0x02)) | (ioport("POWER_PG1")->read() & 0x02);
         return value;
     }
     void pg_w(offs_t reg, u8 value)
@@ -714,7 +719,13 @@ private:
     u16 m_pwm1_control=0x0020, m_pwm1_sample=0;
     u8 m_pwm1_period=0xfe, m_pwm1_counter=0;
     u8 m_pwm1_fifo[5]={}, m_pwm1_head=0, m_pwm1_count=0;
-    u8 m_pwm1_last_sample=0;
+    u8 m_pwm1_last_sample=0,m_pwm1_repeat_left=0;
+    bool m_pwm1_high=false;
+    u16 m_pwm1_cycle_steps=256;
+    u32 m_pwm1_source_hz=0,m_pwm1_step_clocks=2;
+    u64 m_pwm1_cycles=0,m_pwm1_samples=0;
+    static constexpr char const *PWM_OUTPUT_NAMES[]={"dana_pwm1_pin","dana_pwm1_cycles","dana_pwm1_samples","dana_pwm1_fifo","dana_pwm1_sample"};
+    output_finder<5> m_pwm1_outputs{*this,PWM_OUTPUT_NAMES};
     emu_timer *m_pwm1_timer=nullptr, *m_pwm1_fall_timer=nullptr;
     emu_timer *m_timer1_timer = nullptr;
     u16 m_tctl1=0, m_tprer1=0, m_tcmp1=0xffff;
@@ -787,6 +798,7 @@ private:
     bool m_lcd_pwm_active=false;
 };
 
+#include "alphasdana_pwm.h"
 #include "alphasdana_lcd.h"
 #include "alphasdana_h2.h"
 
@@ -834,7 +846,7 @@ void alphasdana_state::machine_start()
     save_item(NAME(m_pwm1_control));
     save_item(NAME(m_pwm1_sample)); save_item(NAME(m_pwm1_period)); save_item(NAME(m_pwm1_counter));
     save_item(NAME(m_pwm1_fifo)); save_item(NAME(m_pwm1_head)); save_item(NAME(m_pwm1_count));
-    save_item(NAME(m_pwm1_last_sample));
+    save_item(NAME(m_pwm1_last_sample));pwm1_save();
     save_item(NAME(m_clk32_high));
     save_item(NAME(m_ivr));
     save_item(NAME(m_guest_loaded));
@@ -1030,7 +1042,12 @@ void alphasdana_state::machine_reset()
     m_pwm1_control=0x0020; m_pwm1_sample=0; m_pwm1_period=0xfe;
     m_pwm1_counter=0; m_pwm1_head=0; m_pwm1_count=0;
     std::fill(std::begin(m_pwm1_fifo),std::end(m_pwm1_fifo),0);
-    m_pwm1_last_sample=0;
+    m_pwm1_last_sample=0;m_pwm1_repeat_left=0;m_pwm1_high=false;
+    m_pwm1_cycle_steps=256;m_pwm1_source_hz=0;m_pwm1_step_clocks=2;
+    m_pwm1_cycles=0;m_pwm1_samples=0;
+    m_pwm_clock_remaining=m_pwm_fall_remaining=-1;
+    m_pwm1_outputs[1]=0;m_pwm1_outputs[2]=0;m_pwm1_outputs[3]=0;m_pwm1_outputs[4]=0;
+    pwm1_level(false);
     m_pwm1_timer->adjust(attotime::never);
     m_pwm1_fall_timer->adjust(attotime::never);
     m_pwm1_speaker->level_w(0);
@@ -2008,7 +2025,10 @@ u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
     // EmuTOS 8+16 uses (received >> 4). Keep these protocols distinct.
     // No claimed factory calibration: these bounded endpoints are a
     // provisional emulator digitizer mapping, separate from the LCD pixels.
-    if (!(m_pen_contact->read() & 1))
+    u16 const incoming=width==7?u16((outgoing&0x7f)<<1):outgoing;
+    bool const power_command=((width==7 || width==8) && (incoming==0xa4 || incoming==0xe4))
+        || ((width==1 || width==16) && (m_pen_command==0xa4 || m_pen_command==0xe4));
+    if (!(m_pen_contact->read() & 1) && !power_command)
     {
         m_pen_command=0;
         m_pen_command_7bit=false;
@@ -2019,8 +2039,8 @@ u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
     {
         m_pen_command_7bit=(width==7);
         u16 const command=width==7 ? u16((outgoing & 0x7f)<<1) : outgoing;
-        // UK1.5 Ghidra 0x1007B650/0x1007B65A also references A4/E4
-        // during its early ADC probe. The live setup taps use 90/D8.
+        // UK1.5 HwrBatMasterRead/PrvFilteredBurrBrownRead prove A4/E4 are
+        // separate power ADC channels. Their transfer to volts is unmeasured.
         m_pen_command=(command==0x90 || command==0xd0 || command==0xd8 ||
                        command==0xa4 || command==0xe4)
             ? u8(command) : 0;
@@ -2030,7 +2050,12 @@ u16 alphasdana_state::pen_exchange(unsigned width, u16 outgoing)
             m_pen_sample=0;
             return 0xff;
         }
-        bool const x_axis=(m_pen_command==0x90 || m_pen_command==0xa4);
+        if(m_pen_command==0xa4 || m_pen_command==0xe4)
+        {
+            m_pen_sample=ioport(m_pen_command==0xa4?"POWER_ADC_A4":"POWER_ADC_E4")->read()&0x0fff;
+            return 0xff;
+        }
+        bool const x_axis=m_pen_command==0x90;
         unsigned const host_coord=x_axis ? (m_pen_x->read() & 0xffff) : (m_pen_y->read() & 0xffff);
         // Both physical Palm ADC axes are inverted relative to screen
         // coordinates. Three-point calibration of the unchanged UK1.5 ROM
@@ -2475,143 +2500,6 @@ void alphasdana_state::icemsr_w(offs_t, u16 data, u16 mem_mask)
 // VZ UM 4.4.1: CLKEN gates the CLKO output, not the PLL itself.
 // Keep the qualified PLLFSR-derived CPU/peripheral clocks unchanged. Reject
 // unsupported divider, sleep and wake-delay changes before committing them.
-// MC68VZ328UM 15.4.1-15.4.4: PWM1 has a five-byte sample FIFO.
-// Hardware status FIFOAV and IRQ are not writable state.
-void alphasdana_state::pwm1_schedule()
-{
-    if (!(m_pwm1_control & 0x0010))
-    {
-        m_pwm1_timer->adjust(attotime::never);
-        m_pwm1_fall_timer->adjust(attotime::never);
-        m_pwm1_speaker->level_w(0);
-        return;
-    }
-    u32 const src=(m_pwm1_control & 0x8000) ? m_xtal->read() : h2_sysclk();
-    if(!src){m_pwm1_timer->adjust(attotime::never);return;}
-    u32 const prescale=((m_pwm1_control>>8)&0x7f)+1;
-    u32 const divider=2U<<(m_pwm1_control&3);
-    m_pwm1_timer->adjust(attotime::from_ticks(
-        u64(prescale)*divider*(u32(m_pwm1_period)+2),src));
-}
-TIMER_CALLBACK_MEMBER(alphasdana_state::pwm1_fall)
-{
-    // The active-high PWM1 output drops when the actual duty counter
-    // reaches the latched sample. MAME speaker device anti-aliases pulses.
-    m_pwm1_speaker->level_w(0);
-}
-TIMER_CALLBACK_MEMBER(alphasdana_state::pwm1_tick)
-{
-    if (!(m_pwm1_control & 0x0010)) return;
-    m_pwm1_counter=0;
-    if (m_pwm1_count)
-    {
-        m_pwm1_last_sample=m_pwm1_fifo[m_pwm1_head];
-        m_pwm1_head=(m_pwm1_head+1)%5;
-        --m_pwm1_count;
-    }
-
-    // One PWM period has PWMP1+2 prescaled clock steps. The register
-    // PWMS1 determines how long the output is high during that period.
-    // This generates a real audible digital pulse train, not a sampled
-    // notification or a host-generated beep unrelated to the 68000.
-    u32 const clock=(m_pwm1_control & 0x8000) ? m_xtal->read() : h2_sysclk();
-    if(!clock)return;
-    u64 const clocks_per_step=u64(((m_pwm1_control>>8)&0x7f)+1)
-        * (2U<<(m_pwm1_control&3));
-    unsigned const total=u32(m_pwm1_period)+2;
-    unsigned const high=std::min(unsigned(m_pwm1_last_sample),total);
-    m_pwm1_fall_timer->adjust(attotime::never);
-    m_pwm1_speaker->level_w(high ? 1 : 0);
-    if (high && high<total)
-        m_pwm1_fall_timer->adjust(attotime::from_ticks(clocks_per_step*high,clock));
-
-    if (m_pwm1_count<=1)
-    {
-        m_pwm1_control |= 0x0080;
-        if (m_pwm1_control & 0x0040) m_pending |= 0x00000080;
-    }
-    update_irq_lines();
-    pwm1_schedule();
-}
-u16 alphasdana_state::pwm1_control_r()
-{
-    u16 const ret=(m_pwm1_control & ~u16(0x002c))
-       | (m_pwm1_count<5 ? 0x0020 : 0);
-    m_pwm1_control &= ~u16(0x0080);
-    m_pending &= ~u32(0x00000080);
-    update_irq_lines();
-    return ret;
-}
-void alphasdana_state::pwm1_control_w(offs_t, u16 data, u16 mem_mask)
-{
-    u16 const next=(m_pwm1_control & ~mem_mask) | (data & mem_mask);
-    bool const old_enable=bool(m_pwm1_control & 0x0010);
-    bool const enable=bool(next & 0x0010);
-    m_pwm1_control=(next & 0xff53) | (m_pwm1_control & 0x0080);
-    if (!enable)
-    {
-        m_pwm1_count=0; m_pwm1_head=0; m_pwm1_counter=0;
-        m_pwm1_control&=~u16(0x0080);
-        m_pending&=~u32(0x00000080);
-        m_pwm1_timer->adjust(attotime::never);
-        m_pwm1_fall_timer->adjust(attotime::never);
-        m_pwm1_last_sample=0;
-        m_pwm1_speaker->level_w(0);
-    }
-    else
-    {
-        if (!old_enable)
-        {
-            m_pwm1_count=0; m_pwm1_head=0; m_pwm1_last_sample=0;
-            m_pwm1_control |= 0x0080;
-        }
-        if (data & mem_mask & 0x0080) m_pwm1_control|=0x0080;
-        if ((m_pwm1_control & 0x00c0)==0x00c0)
-            m_pending |= 0x00000080;
-        else m_pending &= ~u32(0x00000080);
-        pwm1_schedule();
-    }
-    update_irq_lines();
-    logerror("DANA_PWM1_CONTROL value=%04x fifo=%u\n",m_pwm1_control,unsigned(m_pwm1_count));
-}
-void alphasdana_state::pwm1_sample_w(offs_t, u16 data, u16 mem_mask)
-{
-    if (!(m_pwm1_control & 0x0010)) return;
-    // UM 15.4.2: 16-bit loads high then low byte; 8-bit loads LOW byte.
-    auto write_byte=[this](u8 value) {
-        if (m_pwm1_count==5) return;
-        m_pwm1_fifo[(m_pwm1_head+m_pwm1_count)%5]=value;
-        ++m_pwm1_count;
-    };
-    if (mem_mask & 0xff00) write_byte(u8(data>>8));
-    if (mem_mask & 0x00ff) write_byte(u8(data));
-    m_pwm1_sample=(m_pwm1_sample & ~mem_mask) | (data & mem_mask);
-    if (m_pwm1_count>1)
-    {
-        m_pwm1_control &= ~u16(0x0080);
-        m_pending &= ~u32(0x00000080);
-    }
-    update_irq_lines();
-}
-u16 alphasdana_state::pwm1_period_count_r()
-{
-    return (u16(m_pwm1_period)<<8) | m_pwm1_counter;
-}
-void alphasdana_state::pwm1_period_count_w(offs_t, u16 data, u16 mem_mask)
-{
-    if (!(m_pwm1_control & 0x0010)) return;
-    // F504 is writable period (even, high lane); F505 is read-only count.
-    if (mem_mask & 0xff00)
-    { m_pwm1_period=u8(data>>8); pwm1_schedule(); }
-}
-
-
-
-
-
-
-
-
 u8 alphasdana_state::ivr_r()
 {
     // Actual handler dispatch, independently countable in MAME -log output.
@@ -3157,9 +3045,9 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
     map(0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
     map(0xfffff207,0xfffff207).rw(FUNC(alphasdana_state::pctlr_r),FUNC(alphasdana_state::pctlr_w)).umask16(0x00ff);
-    m_boot_memory[1](0xfffff500,0xfffff501).rw(FUNC(alphasdana_state::pwm1_control_r),FUNC(alphasdana_state::pwm1_control_w));
-    m_boot_memory[1](0xfffff502,0xfffff503).rw(FUNC(alphasdana_state::pwm1_sample_r),FUNC(alphasdana_state::pwm1_sample_w));
-    m_boot_memory[1](0xfffff504,0xfffff505).rw(FUNC(alphasdana_state::pwm1_period_count_r),FUNC(alphasdana_state::pwm1_period_count_w));
+    map(0xfffff500,0xfffff501).rw(FUNC(alphasdana_state::pwm1_control_r),FUNC(alphasdana_state::pwm1_control_w));
+    map(0xfffff502,0xfffff503).rw(FUNC(alphasdana_state::pwm1_sample_r),FUNC(alphasdana_state::pwm1_sample_w));
+    map(0xfffff504,0xfffff505).rw(FUNC(alphasdana_state::pwm1_period_count_r),FUNC(alphasdana_state::pwm1_period_count_w));
     map(0xfffff410,0xfffff410).rw(FUNC(alphasdana_state::pcdir_r),FUNC(alphasdana_state::pcdir_w)).umask16(0xff00);
     // Native UK1.5 cold-start also writes TCTL2=0000 after TCTL1=0000.
     m_boot_memory[0](0xfffff610,0xfffff611).rw(FUNC(alphasdana_state::timer2_tctl_r),FUNC(alphasdana_state::timer2_tctl_w));
@@ -3404,6 +3292,19 @@ static INPUT_PORTS_START(alphasdana)
     PORT_CONFSETTING(0,"Dana 2002 - marketed 4 grays")
     PORT_CONFSETTING(1,"Dana revised 2003 - marketed 16 grays")
     PORT_CONFSETTING(2,"Dana Wireless 2003 - marketed 16 grays")
+    // Raw firmware-observed power inputs. Counts are not a battery percentage,
+    // voltage, cell chemistry or a model of the unknown charging circuitry.
+    PORT_START("POWER_PG1")
+    PORT_CONFNAME(2,2,"PG1 power-sense input (raw bench level)")
+    PORT_CONFSETTING(0,"Low") PORT_CONFSETTING(2,"High")
+    PORT_START("POWER_ADC_A4")
+    PORT_CONFNAME(0x0fff,0x0fff,"SPI2 power A4 raw ADC code (unmeasured transfer)")
+    PORT_CONFSETTING(0,"0x000") PORT_CONFSETTING(512,"0x200") PORT_CONFSETTING(1024,"0x400")
+    PORT_CONFSETTING(2048,"0x800") PORT_CONFSETTING(3072,"0xC00") PORT_CONFSETTING(4095,"0xFFF reference saturation")
+    PORT_START("POWER_ADC_E4")
+    PORT_CONFNAME(0x0fff,0x0fff,"SPI2 power E4 raw ADC code (unmeasured transfer)")
+    PORT_CONFSETTING(0,"0x000") PORT_CONFSETTING(512,"0x200") PORT_CONFSETTING(1024,"0x400")
+    PORT_CONFSETTING(2048,"0x800") PORT_CONFSETTING(3072,"0xC00") PORT_CONFSETTING(4095,"0xFFF reference saturation")
     PORT_START("PHYSRAM")
     PORT_CONFNAME(0x01,0x01,"Dana physical SDRAM (boot profile)")
     PORT_CONFSETTING(0x00,"8 MiB (original Dana)")

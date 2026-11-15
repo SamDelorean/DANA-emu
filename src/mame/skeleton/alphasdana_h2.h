@@ -35,11 +35,7 @@ void alphasdana_state::h2_clock_apply(u32 old_hz)
     if((m_tctl1&14)==2 || (m_tctl1&14)==4)timer1_schedule();
     if((m_tctl2&14)==2 || (m_tctl2&14)==4)timer2_schedule();
     h2_retime(m_spi1_timer,old_hz,hz,m_spi_clock_remaining);
-    if(!(m_pwm1_control&0x8000))
-    {
-        h2_retime(m_pwm1_timer,old_hz,hz,m_pwm_clock_remaining);
-        h2_retime(m_pwm1_fall_timer,old_hz,hz,m_pwm_fall_remaining);
-    }
+    pwm1_clock_changed();
     serial_clock();h2_cpu_gate();lcd_clock_changed();
 }
 void alphasdana_state::h2_cpu_gate()
@@ -232,6 +228,7 @@ u8 alphasdana_state::h2_gpio_r(unsigned n,offs_t reg)
     u8 value=(m_gpio[n*4+1]&driven)|(h2_gpio_input(n)&~driven);
     if(n==3 && !(sel&4) && pllcr_clko_enabled())
         value=(value&~u8(4))|((h2_sysclk() && (machine().time().as_ticks(u64(h2_sysclk())*2)&1))?4:0);
+    if(n==0 && !(sel&128))value=(value&127)|(m_pwm1_high?128:0);
     if(n==3 && !(sel&1))value=(value&~u8(1)) | (lcd_contrast_pin()?1:0);
     if(n==6 && ((m_lpicf>>2)&3)==3)
         value=(value & u8(sel|15)) | (lcd_data_pins() & u8(~sel&0xf0));
