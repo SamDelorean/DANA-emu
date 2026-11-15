@@ -73,6 +73,16 @@
           "blob_sha": "1dc2927a393640fa53f1b626de91e35dbaabaca9",
           "license": "BSD-3-Clause",
           "uart_role": "Reused MAME framing/transport; null_modem examined as reference only."
+        },
+        {
+          "path": "src/devices/machine/intelfsh.cpp",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/machine/intelfsh.cpp",
+          "role": "H3 BSD flash array/NVRAM/state infrastructure"
+        },
+        {
+          "path": "src/devices/machine/intelfsh.h",
+          "pinned_url": "https://github.com/SamDelorean/mame-as3k/blob/c4e48388ca620472643110db2941ce70aa5f3c07/src/devices/machine/intelfsh.h",
+          "role": "H3 BSD flash array/NVRAM/state infrastructure"
         }
       ]
     },
@@ -427,6 +437,20 @@
       "name": "Motorola MC68VZ328UM Addendum Rev.7 October 2001",
       "url": "https://www.nxp.com/docs/en/user-guide/MC68VZ328UMAD.pdf",
       "scope": "UART reset, status mutability, RTS2TRIG and divide-by-one corrections, section 1.8; manufacturer specification, not copied implementation."
+    },
+    {
+      "name": "M28W640HCB",
+      "url": "https://www.ic-components.cz/files/33/M28W640HCB70N6E.pdf",
+      "revision": "Numonyx November 2008 Rev.3",
+      "sha256": "a908eb508768ce7ac65616a9aa395a01a2c705435618e32adad8ef530aa63eb1",
+      "scope": "H3 explicit virtual profile: original UK1.5 ID, command family and complete sector table agree. Not physical U7 identification. Datasheet facts, no manufacturer implementation code copied."
+    },
+    {
+      "name": "M29W320DB",
+      "url": "https://www.ic-components.nl/files/75/M29W320DB70N6.pdf",
+      "revision": "Numonyx February 2010 Rev.12",
+      "sha256": "1a2771b857a163b825446b96ebbe6094a51ff8e4816f400a8a1cc7a5ab6c5e0a",
+      "scope": "H3 explicit virtual profile: original UK1.5 ID, command family and complete sector table agree. Not physical U7 identification. Datasheet facts, no manufacturer implementation code copied."
     }
   ],
   "primary_source_for_dana_board": "retro68_pose_dana",

@@ -1,5 +1,8 @@
 # Dana / Flash NOR — implementación comprobada 2026-10-26
 
+> **H3 NOR release — 2026-11-15.** One `dana-diag` now implements the firmware-supported **M29W320DB 4 MiB** and **M28W640HCB 8 MiB** profiles: native programming/erase, correct asymmetric geometry, status/protection, virtual-time operations, persistent working copies and save-state compatibility. **75 NOR cases plus cross-profile rejection PASS**, with the original UK1.5/AlphaWord/81-key/EmuTOS/peripheral regressions and 29 H2 cases preserved. Installed SHA-256 `d2cc5e10c82919c69077521564a59665dff6c654326e263342dd59aeb1569ae0`. **U7 topmark, physical pin wiring and original 4 MiB firmware remain NO VERIFICADO**; this does not certify all three complete machine variants. See [H3_NOR_INTEGRATION_20261115.md](H3_NOR_INTEGRATION_20261115.md) and [machine-readable receipts](H3_NATIVE_RESULTS_20261115.json). The same 14-sheet/1,020-formula Drive master retains its concurrent variant matrix and history. Earlier pending/read-only/call-limit cursors below are historical. H3 is closed within these demonstrated digital profiles; development stops here and H4 is not started.
+
+
 **Árbol único:** `SamDelorean/DANA-emu`, `main`, `src/mame/skeleton/alphasdana.cpp`. Trabajo y compilación nativa realizados en el DIAG único de T:
 `/home/spc/DANA_EMU_ISOLATED/dana_timer_uart_irq_hmkem769/mame-stage/diag/source`.
 No se creó otra compilación, otro árbol ni una rama. Ejecutable operativo **no sustituido**.

@@ -26,7 +26,11 @@ def cleanup(runtime,leader):
  for line in Path('/proc/self/mountinfo').read_text().splitlines():
   point=line.split()[4]
   if point.startswith(str(runtime)+'/') and 'fuse' in line.split(' - ',1)[1]:
-   subprocess.run(['fusermount3','-uz',point],check=True,stdout=subprocess.DEVNULL)
+   result=subprocess.run(['fusermount3','-uz',point],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,text=True)
+   # The owned portal may finish unmounting after our mountinfo snapshot.
+   # A failed command is harmless only if that exact mount has disappeared.
+   if result.returncode and any(row.split()[4]==point for row in Path('/proc/self/mountinfo').read_text().splitlines()):
+    raise RuntimeError('Private FUSE mount remains: '+point+': '+result.stderr.strip())
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('--prefix',required=True)
