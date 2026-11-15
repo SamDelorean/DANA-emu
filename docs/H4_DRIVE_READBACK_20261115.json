@@ -1,0 +1,17 @@
+{
+  "master": {
+    "readback_sha256": "0a79e116047652a7873056771ac5446deede1f697955b8a1a1b340ebd8e7bf76",
+    "sheets": 14,
+    "formulas": 1020,
+    "drive_same_id": true,
+    "readback_verified": true,
+    "history_rows": 55
+  },
+  "atlas": {
+    "readback_sha256": "6884a26bdf9f11c6265734c35abae6c9923a6c09e906dbb864949fb3573683ed",
+    "sheets": 14,
+    "formulas": 2,
+    "drive_same_id": true,
+    "readback_verified": true
+  }
+}

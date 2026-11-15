@@ -463,17 +463,17 @@ private:
     u8 st_version_exchange(u8 command);
 
     // Guest-owned VZ LCD configuration registers; the DMA-backed screen
-    // reads real emulated RAM. No LCD IRQ, contrast voltage or clock emulation.
+    // consumes the existing memory bus. VZ has no LCD interrupt source.
     u16 lssa_r(offs_t offset) { return offset ? u16(m_lssa) : u16(m_lssa >> 16); }
     void lssa_w(offs_t offset, u16 data, u16 mem_mask)
     {
         unsigned const shift = offset ? 0 : 16;
         u32 const lane = u32(mem_mask) << shift;
-        m_lssa = (m_lssa & ~lane) | (u32(data & mem_mask) << shift);
+        m_lssa = ((m_lssa & ~lane) | (u32(data & mem_mask) << shift)) & 0xfffffffeU;
     }
 #define DANA_LCD_BYTE(NAME) \
     u8 NAME##_r() { return m_##NAME; } \
-    void NAME##_w(u8 value) { m_##NAME = value; }
+    void NAME##_w(u8 value) { m_##NAME = value; lcd_register_changed(); }
     DANA_LCD_BYTE(lvpw)
     DANA_LCD_BYTE(lpicf)
     DANA_LCD_BYTE(lpolcf)
@@ -483,10 +483,12 @@ private:
     DANA_LCD_BYTE(lposr)
     DANA_LCD_BYTE(lgpmr)
     DANA_LCD_BYTE(lblkc)
+    DANA_LCD_BYTE(rmcr)
+    DANA_LCD_BYTE(dmacr)
 #undef DANA_LCD_BYTE
 #define DANA_LCD_WORD(NAME) \
     u16 NAME##_r() { return m_##NAME; } \
-    void NAME##_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_##NAME); }
+    void NAME##_w(offs_t, u16 data, u16 mem_mask) { COMBINE_DATA(&m_##NAME); lcd_register_changed(); }
     DANA_LCD_WORD(lxmax)
     DANA_LCD_WORD(lymax)
     DANA_LCD_WORD(lrra)
@@ -505,6 +507,24 @@ private:
 #undef DANA_LCD_WORD
     u32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
     void lcd_bootstrap_reset();
+    void lcd_start();
+    void lcd_register_changed();
+    void lcd_clock_changed();
+    void lcd_postload();
+    void lcd_line_start();
+    void lcd_schedule();
+    void lcd_publish();
+    u16 lcd_dma_read(u32 address);
+    void lcd_consume_words(unsigned target);
+    u32 lcd_line_clocks() const { return 12+u32(m_lxmax)+m_lrra; }
+    double lcd_position() const;
+    u8 lcd_density(u8 pixel) const;
+    u8 lcd_pixel_density(unsigned x) const;
+    u8 lcd_data_pins() const;
+    u8 lcd_control_pins() const;
+    bool lcd_contrast_pin() const;
+    double lcd_pwm_ticks() const;
+    TIMER_CALLBACK_MEMBER(lcd_event);
 
     DECLARE_QUICKLOAD_LOAD_MEMBER(guest_load);
     required_device_array<dana_vz_uart_device,2> m_uart;
@@ -743,12 +763,36 @@ private:
     u8 m_lpicf = 0, m_lpolcf = 0, m_lacdrc = 0, m_lpxcd = 0;
     u8 m_lckcon = 0, m_lposr = 0, m_lgpmr = 0x84;
     u16 m_lrra = 0x00ff, m_pwmr = 0;
+    static constexpr char const *LCD_OUTPUT_NAMES[]={"dana_lcd_frames","dana_lcd_lines","dana_lcd_dma_words","dana_lcd_dma_bursts","dana_lcd_dma_faults","dana_lcd_dma_address","dana_lcd_fifo_words","dana_lcd_line","dana_lcd_pixel_hz","dana_lcd_running","dana_lcd_self_refresh","dana_lcd_bpp","dana_lcd_panel_profile"};
+    output_finder<13> m_lcd_outputs{*this,LCD_OUTPUT_NAMES};
+    u8 m_rmcr=0, m_dmacr=0x62;
+    // One controller, one eight-word FIFO and the digitally scanned surface.
+    // No second framebuffer address space: these are output/FIFO state only.
+    emu_timer *m_lcd_timer=nullptr;
+    u8 m_lcd_image[1024*512]={}, m_lcd_present[560*160]={}, m_lcd_line[1040]={};
+    u16 m_lcd_fifo[8]={};
+    u8 m_lcd_head=0,m_lcd_count=0,m_lcd_bpp=1,m_lcd_pan=0;
+    u16 m_lcd_y=0,m_lcd_width=0,m_lcd_height=0,m_lcd_fetched=0,m_lcd_consumed=0,m_lcd_needed=0;
+    u32 m_lcd_line_address=0;
+    double m_lcd_hz=0;
+    u64 m_lcd_frames=0,m_lcd_lines=0,m_lcd_dma_words=0,m_lcd_dma_bursts=0,m_lcd_dma_faults=0;
+    bool m_lcd_running=false,m_lcd_self_refresh=false;
+    attotime m_lcd_origin=attotime::zero;
+    double m_lcd_offset=0;
+    attoseconds_t m_lcd_screen_period=0;
+    double m_lcd_pwm_phase=0,m_lcd_pwm_hz=0;
+    attotime m_lcd_pwm_origin=attotime::zero;
+    u64 m_lcd_pwm_line_base=0;
+    u8 m_lcd_pwm_source=0;
+    bool m_lcd_pwm_active=false;
 };
 
+#include "alphasdana_lcd.h"
 #include "alphasdana_h2.h"
 
 void alphasdana_state::machine_start()
 {
+    lcd_start();
     // Allocate only physical-mode upper RAM; R-direct map remains 4 MiB.
     m_physical_ram_extra=std::make_unique<u16[]>(0x600000);
     save_pointer(NAME(m_physical_ram_extra),0x600000);
@@ -2301,39 +2345,6 @@ void alphasdana_state::spi2_ctrl_w(offs_t, u16 data, u16 mem_mask)
     // IRQ4 remains as in original 012-C; EmuTOS polls bit 7.
 }
 
-void alphasdana_state::lcd_bootstrap_reset()
-{
-    // D0.2 register contract; LCD is off until explicitly programmed by guest.
-    // These are controller-register initial values, not a physical LCD reset test.
-    m_lssa=0; m_lvpw=0xff; m_lxmax=0x03f0; m_lymax=0x01ff;
-    m_lcxp=0; m_lcyp=0; m_lcwch=0x0101; m_lblkc=0x7f;
-    m_lpicf=0; m_lpolcf=0; m_lacdrc=0; m_lpxcd=0;
-    m_lckcon=0; m_lposr=0; m_lgpmr=0x84; m_lrra=0x00ff; m_pwmr=0;
-}
-
-u32 alphasdana_state::screen_update(screen_device &, bitmap_rgb32 &bitmap, const rectangle &cliprect)
-{
-    // Read the actual guest-allocated 560x160 1-bpp framebuffer, never draw a
-    // host-generated imitation of an EmuTOS screen. The direct RAM share avoids
-    // debugger memory taps falsely classifying video reads as 68000 traffic.
-    rgb_t const off(0xbd, 0xbd, 0xaa), on(0x40, 0x40, 0x40);
-    bitmap.fill(off, cliprect);
-    if (!(m_lckcon & 0x80) || m_lpicf != 8 || m_lvpw != 35
-        || m_lxmax != 560 || m_lymax != 159 || (m_lssa & 1)
-        || m_lssa > 0x400000 - 11200)
-        return 0;
-    for (int y=std::max(cliprect.top(),0); y<=std::min(cliprect.bottom(),159); ++y)
-    {
-        u32 const line = m_lssa + u32(y)*70;
-        for (int x=std::max(cliprect.left(),0); x<=std::min(cliprect.right(),559); ++x)
-        {
-            u16 const word = m_ram[(line >> 1) + u32(x >> 4)];
-            bitmap.pix(y,x) = BIT(word,15-(x & 15)) ? on : off;
-        }
-    }
-    return 0;
-}
-
 TIMER_CALLBACK_MEMBER(alphasdana_state::clk32_tick)
 {
     m_clk32_high = !m_clk32_high;
@@ -3246,6 +3257,8 @@ void alphasdana_state::program_map(address_map &map)
     map(0xfffffa2d,0xfffffa2d).rw(FUNC(alphasdana_state::lposr_r),FUNC(alphasdana_state::lposr_w));
     map(0xfffffa33,0xfffffa33).rw(FUNC(alphasdana_state::lgpmr_r),FUNC(alphasdana_state::lgpmr_w));
     map(0xfffffa36,0xfffffa37).rw(FUNC(alphasdana_state::pwmr_r),FUNC(alphasdana_state::pwmr_w));
+    map(0xfffffa38,0xfffffa38).rw(FUNC(alphasdana_state::rmcr_r),FUNC(alphasdana_state::rmcr_w)).umask16(0xff00);
+    map(0xfffffa39,0xfffffa39).rw(FUNC(alphasdana_state::dmacr_r),FUNC(alphasdana_state::dmacr_w)).umask16(0x00ff);
 
 }
 
@@ -3278,7 +3291,7 @@ void alphasdana_state::alphasdana(machine_config &config)
     m_maincpu->set_addrmap(m68000_base_device::AS_CPU_SPACE, &alphasdana_state::cpu_space_map);
     // Reuse MAME's LCD screen infrastructure; the only pixel source is guest RAM.
     SCREEN(config, m_screen).set_lcd();
-    m_screen->set_refresh_hz(60); // Display cadence provisional; VZ PLL timing pending.
+    m_screen->set_refresh_hz(60); // Host delivery while reset/off; LCDON programs real VZ cadence.
     m_screen->set_size(560,160);
     m_screen->set_visarea(0,559,0,159);
     m_screen->set_screen_update(FUNC(alphasdana_state::screen_update));
@@ -3384,6 +3397,13 @@ static INPUT_PORTS_START(alphasdana)
     // active-low interrupt line, while low tests the original sleep path.
     // Original Dana 8 MiB; later Dana 2 and Wireless 16 MiB. The authentic
     // 68k memory probe decides what exists. Unpopulated addresses mirror RAM.
+    // Panel capability metadata is independent of RAM/NOR and VZ GS bits.
+    // The digital controller is identical; installed glass transfer is unmeasured.
+    PORT_START("LCD_PANEL")
+    PORT_CONFNAME(3,1,"Dana LCD panel documentation profile")
+    PORT_CONFSETTING(0,"Dana 2002 - marketed 4 grays")
+    PORT_CONFSETTING(1,"Dana revised 2003 - marketed 16 grays")
+    PORT_CONFSETTING(2,"Dana Wireless 2003 - marketed 16 grays")
     PORT_START("PHYSRAM")
     PORT_CONFNAME(0x01,0x01,"Dana physical SDRAM (boot profile)")
     PORT_CONFSETTING(0x00,"8 MiB (original Dana)")

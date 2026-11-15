@@ -40,7 +40,7 @@ void alphasdana_state::h2_clock_apply(u32 old_hz)
         h2_retime(m_pwm1_timer,old_hz,hz,m_pwm_clock_remaining);
         h2_retime(m_pwm1_fall_timer,old_hz,hz,m_pwm_fall_remaining);
     }
-    serial_clock();h2_cpu_gate();
+    serial_clock();h2_cpu_gate();lcd_clock_changed();
 }
 void alphasdana_state::h2_cpu_gate()
 {
@@ -232,36 +232,13 @@ u8 alphasdana_state::h2_gpio_r(unsigned n,offs_t reg)
     u8 value=(m_gpio[n*4+1]&driven)|(h2_gpio_input(n)&~driven);
     if(n==3 && !(sel&4) && pllcr_clko_enabled())
         value=(value&~u8(4))|((h2_sysclk() && (machine().time().as_ticks(u64(h2_sysclk())*2)&1))?4:0);
+    if(n==3 && !(sel&1))value=(value&~u8(1)) | (lcd_contrast_pin()?1:0);
+    if(n==6 && ((m_lpicf>>2)&3)==3)
+        value=(value & u8(sel|15)) | (lcd_data_pins() & u8(~sel&0xf0));
     m_gpio_sample[n]=value;return value;
 }
 u8 alphasdana_state::h2_lcd_pins() const
-{
-    u32 const hz=h2_lcd_hz();
-    if(!hz || !(m_lckcon&0x80))return 0;
-    u32 const div=(m_lpxcd&63)+1,width=std::max(u32(m_lxmax),1U),height=u32(m_lymax)+1;
-    u64 const half=machine().time().as_ticks(u64(hz)*2)/div;
-    u64 const pix=half/2,line=width+12+(m_lrra&1023);
-    u32 const y=(pix/line)%height,x=pix%line;
-    unsigned const bus=1U<<((m_lpicf>>2)&3),bpp=1U<<(m_lpicf&3),group=std::max(bus/bpp,1U);
-    u8 value=((half/group)&1)?0x40:0;
-    if(y==0)value|=0x10;
-    if(x==line-1)value|=0x20;
-    if((pix/line/((m_lacdrc&15)+1))&1)value|=0x80;
-    if(x<width && m_lpicf==8)
-    {
-        u32 const col=(x/group)*group;
-        for(unsigned bit=0;bit<4;++bit)
-        {
-            u32 const a=m_lssa+y*2*m_lvpw+(col+bit)/8;
-            if(a<0x400000 && (m_ram[a/2]&(0x8000U>>((a&1)*8+((col+bit)&7)))))value|=1U<<(3-bit);
-        }
-    }
-    if(m_lpolcf&1)value^=15;
-    if(m_lpolcf&2)value^=0x20;
-    if(m_lpolcf&4)value^=0x10;
-    if(m_lpolcf&8)value^=0x40;
-    return value;
-}
+{ return lcd_control_pins() | (lcd_data_pins() & 15); }
 u8 alphasdana_state::pcdata_r()
 {
     u8 const drive=m_pc_drive->read(),external=m_pc_value->read();

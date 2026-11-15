@@ -31,7 +31,7 @@ def inline(src, signature):
 
 class LCDCursorRegisters(unittest.TestCase):
     def test_production_handlers_reset_bus_lanes_and_reserved_bits(self):
-        source = DRIVER.read_text()
+        source = DRIVER.read_text() + (DRIVER.parent / "alphasdana_lcd.h").read_text()
         for declaration in (
             "u16 m_lcxp = 0, m_lcyp = 0, m_lcwch = 0x0101;",
             "u8 m_lblkc = 0x7f;",

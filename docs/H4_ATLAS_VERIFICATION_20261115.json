@@ -1,0 +1,22 @@
+{
+  "source_sha256": "1275bdb299131ba6ab7609865c52ddcbb2dee0ba89d45bc90809f38562823a78",
+  "updated_sha256": "6884a26bdf9f11c6265734c35abae6c9923a6c09e906dbb864949fb3573683ed",
+  "sheets": 14,
+  "formulas": 2,
+  "changed_cells": [
+    "07_Registros_ROM!C14",
+    "07_Registros_ROM!D14",
+    "07_Registros_ROM!E14",
+    "07_Registros_ROM!F14",
+    "07_Registros_ROM!G14",
+    "07_Registros_ROM!H14",
+    "07_Registros_ROM!I14",
+    "07_Registros_ROM!J14"
+  ],
+  "appended_rows": [
+    "09_Fuentes!25",
+    "09_Fuentes!26"
+  ],
+  "unchanged_cells_styles_formulas_history_preserved": true,
+  "unchanged_zip_members_preserved": true
+}
