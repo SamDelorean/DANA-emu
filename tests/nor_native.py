@@ -204,13 +204,15 @@ def fixture(mode,body=None,size=0x800000):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--mode',required=True);p.add_argument('--case',required=True);p.add_argument('--installed',action='store_true');p.add_argument('--reuse',type=Path);p.add_argument('--reference',action='store_true');p.add_argument('--load-state',type=Path);p.add_argument('--expect-rejection',action='store_true');p.add_argument('--save-final',action='store_true');p.add_argument('--chip',choices=['m28w640hcb','m29w320db'],default='m28w640hcb')
-    a=p.parse_args();assert re.fullmatch('[A-Za-z0-9_-]+',a.case);root=Path(__file__).resolve().parents[1];folder=root/'local-evidence/runtime-compare'/a.case;folder.mkdir(parents=True,exist_ok=False)
+    p.add_argument('--storage-board',type=int,choices=[0,1,2,3],default=0);a=p.parse_args();assert re.fullmatch('[A-Za-z0-9_-]+',a.case);root=Path(__file__).resolve().parents[1];folder=root/'local-evidence/runtime-compare'/a.case;folder.mkdir(parents=True,exist_ok=False)
     binary=root/('runtime/diag/bin/dana-diag'if a.installed else'runtime/diag/source/danadiagd')
     cfg=folder/'cfg';cfg.mkdir()
     for name in ['asmdana.cfg','default.cfg']:shutil.copy2(root/'config/palm-uk15'/name,cfg/name)
     f=cfg/'asmdana.cfg';s=f.read_text();s=s.replace('</input>',f'<port tag=":NOR_WORK" type="CONFIG" mask="1" defvalue="0" value="{0 if a.reference else 1}"/><port tag=":NOR_VPP" type="CONFIG" mask="3" defvalue="1" value="{0 if a.mode=="vpp-off" and not a.reference else 2 if a.mode=="accelerated"or(a.chip=="m28w640hcb"and a.mode in ["multi","group-alignment","save-setup","reverse-group"]) else 1}"/></input>')
     if a.mode in ['unknown','erase-unknown']:s=s.replace('tag=":NOR_FACTORY" type="CONFIG" mask="1" defvalue="0" value="1"','tag=":NOR_FACTORY" type="CONFIG" mask="1" defvalue="0" value="0"')
     if a.mode in ['readback','otp-readback','powercut-read','powercut-erase','protection-readback']:s=s.replace('tag=":GPIO1VALUE" type="CONFIG" mask="255" defvalue="0" value="0"','tag=":GPIO1VALUE" type="CONFIG" mask="255" defvalue="0" value="'+str(3 if a.mode=='powercut-erase'else 1)+'"')
+    if a.storage_board:
+        s=s.replace('</input>',f'<port tag=":DANA_STORAGE" type="CONFIG" mask="3" defvalue="0" value="{a.storage_board}"/></input>')
     f.write_text(s)
     # Readback uses exactly the original seed, not a newly generated program.
     rom=a.reuse/'seed.bin'if a.reuse else folder/'seed.bin'

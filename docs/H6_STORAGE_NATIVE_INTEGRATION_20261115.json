@@ -1,0 +1,89 @@
+{
+  "date": "2026-11-15",
+  "status": "H6_STORAGE_PROFILES_NATIVE_PASS",
+  "baseline_h5_sha256": "6081b48e671cd677a09f3033eb2131a3cfaad8638e3d9ab742c56bf57da6e480",
+  "installed_h6_sha256": "8538592882358372293e583a6570ddc307398548a81aa8ceb0f0c1aa5515c46a",
+  "profile_cases": [
+    {
+      "case": "manual8",
+      "chip": "m28w640hcb",
+      "profile": 0,
+      "expected_accept": true,
+      "ok": true,
+      "process_rc": 0,
+      "native_marker": 42330,
+      "message_tail": "{\"marker\": 42330, \"stage\": 2, \"failure_d0\": 0, \"pc\": 9728, \"frames\": 1, \"restored\": false, \"expected_guard\": null, \"qualification\": \"CPU_FUNCTIONAL\", \"mode\": \"identify\", \"chip\": \"m28w640hcb\", \"returncode\": 0, \"seed_sha256\": \"925e81e8c4d5dea37084e67134a3ed362ece642ebb50297b9af4fbcefd921bff\", \"seed_preserved\": true, \"binary_sha256\": \"8538592882358372293e583a6570ddc307398548a81aa8ceb0f0c1aa5515c46a\", \"working_storage_preserved\": true, \"pass\": true}\n"
+    },
+    {
+      "case": "original",
+      "chip": "m29w320db",
+      "profile": 1,
+      "expected_accept": true,
+      "ok": true,
+      "process_rc": 0,
+      "native_marker": 42330,
+      "message_tail": "{\"marker\": 42330, \"stage\": 1, \"failure_d0\": 0, \"pc\": 9616, \"frames\": 1, \"restored\": false, \"expected_guard\": null, \"qualification\": \"CPU_FUNCTIONAL\", \"mode\": \"identify\", \"chip\": \"m29w320db\", \"returncode\": 0, \"seed_sha256\": \"164920ff9a5f6db8ae9d1f8e08593ea1faa5d25a795fda9bed3baf4b8353b792\", \"seed_preserved\": true, \"binary_sha256\": \"8538592882358372293e583a6570ddc307398548a81aa8ceb0f0c1aa5515c46a\", \"working_storage_preserved\": true, \"pass\": true}\n"
+    },
+    {
+      "case": "revised",
+      "chip": "m28w640hcb",
+      "profile": 2,
+      "expected_accept": true,
+      "ok": true,
+      "process_rc": 0,
+      "native_marker": 42330,
+      "message_tail": "{\"marker\": 42330, \"stage\": 2, \"failure_d0\": 0, \"pc\": 9728, \"frames\": 1, \"restored\": false, \"expected_guard\": null, \"qualification\": \"CPU_FUNCTIONAL\", \"mode\": \"identify\", \"chip\": \"m28w640hcb\", \"returncode\": 0, \"seed_sha256\": \"925e81e8c4d5dea37084e67134a3ed362ece642ebb50297b9af4fbcefd921bff\", \"seed_preserved\": true, \"binary_sha256\": \"8538592882358372293e583a6570ddc307398548a81aa8ceb0f0c1aa5515c46a\", \"working_storage_preserved\": true, \"pass\": true}\n"
+    },
+    {
+      "case": "wireless",
+      "chip": "m28w640hcb",
+      "profile": 3,
+      "expected_accept": true,
+      "ok": true,
+      "process_rc": 0,
+      "native_marker": 42330,
+      "message_tail": "{\"marker\": 42330, \"stage\": 2, \"failure_d0\": 0, \"pc\": 9728, \"frames\": 1, \"restored\": false, \"expected_guard\": null, \"qualification\": \"CPU_FUNCTIONAL\", \"mode\": \"identify\", \"chip\": \"m28w640hcb\", \"returncode\": 0, \"seed_sha256\": \"925e81e8c4d5dea37084e67134a3ed362ece642ebb50297b9af4fbcefd921bff\", \"seed_preserved\": true, \"binary_sha256\": \"8538592882358372293e583a6570ddc307398548a81aa8ceb0f0c1aa5515c46a\", \"working_storage_preserved\": true, \"pass\": true}\n"
+    },
+    {
+      "case": "reject-original8",
+      "chip": "m28w640hcb",
+      "profile": 1,
+      "expected_accept": false,
+      "ok": true,
+      "process_rc": 1,
+      "native_marker": null,
+      "message_tail": ":540:(snd_seq_hw_open) [error.sequencer] open /dev/snd/seq failed: Permission denied\n[:firmware:rom] Allocating 8388608 byte ROM region with tag ':firmware:cart:rom' (width 1)\n[:] DANA_PHYSICAL_IMAGE bytes=8388608 sha1=206496bdbbf59c059f9ddf96da9aabc1e211a09d read_only=1 topology=linear_array_unqualified\nSoft reset\nIgnoring MAME exception: DANA_STORAGE NOR capacity mismatch: board 1 requires 4 MiB; select matching -nor before starting\nFatal error: DANA_STORAGE NOR capacity mismatch: board 1 requires 4 MiB; select matching -nor before starting\n\n"
+    },
+    {
+      "case": "reject-revised4",
+      "chip": "m29w320db",
+      "profile": 2,
+      "expected_accept": false,
+      "ok": true,
+      "process_rc": 1,
+      "native_marker": null,
+      "message_tail": ":540:(snd_seq_hw_open) [error.sequencer] open /dev/snd/seq failed: Permission denied\n[:firmware:rom] Allocating 4194304 byte ROM region with tag ':firmware:cart:rom' (width 1)\n[:] DANA_PHYSICAL_IMAGE bytes=4194304 sha1=30315cc033aeca781bab35d7ed91f9b401ece455 read_only=1 topology=linear_array_unqualified\nSoft reset\nIgnoring MAME exception: DANA_STORAGE NOR capacity mismatch: board 2 requires 8 MiB; select matching -nor before starting\nFatal error: DANA_STORAGE NOR capacity mismatch: board 2 requires 8 MiB; select matching -nor before starting\n\n"
+    },
+    {
+      "case": "reject-wireless4",
+      "chip": "m29w320db",
+      "profile": 3,
+      "expected_accept": false,
+      "ok": true,
+      "process_rc": 1,
+      "native_marker": null,
+      "message_tail": ":540:(snd_seq_hw_open) [error.sequencer] open /dev/snd/seq failed: Permission denied\n[:firmware:rom] Allocating 4194304 byte ROM region with tag ':firmware:cart:rom' (width 1)\n[:] DANA_PHYSICAL_IMAGE bytes=4194304 sha1=30315cc033aeca781bab35d7ed91f9b401ece455 read_only=1 topology=linear_array_unqualified\nSoft reset\nIgnoring MAME exception: DANA_STORAGE NOR capacity mismatch: board 3 requires 8 MiB; select matching -nor before starting\nFatal error: DANA_STORAGE NOR capacity mismatch: board 3 requires 8 MiB; select matching -nor before starting\n\n"
+    }
+  ],
+  "previous_compiler_fault": "GCC 15.2.0 warnings as errors, corrected to Clang",
+  "storage_latch_fix": "DANA_STORAGE sampled at initial machine_reset, with reset and postload consistency guards",
+  "native_68000_ram_board_cases": 9,
+  "profile_save_state_guard": "source guarded; cross-profile native load not separately accredited",
+  "limitations": [
+    "SDIO CMD52/CMD53 not implemented or accredited",
+    "Wi-Fi radio not emulated",
+    "Physical NOR part number U7 and Wi-Fi power wiring unverified",
+    "4 MiB profile qualified with synthetic M68000 guest, not private UK1.5"
+  ],
+  "regressions_log": "local-evidence/runtime-compare/h6-storage-latch-20261115/regressions.log"
+}

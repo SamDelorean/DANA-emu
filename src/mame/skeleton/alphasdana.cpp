@@ -81,6 +81,7 @@ public:
         , m_sd_irq(*this, "SDIRQ")
         , m_nor_profile(*this, "NOR_PROFILE")
         , m_nor_factory(*this, "NOR_FACTORY")
+        , m_storage_profile(*this,"DANA_STORAGE")
         , m_pd7_pin(*this, "PDPIN7")
         , m_sdram_profile(*this, "PHYSRAM")
         , m_emubrk_pin(*this, "EMUBRK")
@@ -156,7 +157,14 @@ private:
     void isp1161_w(offs_t offset, u16 data, u16 mem_mask);
     void physical_w(offs_t offset, u16 data, u16 mem_mask);
     u32 cs_base(unsigned group) const { return u32(m_cs_base[group] & 0xfffe) << 13; }
-    u32 physical_sdram_bytes() const { return (m_sdram_profile->read() & 1) ? 0x1000000U : 0x800000U; }
+    u32 physical_sdram_bytes() const
+    {
+        // A selected physical storage board determines RAM capacity; manual
+        // mode retains the existing PHYSRAM diagnostic behavior unchanged.
+        if (m_storage_board)
+            return m_storage_board==1 ? 0x800000U : 0x1000000U;
+        return (m_sdram_profile->read() & 1) ? 0x1000000U : 0x800000U;
+    }
     u32 physical_sdram_index(u32 index) const { return index & (physical_sdram_bytes()-1); }
     // VZ UM 6.3.5 and Example 6-1: CSCTRL1.EUPEN extends CSD.UPSIZ
     // with DUPS2. The unprotected region begins at the CSD bank base.
@@ -554,8 +562,13 @@ private:
     required_ioport m_sd_irq;
     required_ioport m_nor_profile;
     required_ioport m_nor_factory;
+    required_ioport m_storage_profile;
     required_ioport m_pd7_pin;
     required_ioport m_sdram_profile;
+    // Storage board is sampled once, at the first machine reset, when
+    // input ports are readable. Later reset and state-load cannot remap RAM.
+    u8 m_storage_board=0;
+    bool m_storage_profile_latched=false;
     required_ioport m_emubrk_pin;
     required_ioport m_uclk;
     required_ioport m_xtal;
@@ -804,6 +817,9 @@ private:
 
 void alphasdana_state::machine_start()
 {
+    // No input-port reads here: MAME has not initialized them yet.
+    save_item(NAME(m_storage_board));
+    save_item(NAME(m_storage_profile_latched));
     lcd_start();
     // Allocate only physical-mode upper RAM; R-direct map remains 4 MiB.
     m_physical_ram_extra=std::make_unique<u16[]>(0x600000);
@@ -1014,6 +1030,28 @@ void alphasdana_state::machine_start()
 
 void alphasdana_state::machine_reset()
 {
+    // A physical board selection constrains storage capacity only. H1-H5
+    // remains equivalent when DANA_STORAGE=0 (the default).
+    // MAME input ports may first be read in machine_reset(), not machine_start().
+    u8 const requested_board=u8(m_storage_profile->read() & 3);
+    if (!m_storage_profile_latched)
+    {
+        m_storage_board=requested_board;
+        m_storage_profile_latched=true;
+    }
+    else if (requested_board!=m_storage_board)
+        fatalerror("DANA_STORAGE profile changed after startup; restart the emulator");
+    if (m_storage_board)
+    {
+        u32 const expected_nor=m_storage_board==1 ? 0x400000U : 0x800000U;
+        if (m_nor->array_bytes()!=expected_nor)
+            fatalerror("DANA_STORAGE NOR capacity mismatch: board %u requires %u MiB; select matching -nor before starting",
+                unsigned(m_storage_board),unsigned(expected_nor>>20));
+        if (!(m_nor_profile->read() & 1))
+            fatalerror("DANA_STORAGE requires explicit NOR_PROFILE=1 for the selected virtual NOR device");
+        logerror("DANA_STORAGE_PROFILE board=%u sdram=%u nor=%u sd_slots=2 sd_protocol=SPI_SD_MMC sdio=UNVERIFIED radio=NOT_EMULATED\n",
+            unsigned(m_storage_board),unsigned(physical_sdram_bytes()),unsigned(m_nor->array_bytes()));
+    }
     u32 const old_hz=h2_sysclk();
     m_physical_boot=m_firmware->exists() || !(m_emubrk_pin->read()&1);
     if(!m_watchdog_reset)
@@ -1204,6 +1242,10 @@ void alphasdana_state::physical_reset()
 
 void alphasdana_state::boot_postload()
 {
+    if (!m_storage_profile_latched || u8(m_storage_profile->read() & 3)!=m_storage_board
+        || (m_storage_board && (m_nor->array_bytes()!=(m_storage_board==1 ? 0x400000U : 0x800000U)
+            || !(m_nor_profile->read() & 1))))
+        fatalerror("DANA_STORAGE saved state requires its original storage board and NOR selection");
     if (m_physical_boot!=(m_firmware->exists()||m_bootstrap_mode))
         fatalerror("Boot profile differs from saved state; restart with the original image selection");
     if (m_physical_boot)
@@ -3305,6 +3347,15 @@ static INPUT_PORTS_START(alphasdana)
     PORT_CONFNAME(0x0fff,0x0fff,"SPI2 power E4 raw ADC code (unmeasured transfer)")
     PORT_CONFSETTING(0,"0x000") PORT_CONFSETTING(512,"0x200") PORT_CONFSETTING(1024,"0x400")
     PORT_CONFSETTING(2048,"0x800") PORT_CONFSETTING(3072,"0xC00") PORT_CONFSETTING(4095,"0xFFF reference saturation")
+    // Optional coherent storage geometry; default manual preserves all
+    // existing H1-H5 test fixtures and independent PALM/EmuTOS profiles.
+    // NOR selection is made by -nor BEFORE allocation and validated on reset.
+    PORT_START("DANA_STORAGE")
+    PORT_CONFNAME(0x03,0x00,"Dana storage board profile (restart to change)")
+    PORT_CONFSETTING(0x00,"Manual diagnostics - independent PHYSRAM and -nor (default)")
+    PORT_CONFSETTING(0x01,"Dana original 2002 - 8 MiB SDRAM / 4 MiB NOR / SD0+SD1")
+    PORT_CONFSETTING(0x02,"Dana revised 2003 - 16 MiB SDRAM / 8 MiB NOR / SD0+SD1")
+    PORT_CONFSETTING(0x03,"Dana Wireless 2003 - 16 MiB SDRAM / 8 MiB NOR / SD0+SD1")
     PORT_START("PHYSRAM")
     PORT_CONFNAME(0x01,0x01,"Dana physical SDRAM (boot profile)")
     PORT_CONFSETTING(0x00,"8 MiB (original Dana)")

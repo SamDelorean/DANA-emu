@@ -25,7 +25,7 @@ class DanaSdramCapacity(unittest.TestCase):
 using u32=std::uint32_t;
 struct P{u32 value; constexpr u32 read()const{return value;}};
 struct D{
- P port{1};P *m_sdram_profile=&port;
+ P port{1};P *m_sdram_profile=&port;std::uint8_t m_storage_board=0;
 """+methods+"""
 };
 constexpr bool check(){
@@ -35,6 +35,12 @@ constexpr bool check(){
  d.port.value=0;
  if(d.physical_sdram_bytes()!=0x800000 || d.physical_sdram_index(0x800000)!=0
  || d.physical_sdram_index(0xf00000)!=0x700000)return false;
+ d.m_storage_board=1; d.port.value=1;
+ if(d.physical_sdram_bytes()!=0x800000 || d.physical_sdram_index(0xc30002)!=0x430002)return false;
+ d.m_storage_board=2; d.port.value=0;
+ if(d.physical_sdram_bytes()!=0x1000000 || d.physical_sdram_index(0xc30002)!=0xc30002)return false;
+ d.m_storage_board=3;
+ if(d.physical_sdram_bytes()!=0x1000000 || d.physical_sdram_index(0xc30002)!=0xc30002)return false;
  return true;
 }
 static_assert(check());
