@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-16",
+  "repository": "SamDelorean/DANA-emu",
+  "baseline_commit": "dcbb7df94c1c849b88e6c6d32d17eb596fccbfc8",
+  "canonical_driver": "src/mame/skeleton/alphasdana.cpp",
+  "canonical_driver_git_blob": "6ac01b936a9e2dff9c473fbe213c0c50a8d23ffe",
+  "sole_installed_binary_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
+  "scope": "H8 emulated hardware finalization; source/evidence reconciliation only in this publication",
+  "h8_a": "SOURCE_RECONCILED_NO_NATIVE_RUN",
+  "h8_b": "PENDING_AUTHENTIC_PROFILE_BOOT_EVIDENCE",
+  "h8_c": "PENDING_RELEVANT_PCB_NET_EVIDENCE",
+  "h8_d": "CONDITIONAL_GUEST_PROVEN_VZ_BLOCKERS_ONLY",
+  "h8_e": "PENDING_INTEGRATED_ACCEPTANCE",
+  "reused_pass": [
+    {"block":"MC68VZ328 CPU/MMIO/reset/power/PLL/RTC/watchdog", "evidence":"docs/H2_VZ_INTEGRATION_20261101.md", "limit":"routes verified, not every silicon pad/mode"},
+    {"block":"NOR flash 4/8 MiB digital commands", "evidence":"docs/H3_NOR_INTEGRATION_20261115.md", "limit":"physical U7 unknown; original full 4 MiB commercial image missing"},
+    {"block":"LCD controller 560x160 1/2/4 bpp", "evidence":"docs/H4_LCD_INTEGRATION_20261115.md", "limit":"physical glass analog transfer unmeasured"},
+    {"block":"PWM1 and raw power ADC/PG1", "evidence":"docs/H5_PWM_POWER_INTEGRATION_20261115.md", "limit":"charger and amplifier analog nets not qualified"},
+    {"block":"Dana 2002/revised/Wireless configuration and PK0 monitor", "evidence":"docs/H6_INTEGRATION_20261116.md", "limit":"not three complete real board boots or radio"},
+    {"block":"ISP1161 Device digital M68000 EP0/DUSB/USB-IP", "evidence":"docs/H7_USB_NATIVE_INTEGRATION_20261116.md", "limit":"host OS enumeration and Palm original connection excluded"},
+    {"block":"keyboard ST, touchscreen, SD/MMC dual slot, UART1/2 SIR, USB printer", "evidence":"docs/DANA_EMU_INCREMENTAL_WORK_PLAN.md", "limit":"supported guest/transport paths only"}
+  ],
+  "profiles": [
+    {"name":"Dana original 2002", "storage_selector":1, "ram_mib":8, "nor_mib":4, "storage_configuration":"DIGITAL_PASS", "commercial_boot":"BLOCKED_EXTERNAL_IMAGE", "reason":"no authenticated original complete 4 MiB image"},
+    {"name":"Dana revised 2003", "storage_selector":2, "ram_mib":16, "nor_mib":8, "storage_configuration":"DIGITAL_PASS", "commercial_boot":"NOT_ACCREDITED", "reason":"available UK1.5 0x5D0000 updater stream is not authenticated as full 8 MiB flash"},
+    {"name":"Dana Wireless 2003", "storage_selector":3, "ram_mib":16, "nor_mib":8, "storage_configuration":"DIGITAL_PASS", "commercial_boot":"NOT_ACCREDITED", "reason":"radio not emulated; stock full board boot and radio wiring not proved"}
+  ],
+  "original_private_uk15": {"size_bytes":6094848, "sha256":"2f607705738e470d892bfefb9a5dcae1fb3c4195d070c358224e20c93bf365e3", "classification":"UPDATER_DERIVED_NOT_FULL_4_OR_8_MIB_NOR"},
+  "physical_not_verified": ["NOR U7 topmark and physical nets", "SD card-detect polarity and left/right wiring", "audio output stage and PWM2 routing", "battery and charger electrical transfer", "LCD glass bias/contrast/optics", "Wi-Fi module/power rail/IRQ wiring"],
+  "excluded": ["SDIO", "802.11 radio simulation", "PC USB enumeration/data exchange", "Palm HotSync/NEO Manager", "unneeded silicon modes without guest evidence"],
+  "artifacts_modified_in_this_source_phase": ["H8 plan and audit inventory only"],
+  "native_test_executed": false,
+  "commander_called": false,
+  "emulator_modified": false
+}
