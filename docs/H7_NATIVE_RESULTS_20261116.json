@@ -1,12 +1,16 @@
 {
   "date": "2026-11-16",
-  "status": "DIGITAL_CPU_ISP1161_DUSB_USBIP_PASS__H7_INCOMPLETE",
+  "status": "H7_CLOSED_PASS_HARDWARE_DIGITAL__PC_COMMUNICATION_DEFERRED",
   "repository": "SamDelorean/DANA-emu",
   "baseline_h6_commit": "322e021924bc3c5d22e3911d51a153957e12d861",
   "h7_bridge_commit": "d66cbcf3892d797b73238fcbfd7381ba9d349445",
   "only_emulator": "runtime/diag/bin/dana-diag",
   "installed_executable_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
-  "local_protocol_tests": {"passed": 14, "total": 14, "nature": "host-only synthetic fixture"},
+  "local_protocol_tests": {
+    "passed": 14,
+    "total": 14,
+    "nature": "host-only synthetic fixture"
+  },
   "original_uk15": {
     "mame_rc": 0,
     "usb_mmio_transactions": 174,
@@ -46,7 +50,24 @@
   "physical_dana_wiring": "NO_VERIFICADO",
   "h6_changed": false,
   "new_emulator_created": false,
-  "commander_calls_for_h7_so_far": 5,
+  "commander_calls_for_h7_so_far": 7,
   "commander_authorized_max": 10,
-  "regression_gates_reopened": false
+  "regression_gates_reopened": false,
+  "scope_close": {
+    "approved_by_user_date": "2026-11-16",
+    "scope": "digital emulated USB Device hardware: M68000 CPU -> ISP1161 -> DUSB -> USB/IP user-space packet transport",
+    "validation": "CLOSED_PASS",
+    "excluded_from_h7_gate": [
+      "host OS enumeration",
+      "PC connection and data exchange",
+      "Palm UK1.5 USB Computer original-ROM activation",
+      "PCB physical wiring and continuity",
+      "SDIO"
+    ],
+    "deferred_future_phase": "PC communications / USB enumeration and firmware compatibility only under later explicit authorization",
+    "physical_board_wiring_still": "NO_VERIFICADO",
+    "not_equivalent_to_host_os_enumeration": true
+  },
+  "remaining_calls_not_used": 3,
+  "git_main_at_native_evidence": "f50dd584fd2294c463ff0f276a68462ed7ebaad2"
 }

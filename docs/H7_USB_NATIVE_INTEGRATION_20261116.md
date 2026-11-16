@@ -1,6 +1,6 @@
 # H7 USB Computer — integración digital nativa (2026-11-16)
 
-**Estado:** `DIGITAL_CPU_ISP1161_DUSB_USBIP_PASS / ORIGINAL_UK15_PENDING / OS_ENUMERATION_NOT_ACCREDITED`. Este registro **no** cierra íntegramente H7 ni reabre H1–H6.
+**Estado aprobado (16-nov-2026):** `H7 CLOSED / PASS HARDWARE DIGITAL / PC COMMUNICATION DEFERRED`. El usuario valida H7 **únicamente hasta el hardware digital emulado**. La comunicación y enumeración USB ante una PC se trasladan a una etapa posterior, sin contar como fallo o pendiente bloqueante de H7. No se reabren H1–H6 ni se amplía el alcance hacia SDIO, radio Wi-Fi o Palm HotSync/DLP. Este cierre **no** acredita continuidad eléctrica de la PCB, funcionamiento USB del Palm original ni enumeración en el sistema operativo anfitrión.
 
 ## Línea base y restricciones
 
@@ -46,6 +46,6 @@
 
 ## Cierre de la intervención y continuidad
 
-- Cinco llamadas Commander de diez autorizadas hasta concluir la auditoría Ghidra 12.1.3; queda presupuesto, pero ningún uso justifica reabrir H6 ni repetir campañas cerradas.
-- Los tres archivos maestros existentes se preservan; actualizar el rector original solo con campos H7 y conservando **14 hojas, 1.020 fórmulas y 8 tablas**; atlas y plan OS3K no cambian porque H7 no acreditó continuidad física ni se ejecutó OS3K.
-- **Siguiente requisito técnico no acreditado:** una presentación USB/IP por VHCI/OS con acceso comprobado, y por separado la activación auténtica de USB Computer desde Palm UK1.5. Ambos deben etiquetarse pendientes mientras no existan observaciones positivas.
+- La intervención H7 consumió **7/10** llamadas autorizadas a T; las 3 restantes no se utilizan para cerrar alcance. No se reabren H6 ni las campañas previas.
+- El rector original se actualizó en su **mismo ID** `1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l` sin cambiar sus 14 hojas, 1.020 fórmulas ni 8 tablas. Atlas y plan OS3K no se modifican: ni se acreditó continuidad física ni se ejecutó OS3K.
+- **Diferido fuera de H7:** presentación USB/IP mediante VHCI/OS, intercambio efectivo con una PC y, de considerarse relevante en otra etapa, la activación auténtica de USB Computer por Palm UK1.5. Mantener sus resultados previos como `NOT_ACCREDITED`, sin presentarlos como fallos del hardware digital de H7. No iniciar esa etapa sin nueva autorización.
