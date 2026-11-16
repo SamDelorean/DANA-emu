@@ -1,0 +1,57 @@
+{
+  "status": "H8_E_CLOSED_PASS_DIGITAL_SCOPE_WITH_EXTERNAL_DEFERRED",
+  "command_receipt_status": "H8_E_DIGITAL_ACCEPTANCE_PASS_PRIOR_NATIVE_EVIDENCE_REUSED",
+  "command_receipt_exit_code": 0,
+  "remote_native_receipt": "https://drive.google.com/file/d/1wTuKLmi1ESrLdE8D4BnE86-Cl7WhncKf/view",
+  "installed_binary_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
+  "git_head_at_audit": "672ddb17b384df4026ce9c789457e2a544e8cca8",
+  "prior_native_coverage": {
+    "h4_installed_lcd_scenarios": 51,
+    "h5_installed_pwm_power_scenarios": 22,
+    "h6_installed_scenarios": 14,
+    "h6_passivity_pairs": 5,
+    "h7_cpu_isp1161_dusb_usbip": "PASS",
+    "h6_configured_boards": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "h8_b_prior_profiles": {
+      "positive_cpu": 16,
+      "expected_geometry_guards": 6,
+      "same_current_binary_receipts": 8
+    }
+  },
+  "h8_b": {
+    "commander_used": 3,
+    "commander_max": 5,
+    "commercial_stock_boot": "BLOCKED_EXTERNAL_IMAGE"
+  },
+  "h8_c": {
+    "commander_used": 0,
+    "hardware_measurements": "PENDING_PHYSICAL_DEVICE"
+  },
+  "h8_d": {
+    "commander_used": 0,
+    "new_proven_blockers": 0,
+    "new_driver_modifications": 0
+  },
+  "h8_e": {
+    "commander_used": 1,
+    "commander_max": 5,
+    "native_tests_new": 0,
+    "emulator_modified": false
+  },
+  "scope_excluded": [
+    "SDIO",
+    "radio Wi-Fi",
+    "USB to PC OS enumeration",
+    "Palm HotSync",
+    "complete analog/electrical characteristics"
+  ],
+  "deferred_external": {
+    "physical_dana_device": "NOT_AVAILABLE",
+    "authenticated_complete_4_or_8_MiB_flash": "NOT_FOUND"
+  }
+}

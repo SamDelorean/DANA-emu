@@ -5,12 +5,12 @@
   "canonical_driver": "src/mame/skeleton/alphasdana.cpp",
   "canonical_driver_git_blob": "6ac01b936a9e2dff9c473fbe213c0c50a8d23ffe",
   "sole_installed_binary_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
-  "scope": "H8 emulated hardware finalization; source/evidence reconciliation only in this publication",
+  "scope": "H8 digital emulated hardware acceptance only; physical Dana unavailable; no requirement for complete commercial flash to close digital scope",
   "h8_a": "SOURCE_RECONCILED_NO_NATIVE_RUN",
   "h8_b": "NATIVE_MEDIA_AUDITED__COMMERCIAL_BOOT_BLOCKED_EXTERNAL_IMAGE",
-  "h8_c": "SOURCE_MAP_RECONCILED__PHYSICAL_MEASUREMENTS_PENDING",
+  "h8_c": "SOURCE_MAP_RECONCILED__PENDING_PHYSICAL_DEVICE",
   "h8_d": "CONDITIONAL_NO_GUEST_PROVEN_NEW_BLOCKER",
-  "h8_e": "PENDING_EXTERNAL_EVIDENCE_OR_SCOPE_DECISION",
+  "h8_e": "CLOSED_PASS_DIGITAL_SCOPE_WITH_EXTERNAL_DEFERRED",
   "reused_pass": [
     {
       "block": "MC68VZ328 CPU/MMIO/reset/power/PLL/RTC/watchdog",
@@ -98,13 +98,17 @@
     "unneeded silicon modes without guest evidence"
   ],
   "artifacts_modified_in_this_source_phase": [
-    "H8 plan and audit inventory only"
+    "H8 plan",
+    "H8 source audit",
+    "H8 checkpoint",
+    "new H8-E acceptance report",
+    "new H8-E acceptance JSON"
   ],
   "native_test_executed": false,
   "commander_called": false,
   "emulator_modified": false,
   "h8_b_authorized_commander_calls": 5,
-  "h8_b_actual_commander_calls": 2,
+  "h8_b_actual_commander_calls": 3,
   "h8_b_private_media_objects_examined_scoped": 16,
   "h8_b_authenticated_full_commercial_flash_found": 0,
   "h8_b_original_palm_guest_executed_now": false,
@@ -115,5 +119,15 @@
     "on_current_binary": 8
   },
   "h8_c_physical_pin_measurements": 0,
-  "h8_d_driver_modifications": 0
+  "h8_d_driver_modifications": 0,
+  "h8_e_commander_calls": 1,
+  "h8_e_accepted_prior_native_reports": [
+    "H4",
+    "H5",
+    "H6",
+    "H7"
+  ],
+  "h8_e_new_native_guest_runs": 0,
+  "h8_e_reused_binary_unchanged": true,
+  "physical_dana_available": false
 }

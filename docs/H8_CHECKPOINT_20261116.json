@@ -1,11 +1,11 @@
 {
   "date": "2026-11-16",
-  "baseline": "1785a26a5f38ae4180f922c8dc81e379eaf437e1",
+  "baseline": "672ddb17b384df4026ce9c789457e2a544e8cca8",
   "scope": "one dana-diag, no SDIO/radio/PC USB/OS3K",
   "h8_a": "SOURCE_RECONCILED",
   "h8_b": {
     "stage": "NATIVE_SOURCE_INVENTORY_PASS__FULL_STOCK_BOOT_BLOCKED_EXTERNAL_IMAGE",
-    "commander_calls": 2,
+    "commander_calls": 3,
     "authorized_max": 5,
     "prior_native_profile_receipts": 22,
     "prior_cpu_positive": 16,
@@ -19,7 +19,7 @@
     "one_executable_preserved": true
   },
   "h8_c": {
-    "stage": "SOURCE_NET_CLASSIFIED__PHYSICAL_CONTINUITY_PENDING",
+    "stage": "SOURCE_NET_CLASSIFIED__PENDING_PHYSICAL_DEVICE",
     "commander_calls": 0,
     "measured_nets": 0,
     "unverified_high_priority": [
@@ -33,9 +33,20 @@
     "driver_modified": false
   },
   "h8_e": {
-    "stage": "PENDING_EXTERNAL_EVIDENCE_OR_SCOPE_DECISION",
-    "full_physical_fidelity_not_accredited": true
+    "stage": "CLOSED_PASS_DIGITAL_SCOPE_WITH_EXTERNAL_DEFERRED",
+    "commander_calls": 1,
+    "authorized_max": 5,
+    "audit_exit_code": 0,
+    "audit_receipt": "https://drive.google.com/file/d/1wTuKLmi1ESrLdE8D4BnE86-Cl7WhncKf/view",
+    "prior_native_evidence_reused": true,
+    "new_native_guest_campaigns": 0,
+    "installed_binary_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
+    "source_head_at_audit": "672ddb17b384df4026ce9c789457e2a544e8cca8",
+    "emulator_modified": false,
+    "full_physical_fidelity_not_accredited": true,
+    "commercial_stock_boot_not_accredited": true,
+    "physical_dana_available": false
   },
   "canonical_installed_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
-  "notes": "No firmware copied or published; H8-B inventory size/vector checks are not stock boot tests. Previous H6 native runs retained, not rerun."
+  "notes": "H8-E digital-only closure accepted because no physical Dana is available; H8-B three calls include a documentary Git sync. Full stock boot lacks authenticated complete Flash. Neither analog nor physical PCB signal is certified; no code/ROM changes, no repeated H1-H7 tests."
 }
