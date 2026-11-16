@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-16",
+  "baseline": "1785a26a5f38ae4180f922c8dc81e379eaf437e1",
+  "scope": "one dana-diag, no SDIO/radio/PC USB/OS3K",
+  "h8_a": "SOURCE_RECONCILED",
+  "h8_b": {
+    "stage": "NATIVE_SOURCE_INVENTORY_PASS__FULL_STOCK_BOOT_BLOCKED_EXTERNAL_IMAGE",
+    "commander_calls": 2,
+    "authorized_max": 5,
+    "prior_native_profile_receipts": 22,
+    "prior_cpu_positive": 16,
+    "prior_expected_guards": 6,
+    "current_binary_receipts": 8,
+    "current_binary_cpu_positive": 5,
+    "current_binary_expected_guards": 3,
+    "known_images_private_objects": 16,
+    "authenticated_full_commercial_flash": 0,
+    "new_guest_test_executed": false,
+    "one_executable_preserved": true
+  },
+  "h8_c": {
+    "stage": "SOURCE_NET_CLASSIFIED__PHYSICAL_CONTINUITY_PENDING",
+    "commander_calls": 0,
+    "measured_nets": 0,
+    "unverified_high_priority": [
+      "U7 NOR manufacturer/topmark and footprint",
+      "SD0/SD1 left-right mapping and card-detect circuit"
+    ]
+  },
+  "h8_d": {
+    "stage": "NOT_TRIGGERED_NO_GUEST_PROVEN_VZ_BLOCKER",
+    "commander_calls": 0,
+    "driver_modified": false
+  },
+  "h8_e": {
+    "stage": "PENDING_EXTERNAL_EVIDENCE_OR_SCOPE_DECISION",
+    "full_physical_fidelity_not_accredited": true
+  },
+  "canonical_installed_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
+  "notes": "No firmware copied or published; H8-B inventory size/vector checks are not stock boot tests. Previous H6 native runs retained, not rerun."
+}

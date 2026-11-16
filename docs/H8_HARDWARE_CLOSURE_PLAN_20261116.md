@@ -1,6 +1,8 @@
 # H8 — Cierre de fidelidad del hardware Dana (16-nov-2026)
 
-**Estado: H8-A `SOURCE_RECONCILED` / H8-B–E `PENDING_EVIDENCE`.** Este plan desarrolla la instrucción de cerrar el hardware esencial ya identificado, sin volver a abrir H1–H7. No se afirma un nuevo PASS nativo, se evita iniciar OS3K y no se autoriza automáticamente Commander. El único emulador sigue siendo `runtime/diag/bin/dana-diag`.
+**Estado actualizado 16-nov-2026:** H8-A `SOURCE_RECONCILED`; H8-B `NATIVE_MEDIA_AUDITED / COMMERCIAL_BOOT_BLOCKED_EXTERNAL_IMAGE`; H8-C `SOURCE_MAP_RECONCILED / PCB_MEASUREMENTS_PENDING`; H8-D `NOT_TRIGGERED_NO_GUEST_PROVEN_VZ_BLOCKER`; H8-E `PENDING_EXTERNAL_EVIDENCE_OR_SCOPE_DECISION`. El usuario autorizó **hasta cinco llamadas Commander por punto**, sin traslado automático entre puntos. H8-B ha utilizado **2/5**; H8-C/D/E **0/5**. No se reabren H1–H7 ni se afirma un nuevo PASS nativo de ROM comercial. El único ejecutable sigue siendo `runtime/diag/bin/dana-diag`.
+
+**Resultados incorporados:** [H8-B inventario en T y procedencia de firmware](H8_B_NATIVE_MEDIA_AUDIT_20261116.md), [H8-C/D señales físicas y límites VZ](H8_C_D_BOARD_NET_GAPS_20261116.md), [acta JSON actual](H8_CHECKPOINT_20261116.json). Los tres perfiles digitalmente acreditados continúan vigentes, pero falta una imagen de Flash íntegra autenticada; la comprobación de placa no puede convertirse en PASS sin medición real. No se recompiló, sustituyó ni parcheó el emulador.
 
 ## Identidades y línea base
 
@@ -51,4 +53,4 @@ La ROM privada UK1.5 disponible es un flujo de actualizador de `0x5D0000` bytes 
 - `docs/H6_INTEGRATION_20261116.md`, `docs/H7_USB_NATIVE_INTEGRATION_20261116.md`.
 - `docs/D8_5_PHYSICAL_BOOT_IMPLEMENTATION.md` (histórica; su estado de 2026-10-24 no incorpora todo el trabajo posterior), `src/mame/skeleton/alphasdana.cpp` y `docs/DIAG_FIRST_ANTI_GATE_INCREMENTAL_PLAN.md` (contiene cursores históricos, no reanudar automáticamente).
 
-**Ningún cierre H1–H7 se cambia. H8-A es auditoría concluida sobre fuentes; H8-B, C, D y E no tienen nuevo PASS.**
+**Ningún cierre H1–H7 se cambia. H8-A sigue cerrado como auditoría; H8-B tiene dos inventarios reales de T y reutilización H6, pero su arranque stock está bloqueado por falta de imagen completa; H8-C es mapa documental sin mediciones; H8-D no se activa sin bloqueo CPU demostrado; H8-E permanece pendiente.**
