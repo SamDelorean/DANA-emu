@@ -1,0 +1,85 @@
+{
+  "master": {
+    "source_sha256": "1fd21423c863c408b794214867cc4790be7fd4e9000eb48dccbb33d6605016e7",
+    "updated_sha256": "6c8ddc2f038d066c47e7b777a085849aff1a7183b7b01d5becf208d5d2787786",
+    "sheets": 14,
+    "formulas": 1020,
+    "changed_cells": [
+      "CONTROL!B3",
+      "CONTROL!B10",
+      "CONTROL!C10",
+      "CONTROL!B11",
+      "CONTROL!C11",
+      "CONTROL!B17",
+      "CONTROL!C17",
+      "AUD_HW_20261030!D3",
+      "AUD_HW_20261030!E3",
+      "AUD_HW_20261030!H3",
+      "AUD_HW_20261030!J3",
+      "AUD_HW_20261030!D13",
+      "AUD_HW_20261030!E13",
+      "AUD_HW_20261030!G13",
+      "AUD_HW_20261030!H13",
+      "AUD_HW_20261030!I13",
+      "AUD_HW_20261030!J13",
+      "AUD_HW_20261030!K13",
+      "AUD_HW_20261030!E14",
+      "AUD_HW_20261030!G14",
+      "AUD_HW_20261030!H14",
+      "AUD_HW_20261030!J14",
+      "TABLERO_HW!A19"
+    ],
+    "appended_rows": [
+      "BITACORA!57",
+      "FUENTES!50",
+      "CAMPA\u00d1AS!36"
+    ],
+    "unchanged_cells_styles_formulas_history_preserved": true,
+    "unchanged_zip_members_preserved": true,
+    "file_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l"
+  },
+  "atlas": {
+    "source_sha256": "6884a26bdf9f11c6265734c35abae6c9923a6c09e906dbb864949fb3573683ed",
+    "updated_sha256": "9b57078b24b51f3d2f387abc839a027c54911f22f21bbcba8eac5eafbb18760b",
+    "sheets": 14,
+    "formulas": 2,
+    "changed_cells": [
+      "07_Registros_ROM!C17",
+      "07_Registros_ROM!D17",
+      "07_Registros_ROM!E17",
+      "07_Registros_ROM!G17",
+      "07_Registros_ROM!I17",
+      "07_Registros_ROM!J17"
+    ],
+    "appended_rows": [
+      "07_Registros_ROM!24",
+      "09_Fuentes!27",
+      "09_Fuentes!28"
+    ],
+    "unchanged_cells_styles_formulas_history_preserved": true,
+    "unchanged_zip_members_preserved": true,
+    "file_id": "1xiNMO0Oz4Ng6qk2--O6WoNtQ77z9ox0Y"
+  },
+  "os3k_plan": {
+    "source_sha256": "5b7993c0fb6bc1a29214ac7363590eb233d040767013a72ac8fa2738777e00e9",
+    "updated_sha256": "6f635619bdf7510783d64ad4e6062fdf55993159627e30dbdc2dfc42b7996184",
+    "sheets": 8,
+    "formulas": 11,
+    "changed_cells": [
+      "ARQUITECTURA!E14",
+      "ARQUITECTURA!F14",
+      "ARQUITECTURA!E15",
+      "ARQUITECTURA!F15",
+      "ARQUITECTURA!D16",
+      "ARQUITECTURA!E16",
+      "ARQUITECTURA!F16"
+    ],
+    "appended_rows": [
+      "DECISIONES!22",
+      "FUENTES!23"
+    ],
+    "unchanged_cells_styles_formulas_history_preserved": true,
+    "unchanged_zip_members_preserved": true,
+    "file_id": "1IX0eC9OuB4qV8QfbiNpEne31JeHAr7_Z"
+  }
+}

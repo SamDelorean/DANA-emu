@@ -1,0 +1,9 @@
+function_or_role,resource_offset,file_offset,rom_candidate,observed_dependencies,effects_or_failure,qualification
+Resource entry trampoline,0x0000,0x00BE,,wrapper to +0x00E4 then dispatcher +0x0954,Palm NetIF selectors; full ABI unresolved,OBSERVADO entry; NO VERIFICADO full ABI
+Interface control callback,0x0516,0x05D4,0x103056BA,context+0x3A; initialization and cleanup callees,control values 1/2 have distinct branches; names not assumed,OBSERVADO static; no claim of radio sleep API
+Cleanup callback,0x05F4,0x06B2,,context+0x3A,delegates +0x3394,OBSERVADO static
+Detached cleanup,0x3394,0x3452,0x103086D8,context+0x5C/+0x64; CSA FFFFF110; PKDATA FFFFF441,clears flags/state; conditional PK0 clear; returns 0,OBSERVADO private original routine executed by M68000
+Initialize/discover path,0x343E,0x34FC,0x10308782,USB library A80A/A80C/A80F/A810/A811; TimGetTicks A0F7; delays A0A0,PK0 set once; timeout 300 ticks clears PK0; unavailable 0x1211,OBSERVADO static; full module initialization NO VERIFICADO
+Session-start helper,0x4570,0x462E,,+0x343E; +0x2DCC,initializes flags; unavailable return 0x1211,OBSERVADO static
+Bus callback,0x1E20,0x1EDE,,ASbd signature; descriptor matching; Palm notification,validates message and device identifiers,OBSERVADO static; module identity NO VERIFICADO
+Radio-specific sleep/wake/reset/IRQ,,,,No grounded complete route,remain UNKNOWN; not inferred from global PLL,NO VERIFICADO

@@ -1,0 +1,35 @@
+{
+  "master": {
+    "file_id": "1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l",
+    "url": "https://docs.google.com/spreadsheets/d/1B7KFKL4BsQZUQ0kSaqdm2ygv835tPE9l/edit?usp=drivesdk&ouid=112210935163258388834&rtpof=true&sd=true",
+    "sha256": "6c8ddc2f038d066c47e7b777a085849aff1a7183b7b01d5becf208d5d2787786",
+    "bytes": 142746,
+    "sheets": 14,
+    "formulas": 1020,
+    "modified_time": "2026-11-16T05:20:28.707Z",
+    "readback_verified": true,
+    "prior_history_styles_and_formulas_preserved": true
+  },
+  "atlas": {
+    "file_id": "1xiNMO0Oz4Ng6qk2--O6WoNtQ77z9ox0Y",
+    "url": "https://docs.google.com/spreadsheets/d/1xiNMO0Oz4Ng6qk2--O6WoNtQ77z9ox0Y/edit?usp=drivesdk&ouid=112210935163258388834&rtpof=true&sd=true",
+    "sha256": "9b57078b24b51f3d2f387abc839a027c54911f22f21bbcba8eac5eafbb18760b",
+    "bytes": 83202,
+    "sheets": 14,
+    "formulas": 2,
+    "modified_time": "2026-11-16T05:20:35.043Z",
+    "readback_verified": true,
+    "prior_history_styles_and_formulas_preserved": true
+  },
+  "os3k_plan": {
+    "file_id": "1IX0eC9OuB4qV8QfbiNpEne31JeHAr7_Z",
+    "url": "https://docs.google.com/spreadsheets/d/1IX0eC9OuB4qV8QfbiNpEne31JeHAr7_Z/edit?usp=drivesdk&ouid=112210935163258388834&rtpof=true&sd=true",
+    "sha256": "6f635619bdf7510783d64ad4e6062fdf55993159627e30dbdc2dfc42b7996184",
+    "bytes": 32544,
+    "sheets": 8,
+    "formulas": 11,
+    "modified_time": "2026-11-16T05:20:41.722Z",
+    "readback_verified": true,
+    "prior_history_styles_and_formulas_preserved": true
+  }
+}

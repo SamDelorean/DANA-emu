@@ -26,6 +26,17 @@ emu.register_frame_done(function()
  frames=frames+1
  if manager.ui.menu_active then menus=menus+1 end
  if m.paused then paused=paused+1 end
+ -- Handshakes observe existing UI/CPU state; they never drive an input.
+ if exists("wait-menu-closed") and not manager.ui.menu_active then
+  local f=assert(io.open(dest.."/menu-closed","w"));f:write("closed");f:close()
+  os.remove(dest.."/wait-menu-closed")
+ end
+ for _,scan in ipairs({98,110})do
+  if exists("wait-guest-"..scan) and seen[scan]then
+   local f=assert(io.open(dest.."/guest-"..scan,"w"));f:write("CPU observed");f:close()
+   os.remove(dest.."/wait-guest-"..scan)
+  end
+ end
  if frames==2 then m:load(assert(os.getenv("DANA_KEYBOARD_STATE")))end
  if frames==30 then
   for _,token in ipairs({"UI_MENU","UI_SNAPSHOT","UI_SOFT_RESET"})do

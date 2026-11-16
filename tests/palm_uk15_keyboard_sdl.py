@@ -16,7 +16,7 @@ def main():
  root=Path(__file__).resolve().parents[1]
  case=root/"local-evidence/runtime-compare/keyboard-20261030"/("sdl-installed"if args.installed else "sdl-candidate")
  case.mkdir(exist_ok=True,parents=True)
- for name in ["ready","stop","sdl-result.json","phrase.bin","dedicated.bin","menu.bin","command.bin","after-menu.bin","guest-menu.bin"]:
+ for name in ["ready","stop","sdl-result.json","phrase.bin","dedicated.bin","menu.bin","command.bin","after-menu.bin","guest-menu.bin","wait-menu-closed","menu-closed","wait-guest-98","guest-98","wait-guest-110","guest-110"]:
   (case/name).unlink(missing_ok=True)
  servers=subprocess.run(["ps","-eo","args"],capture_output=True,text=True,check=True).stdout.splitlines()
  server=next(l for l in servers if l.startswith("/usr/bin/Xwayland "))
@@ -71,6 +71,13 @@ def main():
   event(d,code,int(down),0);sync(d,0)
  def stroke(name):
   press(name,True);time.sleep(.045);press(name,False);time.sleep(.065)
+ def stroke_guest(name,scan):
+  # Hold a real XTest key until the passive observer sees its CPU SPI read.
+  (case/("wait-guest-"+str(scan))).touch()
+  press(name,True)
+  try:wait_file("guest-"+str(scan))
+  finally:press(name,False)
+  time.sleep(.065)
  binary=root/("runtime/diag/bin/dana-diag"if args.installed else "runtime/diag/source/danadiagd")
  state=Path(env["DANA_KEYBOARD_STATE"])
  assert state.exists()
@@ -109,8 +116,12 @@ def main():
    (case/"capture-dedicated").touch();wait_file("dedicated.bin")
    # MAME menu remains available using the profile's configurable chord.
    press("Control_L",True);press("Alt_L",True);stroke("Tab");press("Alt_L",False);press("Control_L",False)
-   time.sleep(.2);(case/"capture-menu").touch();wait_file("menu.bin");stroke("Escape");stroke("a");stroke("End")
-   stroke("Prior");(case/"capture-guest-menu").touch();wait_file("guest-menu.bin");stroke("Escape")
+   time.sleep(.2);(case/"capture-menu").touch();wait_file("menu.bin");(case/"wait-menu-closed").touch()
+   press("Escape",True)
+   try:wait_file("menu-closed")
+   finally:press("Escape",False)
+   time.sleep(.065);stroke("a");stroke_guest("End",110)
+   stroke_guest("Prior",98);(case/"capture-guest-menu").touch();wait_file("guest-menu.bin");stroke("Escape")
    (case/"capture-after-menu").touch();wait_file("after-menu.bin")
    (case/"stop").touch();process.wait(timeout=15);assert process.returncode==0
   result=json.loads((case/"sdl-result.json").read_text())

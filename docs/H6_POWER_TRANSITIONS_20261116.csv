@@ -1,0 +1,8 @@
+trigger,prior_interpretation,result_interpretation,digital_effect,rail_or_current,evidence,limit
+Startup or machine reset,any,UNKNOWN,existing GPIO reset only,NO VERIFICADO,saved diagnostic state; existing reset,No external module reset pulse
+Wireless PKDATA.0 write 1,any,ACTIVE_REQUESTED,existing latch write; HIGH only with DIR/SEL output,NO VERIFICADO,NetIF +350C; M68000 readback,Not READY or LINK_UP
+Wireless PKDATA.0 write 0,any,OFF_REQUESTED,existing latch write; LOW only with DIR/SEL output,NO VERIFICADO,NetIF +342E/+34EE; original cleanup native test,Not POWER_RAIL_OFF or ZERO_CURRENT
+Other board GPIO writes,any,UNKNOWN,ordinary shared VZ GPIO,NO APLICA radio,Four-profile native tests,No radio endpoint
+System PLL STOP and wake,current request,current request,existing H2 sleep/wake; pin retained,NO VERIFICADO,Native H6 sleep and H2 regressions,No invented SLEEP_REQUESTED/WAKE_REQUESTED mapping
+Save/load,saved request,saved request,no fabricated GPIO write,NO VERIFICADO,Native next-bus-operation check,Does not rewind external hardware
+Radio-specific sleep/wake,UNKNOWN,UNKNOWN,No grounded sequence implemented,NO VERIFICADO,Static research limit,SLEEP_REQUESTED/WAKE_REQUESTED reserved until evidence

@@ -458,6 +458,10 @@ private:
     u8 pk_r(offs_t reg);
     void pk_w(offs_t reg, u8 value);
     DANA_GPIO_PORT(pm, 7)
+    void h6_pk_observe(offs_t reg,u8 value);
+    void h6_trace(char const *event,u32 address,u16 value,u16 mask);
+    u8 m_h6_request=0;
+    u32 m_h6_events=0;
 #undef DANA_GPIO_PORT
 
     // Genuine guest-visible SPI2 (VZ 0xF800 DATA / 0xF802 CTRL).
@@ -811,6 +815,7 @@ private:
     bool m_lcd_pwm_active=false;
 };
 
+#include "alphasdana_h6.h"
 #include "alphasdana_pwm.h"
 #include "alphasdana_lcd.h"
 #include "alphasdana_h2.h"
@@ -819,6 +824,7 @@ void alphasdana_state::machine_start()
 {
     // No input-port reads here: MAME has not initialized them yet.
     save_item(NAME(m_storage_board));
+    save_item(NAME(m_h6_request));save_item(NAME(m_h6_events));
     save_item(NAME(m_storage_profile_latched));
     lcd_start();
     // Allocate only physical-mode upper RAM; R-direct map remains 4 MiB.
@@ -1052,6 +1058,7 @@ void alphasdana_state::machine_reset()
         logerror("DANA_STORAGE_PROFILE board=%u sdram=%u nor=%u sd_slots=2 sd_protocol=SPI_SD_MMC sdio=UNVERIFIED radio=NOT_EMULATED\n",
             unsigned(m_storage_board),unsigned(physical_sdram_bytes()),unsigned(m_nor->array_bytes()));
     }
+    m_h6_request=0;m_h6_events=0;
     u32 const old_hz=h2_sysclk();
     m_physical_boot=m_firmware->exists() || !(m_emubrk_pin->read()&1);
     if(!m_watchdog_reset)
@@ -1707,6 +1714,7 @@ void alphasdana_state::isp1161_w(offs_t offset,u16 data,u16 mem_mask)
     u32 const address=0x1f000000U+u32(offset)*2;
     if(mem_mask!=0xffff)
     { physical_block("ISP1161_BUS_REQUIRES_WORD",address,data); return; }
+    h6_trace("ISP1161_CONTROLLER_WRITE",address,data,mem_mask);
     // ISP1161A1 Device Controller: Table 75 indexed command bank.
     if(offset==3){isp1161_dc_command(data);return;}
     if(offset==2){isp1161_dc_data_w(data);return;}
@@ -1976,6 +1984,7 @@ void alphasdana_state::pk_w(offs_t reg, u8 value)
         st_irq_update(true);
     }
     sd_lines();
+    h6_pk_observe(reg,value);
 }
 
 u8 alphasdana_state::st_exchange(u8 command)
@@ -2179,6 +2188,7 @@ u16 alphasdana_state::spi1_r(offs_t reg)
 
 void alphasdana_state::spi1_w(offs_t reg,u16 data,u16 mem_mask)
 {
+    h6_trace("SPI1_STORAGE_WRITE",0xfffff700+u32(reg)*2,data,mem_mask);
     switch (reg)
     {
     case 0: return; // RX data is read-only.
@@ -3350,6 +3360,9 @@ static INPUT_PORTS_START(alphasdana)
     // Optional coherent storage geometry; default manual preserves all
     // existing H1-H5 test fixtures and independent PALM/EmuTOS profiles.
     // NOR selection is made by -nor BEFORE allocation and validated on reset.
+    PORT_START("H6_MONITOR")
+    PORT_CONFNAME(1,0,"H6 passive digital monitor (bounded log; no radio)")
+    PORT_CONFSETTING(0,"Off") PORT_CONFSETTING(1,"On")
     PORT_START("DANA_STORAGE")
     PORT_CONFNAME(0x03,0x00,"Dana storage board profile (restart to change)")
     PORT_CONFSETTING(0x00,"Manual diagnostics - independent PHYSRAM and -nor (default)")

@@ -1,0 +1,10 @@
+capability,silicon,board,rom_prc,emulator,classification,proof_or_limit
+PK0 control,VZ PKDATA FFFFF441 DIR FFFFF440 SEL FFFFF443,rail connection not measured,NetIF +3394/+343E conditional CSA gate,passive latch/pad observation,OBSERVADO digital; NO VERIFICADO PCB,Original detached cleanup and GPIO readback
+Internal USB dependency,existing ISP1161 HC/DC,internal root-port/module continuity unknown,UsbBusDriver and library-call instructions,existing controller observed without module reply,OBSERVADO software; INFERIDO transport,Not proof of radio part or wiring
+Storage variants,shared VZ and selected NOR device,commercial 8/4 and 16/8 MiB documented,original 4 MiB firmware unavailable,GPT storage profile commit preserved and regressed,OBSERVADO digital,Synthetic 68000 RAM/NOR tests; guards
+LCD capability,1/2/4 bpp shared controller,marketed 4/16 grays; glass unmeasured,existing UK1.5 paths,H4 unchanged and regressed,OBSERVADO digital; NO VERIFICADO optics,No NOR-based LCD register rewrite
+SD/MMC,existing SPI1/FIFO/GPIO/IRQ,two documented slots,original storage driver,existing two-card persistence retained,OBSERVADO digital,No new SDIO card or radio
+SDIO,SPI transport and original ROM routines,2003 advertised capability,SDIO names/routines present,no CMD52/53 function responder added,NO VERIFICADO,No SDIO or radio PASS
+Radio IRQ/reset,possible MCU inputs/controls,no measured net,complete route not established,no invented input or IRQ producer,NO VERIFICADO,Controller pending snapshot is not module IRQ
+Module rail/current,not established by GPIO alone,unmeasured,software requests only,always NO VERIFICADO,NO VERIFICADO,No milliamp or battery-saving claim
+Host radio/network,not applicable to this observer,no host WLAN use,no copied driver port,no radio device/socket code; native strace audit,NO APLICA implementation; OBSERVADO negative test,No AF_INET/AF_INET6 calls in dedicated H6 native audit
