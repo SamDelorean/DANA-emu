@@ -1,0 +1,5 @@
+{"status": "GUEST_DESCRIPTOR_OBSERVED", "usbip": "127.0.0.1:33517", "vid": "1234", "pid": "5678", "host_os_enumeration": "NOT_ACCREDITED"}
+----------------------------------------------------------------------
+Ran 14 tests in 0.082s
+
+OK

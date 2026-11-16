@@ -1,0 +1,16 @@
+{
+  "baseline_git_head": "322e021924bc3c5d22e3911d51a153957e12d861",
+  "file_sha256": {
+    "docs/H7_LOCAL_TESTS_20261116.log": "6ba9ef348a0406820e22e929f743c0845dff5a863b736039d613e96e7e61baae",
+    "docs/H7_USBIP_SOURCE_CANDIDATE_20261116.md": "9420f3db7e776e0292d6500f178b0a9b469da1562f5bb8f34d2c39cdfbc3cd62",
+    "tests/ghidra/DanaH7UsbComputerAudit.java": "86c787fc11c522f6b0f3155ca6c3dc099fec4e3753a2776faa1af8ad6f3e69de",
+    "tests/test_h7_usb_dc_host_probe.py": "f21ddfcd3786813723f4392ecd3520b360442e07fb92ad7644b76a94eca99e8c",
+    "tests/test_h7_usbip_bridge.py": "2012bb1fe8774590c434605861f385ce0a581df79d610f40114a9d7619f5fdf7",
+    "tools/h7_usb_dc_host_probe.py": "5a29cbec8e62e285a98be6eafa5edc1455e65f548bf2620820867ab0610d19e9",
+    "tools/h7_usbip_bridge.py": "40e5377861788e224fdcbad19af00d7c8e60ef23ab166e32af9f5903b934cc9a"
+  },
+  "installed_h6_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
+  "native_mame_tested": false,
+  "status": "HOST_PROTOCOL_TESTS_PASS_14",
+  "usbip_os_enumerated": false
+}
