@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-16",
+  "status": "DIGITAL_CPU_ISP1161_DUSB_USBIP_PASS__H7_INCOMPLETE",
+  "repository": "SamDelorean/DANA-emu",
+  "baseline_h6_commit": "322e021924bc3c5d22e3911d51a153957e12d861",
+  "h7_bridge_commit": "d66cbcf3892d797b73238fcbfd7381ba9d349445",
+  "only_emulator": "runtime/diag/bin/dana-diag",
+  "installed_executable_sha256": "73550d0fc28c3189038e39fad2b5a4321dab59da8cfc416317fad18b875f4e41",
+  "local_protocol_tests": {"passed": 14, "total": 14, "nature": "host-only synthetic fixture"},
+  "original_uk15": {
+    "mame_rc": 0,
+    "usb_mmio_transactions": 174,
+    "dc_B8_selects": 4,
+    "softconnect": false,
+    "ep0_descriptor": "NOT_OBSERVED",
+    "status": "BLOCKED_ORIGINAL_DEVICE_NO_DESCRIPTOR",
+    "drive_receipt": "https://drive.google.com/file/d/1ZdVMrQCQUDYN1gQP9coo4dmKrx3Q1ybJ/view"
+  },
+  "native_diagnostic_m68000": {
+    "status": "M68000_USBIP_END_TO_END_PASS",
+    "guest": "real diagnostic M68000 guest, not original Palm/OS3K",
+    "mame_rc": 0,
+    "usbip_bridge_rc": 0,
+    "usbip_devlist": "PASS",
+    "usbip_import": "PASS",
+    "native_urb_get_descriptor": "PASS",
+    "test_vid": "1234",
+    "test_pid": "5678",
+    "first_8_descriptor_bytes_hex": "12010002ff000008",
+    "guest_marker": "0xA55A",
+    "drive_receipt": "https://drive.google.com/file/d/1SWKgDKyoD3CY1oZlVDHln--H3XPiuq7d/view"
+  },
+  "ghidra_readonly": {
+    "project": "DanaUK15RelocatedTemp",
+    "engine": "Ghidra 12.1.3",
+    "program": "Dana1.2.1.rom",
+    "historical_addresses_checked": 19,
+    "already_disassembled_in_project": 0,
+    "firmware_modified": false,
+    "status": "NO_SOURCE_INSTRUCTIONS_AT_HISTORICAL_ADDRESSES",
+    "receipt": "https://drive.google.com/file/d/1eunkchTS3o5pb7DDLrKxI0VY2XxQOEPx/view"
+  },
+  "host_os_usb_enumeration": "NOT_ACCREDITED",
+  "kernel_vhci_file_present": true,
+  "kernel_vhci_loaded": false,
+  "physical_dana_wiring": "NO_VERIFICADO",
+  "h6_changed": false,
+  "new_emulator_created": false,
+  "commander_calls_for_h7_so_far": 5,
+  "commander_authorized_max": 10,
+  "regression_gates_reopened": false
+}
