@@ -36,6 +36,7 @@ void alphasdana_state::h2_clock_apply(u32 old_hz)
     if((m_tctl2&14)==2 || (m_tctl2&14)==4)timer2_schedule();
     h2_retime(m_spi1_timer,old_hz,hz,m_spi_clock_remaining);
     pwm1_clock_changed();
+    pwm2_clock_changed();
     serial_clock();h2_cpu_gate();lcd_clock_changed();
 }
 void alphasdana_state::h2_cpu_gate()

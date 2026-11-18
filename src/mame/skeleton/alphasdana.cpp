@@ -299,9 +299,11 @@ private:
     u8 pcr_r() {return m_pcr;}
     void pcr_w(u8 data)
     {
-        // PCR's PWM/timer signal combinations remain outside this UART change.
-        if(data&0x0f) {physical_block("PCR_PWM_TIMER_COMBINATION_UNIMPLEMENTED",0xfffff003,data);return;}
-        m_pcr=data&0x10; serial_clock();
+        // Motorola VZ 5.2.2: UCLK, 4 PWM combinations and 4 timer mux
+        // selections. Reserved bits 7:5 read zero, no invented board nets.
+        m_pcr=data&0x1f;
+        serial_clock();
+        pwm_output_update();
     }
     // VZ UM 5.2.4: pad drive strength only (0=2 mA, 1=4 mA).
     // Stored configuration has no effect on logical GPIO, bus or clocks.
@@ -333,6 +335,22 @@ private:
     void pwm1_begin_period();
     double pwm1_phase() const;
     void pwm1_level(bool high);
+    // Motorola 15.5: independent 16-bit PWM2 and PCR logical output select.
+    bool pwm2_pin_level() const;
+    void pwm_output_update();
+    void pwm2_irq();
+    u16 pwm2_count_r();
+    void pwm2_schedule();
+    void pwm2_clock_changed();
+    TIMER_CALLBACK_MEMBER(pwm2_period_event);
+    TIMER_CALLBACK_MEMBER(pwm2_width_event);
+    u16 pwm2_control_r();
+    void pwm2_control_w(offs_t,u16,u16);
+    u16 pwm2_period_r() {return m_pwm2_period;}
+    void pwm2_period_w(offs_t,u16,u16);
+    u16 pwm2_width_r() {return m_pwm2_width;}
+    void pwm2_width_w(offs_t,u16,u16);
+    void pwm2_count_w(offs_t,u16,u16);
     void pwm1_save();
     TIMER_CALLBACK_MEMBER(pwm1_fall);
     // VZ PLLFSR, 0xFFFFF202: CLK32 is a virtual-time signal, not stored data.
@@ -733,6 +751,12 @@ private:
     u32 m_calendar_store=0, m_calendar_hours=0;
     u8 m_calendar_phase=0;
     u16 m_rtc_day=0, m_rtc_day_alarm=0, m_rtc_control=0x0080, m_rtc_ien=0, m_rtc_isr=0;
+    u16 m_pwm2_control=0,m_pwm2_period=0,m_pwm2_width=0,m_pwm2_count=0;
+    bool m_pwm2_high=false;
+    u32 m_pwm2_source_hz=0;
+    u64 m_pwm2_rollovers=0;
+    emu_timer *m_pwm2_timer=nullptr,*m_pwm2_fall_timer=nullptr;
+    output_finder<> m_pwm2_pin{*this,"dana_pwm2_pin"};
     u16 m_pwm1_control=0x0020, m_pwm1_sample=0;
     u8 m_pwm1_period=0xfe, m_pwm1_counter=0;
     u8 m_pwm1_fifo[5]={}, m_pwm1_head=0, m_pwm1_count=0;
@@ -817,6 +841,7 @@ private:
 
 #include "alphasdana_h6.h"
 #include "alphasdana_pwm.h"
+#include "alphasdana_pwm2.h"
 #include "alphasdana_lcd.h"
 #include "alphasdana_h2.h"
 
@@ -859,6 +884,12 @@ void alphasdana_state::machine_start()
     m_timer2_timer=timer_alloc(FUNC(alphasdana_state::timer2_compare),this);
     m_pwm1_timer = timer_alloc(FUNC(alphasdana_state::pwm1_tick), this);
     m_pwm1_fall_timer = timer_alloc(FUNC(alphasdana_state::pwm1_fall), this);
+    m_pwm2_timer=timer_alloc(FUNC(alphasdana_state::pwm2_period_event),this);
+    m_pwm2_fall_timer=timer_alloc(FUNC(alphasdana_state::pwm2_width_event),this);
+    save_item(NAME(m_pwm2_control)); save_item(NAME(m_pwm2_period));
+    save_item(NAME(m_pwm2_width)); save_item(NAME(m_pwm2_count));
+    save_item(NAME(m_pwm2_high)); save_item(NAME(m_pwm2_source_hz));
+    save_item(NAME(m_pwm2_rollovers));
     save_item(NAME(m_pcr));
     save_item(NAME(m_iodcr));
     save_item(NAME(m_icemcr)); save_item(NAME(m_icemsr));
@@ -1080,6 +1111,12 @@ void alphasdana_state::machine_reset()
     m_pll_stopped=false;m_pcm_on=true;
     m_pll_off_timer->adjust(attotime::never);m_pcm_timer->adjust(attotime::never);
     m_pcr=0;
+    m_pwm2_control=m_pwm2_period=m_pwm2_width=m_pwm2_count=0;
+    m_pwm2_high=false; m_pwm2_source_hz=0;
+    m_pwm2_rollovers=0;
+    m_pwm2_timer->adjust(attotime::never);
+    m_pwm2_fall_timer->adjust(attotime::never);
+    pwm_output_update();
     m_pllfsr = 0x0347;
     m_pll_wake_pending=false;
     m_pll_wake_timer->adjust(attotime::never);
@@ -1961,6 +1998,8 @@ void alphasdana_state::pb_w(offs_t reg, u8 value)
 u8 alphasdana_state::pk_r(offs_t reg)
 {
     u8 result=h2_gpio_r(6,reg);
+    if (reg==1 && !(m_gpio[6*4+3] & 0x01) && (m_gpio[6*4] & 0x01))
+        result=(result & ~u8(1)) | (pwm2_pin_level() ? 1 : 0);
     if (reg==1 && !(m_gpio[6*4] & 0x04))
     {
         // PK2 reads the ST ready INPUT while configured as GPIO input.
@@ -2639,9 +2678,11 @@ void alphasdana_state::update_irq_lines()
     unsigned const uart2_level=(m_ilcr>>8)&7;
     unsigned const spi_level=(m_ilcr>>12)&7;
     unsigned const timer2_level=m_ilcr&7;
+    unsigned const pwm2_level=(m_ilcr>>4)&7;
     for (unsigned level=1;level<=6;++level)
     {
-        bool const spi=((uart2_level==level) && (active&0x1000)) || ((spi_level==level) && (active & 0x00200000))||((timer2_level==level)&&(active&0x20));
+        bool const spi=((uart2_level==level) && (active&0x1000)) || ((spi_level==level) && (active & 0x00200000))||((timer2_level==level)&&(active&0x20)) ||
+            ((pwm2_level==level)&&(active&0x00002000));
         bool const external1=(level==1) && (active & 0x00010000);
         bool const usb=((level==2)&&(active&0x00020000))||((level==3)&&(active&0x00040000));
         bool const external5=(level==5) && (active & 0x00100000);
@@ -3097,6 +3138,10 @@ void alphasdana_state::program_map(address_map &map)
     m_boot_memory[1](0xfffff150,0xfffff151).rw(FUNC(alphasdana_state::cs_control3_r),FUNC(alphasdana_state::cs_control3_w));
     map(0xfffff200,0xfffff201).rw(FUNC(alphasdana_state::pllcr_r),FUNC(alphasdana_state::pllcr_w));
     map(0xfffff207,0xfffff207).rw(FUNC(alphasdana_state::pctlr_r),FUNC(alphasdana_state::pctlr_w)).umask16(0x00ff);
+    map(0xfffff510,0xfffff511).rw(FUNC(alphasdana_state::pwm2_control_r),FUNC(alphasdana_state::pwm2_control_w));
+    map(0xfffff512,0xfffff513).rw(FUNC(alphasdana_state::pwm2_period_r),FUNC(alphasdana_state::pwm2_period_w));
+    map(0xfffff514,0xfffff515).rw(FUNC(alphasdana_state::pwm2_width_r),FUNC(alphasdana_state::pwm2_width_w));
+    map(0xfffff516,0xfffff517).rw(FUNC(alphasdana_state::pwm2_count_r),FUNC(alphasdana_state::pwm2_count_w));
     map(0xfffff500,0xfffff501).rw(FUNC(alphasdana_state::pwm1_control_r),FUNC(alphasdana_state::pwm1_control_w));
     map(0xfffff502,0xfffff503).rw(FUNC(alphasdana_state::pwm1_sample_r),FUNC(alphasdana_state::pwm1_sample_w));
     map(0xfffff504,0xfffff505).rw(FUNC(alphasdana_state::pwm1_period_count_r),FUNC(alphasdana_state::pwm1_period_count_w));

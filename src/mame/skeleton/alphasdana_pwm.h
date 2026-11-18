@@ -14,7 +14,7 @@ void alphasdana_state::pwm1_level(bool high)
     m_pwm1_high=high;m_pwm1_outputs[0]=high;
     // Retain the qualified mono MAME speaker path. Electrical filtering,
     // amplification and the physical PB7-to-speaker PCB net are unmeasured.
-    m_pwm1_speaker->level_w(high?1:0);
+    pwm_output_update();
 }
 
 void alphasdana_state::pwm1_irq()
